@@ -6,15 +6,18 @@ import { formatCurrency } from '../utils/formatters';
 import { getCartItemImage, getCartItemPrice } from '../utils/cartHelpers';
 import { BRAND } from '../config/brand';
 
-const emptyAddress = {
+const PURCHASE_REASONS = [
+  { id: 'personal', label: 'Personal use' },
+  { id: 'digital', label: 'Digital media' },
+  { id: 'outlet', label: 'Outlet media' },
+  { id: 'other', label: 'Other' },
+];
+
+const emptyBilling = {
   name: '',
   email: '',
   phone: '',
-  address: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  country: 'India',
+  purchaseReasons: [],
 };
 
 const IconCheck = ({ size = 14, className = '' }) => (
@@ -29,26 +32,42 @@ const IconPackage = () => (
   </svg>
 );
 
+const IconAlert = () => (
+  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+    />
+  </svg>
+);
+
 const Checkout = () => {
   const { cart, getCartTotal, clearCart, loading: cartLoading } = useCart();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [savingAddress, setSavingAddress] = useState(false);
-  const [error, setError] = useState('');
-  const [addressSaved, setAddressSaved] = useState(false);
+  const [alertPopup, setAlertPopup] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
-  const [shippingAddress, setShippingAddress] = useState(emptyAddress);
+  const [billingDetails, setBillingDetails] = useState(emptyBilling);
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const response = await checkoutAPI.getProfile();
         if (response.success && response.data.billingAddress) {
-          setShippingAddress({ ...emptyAddress, ...response.data.billingAddress });
+          const saved = response.data.billingAddress;
+          setBillingDetails({
+            ...emptyBilling,
+            name: saved.name || '',
+            email: saved.email || '',
+            phone: saved.phone || '',
+            purchaseReasons: saved.purchaseReasons || [],
+          });
         }
       } catch (profileError) {
         console.error('Failed to load billing profile:', profileError);
@@ -66,50 +85,40 @@ const Checkout = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setShippingAddress((prev) => ({ ...prev, [name]: value }));
-    if (addressSaved) setAddressSaved(false);
+    setBillingDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  const saveAddress = async () => {
-    if (
-      !shippingAddress.name ||
-      !shippingAddress.email ||
-      !shippingAddress.phone ||
-      !shippingAddress.address ||
-      !shippingAddress.city
-    ) {
-      setError('Please fill in all required fields before saving');
-      return;
-    }
+  const togglePurchaseReason = (reasonId) => {
+    setBillingDetails((prev) => {
+      const selected = prev.purchaseReasons.includes(reasonId)
+        ? prev.purchaseReasons.filter((id) => id !== reasonId)
+        : [...prev.purchaseReasons, reasonId];
+      return { ...prev, purchaseReasons: selected };
+    });
+  };
 
-    setSavingAddress(true);
-    setError('');
+  const showAlert = (message, title = 'Required') => {
+    setAlertPopup({ title, message });
+  };
 
-    try {
-      await checkoutAPI.saveProfile(shippingAddress);
-      setAddressSaved(true);
-      setTimeout(() => setAddressSaved(false), 3000);
-    } catch {
-      setError('Failed to save address. Please try again.');
-    } finally {
-      setSavingAddress(false);
+  const getBillingValidationError = () => {
+    if (!billingDetails.name.trim()) return 'Please enter your full name';
+    if (!billingDetails.email.trim()) return 'Please enter your email address';
+    if (!billingDetails.phone.trim()) return 'Please enter your phone number';
+    if (!billingDetails.purchaseReasons.length) {
+      return 'Please select why you are purchasing this video';
     }
+    return '';
   };
 
   const handlePayment = async () => {
-    if (
-      !shippingAddress.name ||
-      !shippingAddress.email ||
-      !shippingAddress.phone ||
-      !shippingAddress.address ||
-      !shippingAddress.city
-    ) {
-      setError('Please fill in all required billing fields');
+    const validationError = getBillingValidationError();
+    if (validationError) {
+      showAlert(validationError);
       return;
     }
 
     setLoading(true);
-    setError('');
     setIsPlacingOrder(true);
     setIsProcessingOrder(true);
     setProcessingStep(0);
@@ -124,7 +133,7 @@ const Checkout = () => {
       setProcessingStep(4);
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      const response = await orderAPI.createOrder(shippingAddress, paymentMethod);
+      const response = await orderAPI.createOrder(billingDetails, paymentMethod);
 
       if (!response.success) {
         throw new Error(response.message || 'Failed to create order');
@@ -152,7 +161,7 @@ const Checkout = () => {
       setIsProcessingOrder(false);
       setLoading(false);
       setProcessingStep(0);
-      setError(err.message || 'Failed to place order. Please try again.');
+      showAlert(err.message || 'Failed to place order. Please try again.', 'Order Failed');
     }
   };
 
@@ -161,6 +170,7 @@ const Checkout = () => {
   }
 
   return (
+    <>
     <div
       className="min-h-screen bg-gray-50 transition-opacity duration-300 overflow-x-hidden"
       style={{
@@ -202,12 +212,6 @@ const Checkout = () => {
                 <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
               </div>
             </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
           </div>
         )}
 
@@ -276,15 +280,7 @@ const Checkout = () => {
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-gray-900">Billing Details</h2>
-                  {addressSaved && (
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded">
-                      <IconCheck size={12} />
-                      <span>Saved</span>
-                    </div>
-                  )}
-                </div>
+                <h2 className="text-base font-semibold text-gray-900">Billing Details</h2>
               </div>
               <div className="p-4 sm:p-6 space-y-4">
                 <div>
@@ -294,7 +290,7 @@ const Checkout = () => {
                   <input
                     type="text"
                     name="name"
-                    value={shippingAddress.name}
+                    value={billingDetails.name}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
@@ -308,7 +304,7 @@ const Checkout = () => {
                   <input
                     type="email"
                     name="email"
-                    value={shippingAddress.email}
+                    value={billingDetails.email}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
@@ -325,7 +321,7 @@ const Checkout = () => {
                   <input
                     type="tel"
                     name="phone"
-                    value={shippingAddress.phone}
+                    value={billingDetails.phone}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
@@ -333,85 +329,29 @@ const Checkout = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Address <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="address"
-                    value={shippingAddress.address}
-                    onChange={handleInputChange}
-                    required
-                    rows="3"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors resize-none"
-                    placeholder="Enter your complete address"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={shippingAddress.city}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                      placeholder="City"
-                    />
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Why are you purchasing this video? <span className="text-red-500">*</span>
+                  </p>
+                  <div className="space-y-2">
+                    {PURCHASE_REASONS.map((reason) => (
+                      <label
+                        key={reason.id}
+                        className={`flex items-center gap-3 p-3 border rounded-md cursor-pointer transition-all ${
+                          billingDetails.purchaseReasons.includes(reason.id)
+                            ? 'border-gray-900 bg-gray-50'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={billingDetails.purchaseReasons.includes(reason.id)}
+                          onChange={() => togglePurchaseReason(reason.id)}
+                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
+                        />
+                        <span className="text-sm text-gray-900">{reason.label}</span>
+                      </label>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">State</label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={shippingAddress.state}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                      placeholder="State"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">ZIP Code</label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={shippingAddress.zipCode}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                      placeholder="ZIP Code"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Country</label>
-                    <input
-                      type="text"
-                      name="country"
-                      value={shippingAddress.country}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                      placeholder="Country"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={saveAddress}
-                    disabled={savingAddress || !shippingAddress.name || !shippingAddress.phone || !shippingAddress.address || !shippingAddress.city}
-                    className="w-full px-4 py-2 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-gray-200"
-                  >
-                    {savingAddress ? 'Saving...' : (
-                      <>
-                        <IconCheck size={14} />
-                        Save Address
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
             </div>
@@ -542,8 +482,46 @@ const Checkout = () => {
           from { opacity: 0; }
           to { opacity: 1; }
         }
+        @keyframes popupIn {
+          from { opacity: 0; transform: scale(0.95) translateY(8px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
       `}</style>
     </div>
+
+    {alertPopup && (
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        onClick={() => setAlertPopup(null)}
+      >
+        <div
+          className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl animate-[popupIn_0.25s_ease-out]"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="checkout-alert-title"
+          aria-describedby="checkout-alert-message"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+            <IconAlert />
+          </div>
+          <h2 id="checkout-alert-title" className="text-lg font-bold text-gray-900">
+            {alertPopup.title}
+          </h2>
+          <p id="checkout-alert-message" className="mt-2 text-sm leading-relaxed text-gray-600">
+            {alertPopup.message}
+          </p>
+          <button
+            type="button"
+            onClick={() => setAlertPopup(null)}
+            className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

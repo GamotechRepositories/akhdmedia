@@ -5,11 +5,7 @@ const billingAddressSchema = new mongoose.Schema(
     name: { type: String, default: '' },
     email: { type: String, default: '' },
     phone: { type: String, default: '' },
-    address: { type: String, default: '' },
-    city: { type: String, default: '' },
-    state: { type: String, default: '' },
-    zipCode: { type: String, default: '' },
-    country: { type: String, default: 'India' },
+    purchaseReasons: { type: [String], default: [] },
   },
   { _id: false },
 )

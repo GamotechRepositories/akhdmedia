@@ -9,12 +9,14 @@ import {
 import formatProduct from '../utils/formatProduct.js'
 import { getCategoryMap } from '../utils/formatCart.js'
 
-const REQUIRED_ADDRESS_FIELDS = ['name', 'email', 'phone', 'address', 'city']
+const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
+
+const VALID_PURCHASE_REASONS = new Set(['personal', 'digital', 'outlet', 'other'])
 
 const isValidEmail = (value = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
 export const validateBillingAddress = (billingAddress = {}) => {
-  const missing = REQUIRED_ADDRESS_FIELDS.filter((field) => !billingAddress[field]?.trim())
+  const missing = REQUIRED_BILLING_FIELDS.filter((field) => !billingAddress[field]?.trim())
 
   if (missing.length > 0) {
     throw new AppError('Please fill in all required billing fields', 400)
@@ -25,15 +27,19 @@ export const validateBillingAddress = (billingAddress = {}) => {
     throw new AppError('Please enter a valid email address', 400)
   }
 
+  const purchaseReasons = [...new Set((billingAddress.purchaseReasons || []).map(String))]
+    .map((reason) => reason.trim())
+    .filter((reason) => VALID_PURCHASE_REASONS.has(reason))
+
+  if (!purchaseReasons.length) {
+    throw new AppError('Please select why you are purchasing this video', 400)
+  }
+
   return {
     name: billingAddress.name.trim(),
     email,
     phone: billingAddress.phone.trim(),
-    address: billingAddress.address.trim(),
-    city: billingAddress.city.trim(),
-    state: billingAddress.state?.trim() || '',
-    zipCode: billingAddress.zipCode?.trim() || '',
-    country: billingAddress.country?.trim() || 'India',
+    purchaseReasons,
   }
 }
 
