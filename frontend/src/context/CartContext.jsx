@@ -59,9 +59,20 @@ export const CartProvider = ({ children }) => {
   }, [applyCartResponse]);
 
   const removeFromCart = useCallback(async (itemId) => {
-    const response = await cartAPI.removeFromCart(itemId);
-    applyCartResponse(response);
-  }, [applyCartResponse]);
+    if (!itemId) return;
+
+    const previousCart = cart;
+    setCart((current) => current.filter((item) => item.id !== itemId));
+
+    try {
+      const response = await cartAPI.removeFromCart(itemId);
+      applyCartResponse(response);
+    } catch (error) {
+      console.error('Failed to remove cart item:', error);
+      setCart(previousCart);
+      throw error;
+    }
+  }, [applyCartResponse, cart]);
 
   const updateQuantity = useCallback(async (itemId, quantity) => {
     if (quantity < 1) return;

@@ -9,23 +9,21 @@ const Logo = ({ variant = 'default', theme = 'light', className = '' }) => {
     <Link
       to="/"
       aria-label={`${BRAND.name} home`}
-      className={`group inline-flex items-center ${className}`}
+      className={`group inline-flex items-center gap-2.5 ${className}`}
     >
-      <span className="flex flex-col leading-none">
-        <span
-          className={`font-black uppercase tracking-[0.16em] ${isCompact ? 'text-xs' : 'text-sm'} ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}
-        >
-          {BRAND.name}
-        </span>
-        <span
-          className={`mt-0.5 font-semibold uppercase tracking-[0.18em] ${isCompact ? 'text-[8px]' : 'text-[9px]'} ${
-            isDark ? 'text-gray-500' : 'text-gray-400'
-          }`}
-        >
-          Stock Video
-        </span>
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-lg font-black tracking-tight ${
+          isCompact ? 'h-8 w-8 text-xs' : 'h-9 w-9 text-sm'
+        } ${isDark ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'}`}
+      >
+        AK
+      </span>
+      <span
+        className={`font-black uppercase tracking-[0.14em] leading-none ${isCompact ? 'text-xs' : 'text-sm'} ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}
+      >
+        {BRAND.name}
       </span>
     </Link>
   );

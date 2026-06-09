@@ -16,6 +16,12 @@ export const IconProducts = ({ className = 'h-5 w-5' }) => (
   </svg>
 )
 
+export const IconOrders = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+  </svg>
+)
+
 export const IconExternal = ({ className = 'h-4 w-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -23,8 +29,18 @@ export const IconExternal = ({ className = 'h-4 w-4' }) => (
 )
 
 export const IconLogo = ({ className = 'h-8 w-8' }) => (
-  <svg className={className} viewBox="0 0 32 32" fill="none">
+  <svg className={className} viewBox="0 0 32 32" fill="none" aria-hidden="true">
     <rect width="32" height="32" rx="8" fill="currentColor" />
-    <path d="M13 10l9 6-9 6V10z" fill="#f8fafc" />
+    <text
+      x="16"
+      y="21"
+      textAnchor="middle"
+      fill="#f8fafc"
+      fontSize="11"
+      fontWeight="800"
+      fontFamily="Inter, system-ui, sans-serif"
+    >
+      AK
+    </text>
   </svg>
 )

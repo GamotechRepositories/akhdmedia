@@ -18,6 +18,19 @@ const getTierDelivery = (product, imageSize) => {
   return deliveryMap[imageSize] || null
 }
 
+/** Video products always deliver the master file — quality tier is licensing only */
+const getProductDelivery = (product, imageSize) => {
+  if (product.mediaType === 'video' && product.masterVideoKey) {
+    return {
+      videoKey: product.masterVideoKey,
+      videoFilename: product.masterVideoFilename || '',
+      imageKeys: [],
+      imageFilenames: [],
+    }
+  }
+  return getTierDelivery(product, imageSize)
+}
+
 export const getOrderItemDownloads = async (order) => {
   const downloads = []
 
@@ -25,14 +38,14 @@ export const getOrderItemDownloads = async (order) => {
     const product = await Product.findById(item.productId).lean()
     if (!product) continue
 
-    const tier = getTierDelivery(product, item.imageSize)
+    const tier = getProductDelivery(product, item.imageSize)
     if (!tier) {
       downloads.push({
         productId: item.productId,
         name: item.name,
         imageSize: item.imageSize,
         files: [],
-        message: 'Delivery files not yet available for this resolution',
+        message: 'Delivery file not yet available for this product',
       })
       continue
     }

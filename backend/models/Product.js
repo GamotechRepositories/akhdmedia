@@ -70,12 +70,6 @@ const productSchema = new mongoose.Schema(
     masterVideoKey: { type: String, default: '' },
     masterVideoFilename: { type: String, default: '' },
     masterVideoTier: { type: String, default: '' },
-    transcodeStatus: {
-      type: String,
-      enum: ['idle', 'pending', 'processing', 'ready', 'failed'],
-      default: 'idle',
-    },
-    transcodeError: { type: String, default: '' },
     videoInfo: { type: videoInfoSchema, default: () => ({}) },
     isActive: { type: Boolean, default: true },
   },

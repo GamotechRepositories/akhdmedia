@@ -2,6 +2,9 @@ import asyncHandler from '../utils/asyncHandler.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
 import {
   createOrderFromCart,
+  createPendingOnlineOrderFromCart,
+  getAdminOrderById,
+  getAllOrders,
   getCheckoutProfile,
   getOrderById,
   saveCheckoutProfile,
@@ -10,8 +13,12 @@ import {
   getOrderItemDownloads,
   verifyOrderAccess,
 } from '../services/downloadService.js'
-import { queueOrderConfirmationEmail } from '../services/orderEmailService.js'
-
+import {
+  canAccessOrderDownloads,
+  createRazorpayOrder,
+  getRazorpayKeyId,
+} from '../services/paymentService.js'
+import AppError from '../utils/AppError.js'
 export const getProfile = asyncHandler(async (req, res) => {
   const profile = await getCheckoutProfile(req.sessionId)
 
@@ -35,18 +42,46 @@ export const updateProfile = asyncHandler(async (req, res) => {
 
 export const createOrder = asyncHandler(async (req, res) => {
   const { billingAddress, paymentMethod } = req.body
-  const order = await createOrderFromCart(req.sessionId, {
-    billingAddress,
-    paymentMethod,
+
+  if (paymentMethod === 'COD') {
+    const order = await createOrderFromCart(req.sessionId, {
+      billingAddress,
+      paymentMethod: 'COD',
+    })
+
+    return res.status(201).json({
+      success: true,
+      message: 'Order placed successfully',
+      data: {
+        order: formatOrderResponse(order),
+      },
+    })
+  }
+
+  const order = await createPendingOnlineOrderFromCart(req.sessionId, { billingAddress })
+  const razorpayOrder = await createRazorpayOrder({
+    amount: order.totalAmount,
+    receipt: order.orderNumber,
+    notes: {
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+    },
   })
 
-  queueOrderConfirmationEmail(order)
+  order.razorpayOrderId = razorpayOrder.id
+  await order.save()
 
   res.status(201).json({
     success: true,
-    message: 'Order placed successfully',
+    message: 'Proceed to payment',
     data: {
       order: formatOrderResponse(order),
+      razorpay: {
+        keyId: getRazorpayKeyId(),
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+      },
     },
   })
 })
@@ -65,10 +100,37 @@ export const getOrder = asyncHandler(async (req, res) => {
 export const getOrderDownloads = asyncHandler(async (req, res) => {
   const order = await getOrderById(req.sessionId, req.params.id)
   verifyOrderAccess(order, req.sessionId)
+
+  if (!canAccessOrderDownloads(order)) {
+    throw new AppError('Payment is required before downloads are available', 402)
+  }
+
   const downloads = await getOrderItemDownloads(order)
 
   res.json({
     success: true,
     data: { downloads },
+  })
+})
+
+export const listAdminOrders = asyncHandler(async (req, res) => {
+  const orders = await getAllOrders()
+
+  res.json({
+    success: true,
+    data: {
+      orders: orders.map(formatOrderResponse),
+    },
+  })
+})
+
+export const getAdminOrder = asyncHandler(async (req, res) => {
+  const order = await getAdminOrderById(req.params.id)
+
+  res.json({
+    success: true,
+    data: {
+      order: formatOrderResponse(order),
+    },
   })
 })

@@ -34,6 +34,23 @@ const buildDeliveryFilesMap = (body = {}) => {
   return deliveryFiles
 }
 
+const buildMasterVideoDeliveryFiles = (masterVideoKey, masterVideoFilename, tiers = []) => {
+  const deliveryFiles = new Map()
+  const key = masterVideoKey?.trim() || ''
+  const filename = masterVideoFilename?.trim() || ''
+
+  tiers.forEach((tier) => {
+    deliveryFiles.set(tier, {
+      videoKey: key,
+      videoFilename: filename,
+      imageKeys: [],
+      imageFilenames: [],
+    })
+  })
+
+  return deliveryFiles
+}
+
 const readTierInput = (body, tier) => {
   const tierData = body.resolutionPricing?.[tier] || {}
   const defaults = RESOLUTION_TIERS[tier] || {}
@@ -116,6 +133,14 @@ export const normalizeProductPayload = (body = {}) => {
       size: body.videoInfo?.size?.trim() || '',
       duration: body.videoInfo?.duration?.trim() || '',
       format: body.videoInfo?.format?.trim() || '',
+    }
+
+    if (payload.masterVideoKey) {
+      payload.deliveryFiles = buildMasterVideoDeliveryFiles(
+        payload.masterVideoKey,
+        payload.masterVideoFilename,
+        getAvailableTiers(payload),
+      )
     }
   } else {
     payload.masterVideoKey = body.masterVideoKey?.trim() || ''

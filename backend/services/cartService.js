@@ -94,7 +94,8 @@ export const removeCartItem = async (sessionId, itemId) => {
     throw new AppError('Cart item not found', 404)
   }
 
-  item.deleteOne()
+  cart.items.pull(item._id)
+  cart.markModified('items')
   await cart.save()
   return fetchPopulatedCart(sessionId)
 }

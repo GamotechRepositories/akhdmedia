@@ -1,5 +1,10 @@
 import asyncHandler from '../utils/asyncHandler.js'
-import { uploadPrivateFile, uploadPublicFile } from '../services/storageService.js'
+import {
+  getPrivateDownloadUrl,
+  toAbsolutePrivateUrl,
+  uploadPrivateFile,
+  uploadPublicFile,
+} from '../services/storageService.js'
 
 const folderForType = (type) => {
   if (type === 'master-video') return 'delivery/master-videos'
@@ -27,16 +32,20 @@ export const uploadMedia = asyncHandler(async (req, res) => {
     return
   }
 
-  const type = req.body.type || ''
+  const type = req.body?.type || req.query?.type || ''
   const folder = folderForType(type)
 
   if (isPrivateUpload(type)) {
     const result = await uploadPrivateFile(req.file, folder)
+    const accessUrl = await getPrivateDownloadUrl(result.key, result.filename, {
+      inline: true,
+    })
     res.json({
       key: result.key,
       filename: result.filename,
       size: req.file.size,
       type,
+      url: toAbsolutePrivateUrl(accessUrl),
     })
     return
   }

@@ -44,6 +44,7 @@ export const formatOrderResponse = (order) => ({
   items: order.items,
   billingAddress: order.billingAddress,
   paymentMethod: order.paymentMethod,
+  paymentStatus: order.paymentStatus || '',
   totalAmount: order.totalAmount,
   status: order.status,
   createdAt: order.createdAt,

@@ -63,10 +63,7 @@ export const saveCheckoutProfile = async (sessionId, billingAddress) => {
   return profile.billingAddress
 }
 
-export const createOrderFromCart = async (
-  sessionId,
-  { billingAddress, paymentMethod = 'online' },
-) => {
+const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
   const normalizedAddress = validateBillingAddress(billingAddress)
   const cart = await fetchPopulatedCart(sessionId)
 
@@ -99,13 +96,26 @@ export const createOrderFromCart = async (
 
   const { total } = getCartTotals(cart.items)
 
+  return { normalizedAddress, orderItems, total }
+}
+
+export const createOrderFromCart = async (
+  sessionId,
+  { billingAddress, paymentMethod = 'online' },
+) => {
+  const { normalizedAddress, orderItems, total } = await buildOrderPayloadFromCart(
+    sessionId,
+    billingAddress,
+  )
+
   const order = await Order.create({
     sessionId,
     orderNumber: buildOrderNumber(),
     items: orderItems,
     billingAddress: normalizedAddress,
-    paymentMethod: paymentMethod === 'COD' ? 'COD' : 'online',
+    paymentMethod: 'COD',
     totalAmount: total,
+    paymentStatus: 'invoice',
     status: 'confirmed',
   })
 
@@ -115,8 +125,71 @@ export const createOrderFromCart = async (
   return order
 }
 
+export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress }) => {
+  const { normalizedAddress, orderItems, total } = await buildOrderPayloadFromCart(
+    sessionId,
+    billingAddress,
+  )
+
+  const order = await Order.create({
+    sessionId,
+    orderNumber: buildOrderNumber(),
+    items: orderItems,
+    billingAddress: normalizedAddress,
+    paymentMethod: 'online',
+    totalAmount: total,
+    paymentStatus: 'pending',
+    status: 'pending',
+  })
+
+  await saveCheckoutProfile(sessionId, normalizedAddress)
+
+  return order
+}
+
+export const confirmOnlineOrderPayment = async (
+  sessionId,
+  orderId,
+  { razorpayPaymentId, razorpaySignature, razorpayOrderId },
+) => {
+  const order = await getOrderById(sessionId, orderId)
+
+  if (order.paymentMethod !== 'online') {
+    throw new AppError('This order does not require online payment', 400)
+  }
+
+  if (order.paymentStatus === 'paid') {
+    return order
+  }
+
+  order.paymentStatus = 'paid'
+  order.status = 'confirmed'
+  order.razorpayPaymentId = razorpayPaymentId
+  order.razorpaySignature = razorpaySignature
+  if (razorpayOrderId) {
+    order.razorpayOrderId = razorpayOrderId
+  }
+
+  await order.save()
+  await clearCartItems(sessionId)
+
+  return order
+}
+
 export const getOrderById = async (sessionId, orderId) => {
   const order = await Order.findOne({ _id: orderId, sessionId })
+
+  if (!order) {
+    throw new AppError('Order not found', 404)
+  }
+
+  return order
+}
+
+export const getAllOrders = async () => Order.find().sort({ createdAt: -1 })
+
+export const getAdminOrderById = async (orderId) => {
+  const order = await Order.findById(orderId)
 
   if (!order) {
     throw new AppError('Order not found', 404)

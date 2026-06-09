@@ -39,6 +39,13 @@ export const checkoutAPI = {
   },
 }
 
+export const paymentAPI = {
+  verifyRazorpayPayment: async (payload) => {
+    const { data } = await api.post('/payments/razorpay/verify', payload)
+    return data
+  },
+}
+
 export const orderAPI = {
   createOrder: async (billingAddress, paymentMethod = 'online') => {
     const { data } = await api.post('/orders', { billingAddress, paymentMethod })
@@ -47,11 +54,6 @@ export const orderAPI = {
 
   getOrder: async (orderId) => {
     const { data } = await api.get(`/orders/${orderId}`)
-    return data
-  },
-
-  getOrderDownloads: async (orderId) => {
-    const { data } = await api.get(`/orders/${orderId}/downloads`)
     return data
   },
 }

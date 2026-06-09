@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { checkoutAPI, orderAPI } from '../services/commerceApi';
+import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
+import { openRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency } from '../utils/formatters';
 import { getCartItemImage, getCartItemPrice } from '../utils/cartHelpers';
 import { BRAND } from '../config/brand';
@@ -111,6 +112,95 @@ const Checkout = () => {
     return '';
   };
 
+  const completeOrderSuccess = async (orderId) => {
+    setIsProcessingOrder(false);
+    setLoading(false);
+    setShowSuccessModal(true);
+    await clearCart();
+
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      setTimeout(() => {
+        navigate(`/order-success?method=${paymentMethod}&orderId=${orderId}`);
+      }, 300);
+    }, 2000);
+  };
+
+  const placeCodOrder = async () => {
+    setIsProcessingOrder(true);
+    setProcessingStep(0);
+
+    setProcessingStep(1);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setProcessingStep(2);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setProcessingStep(3);
+
+    const response = await orderAPI.createOrder(billingDetails, 'COD');
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to create order');
+    }
+
+    setProcessingStep(4);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await completeOrderSuccess(response.data.order.id);
+  };
+
+  const placeOnlineOrder = async () => {
+    setIsProcessingOrder(true);
+    setProcessingStep(1);
+
+    const response = await orderAPI.createOrder(billingDetails, 'online');
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to start payment');
+    }
+
+    const { order, razorpay } = response.data;
+
+    if (!razorpay?.orderId || !razorpay?.keyId) {
+      throw new Error('Payment gateway is not available right now');
+    }
+
+    setIsProcessingOrder(false);
+    setProcessingStep(0);
+
+    await openRazorpayCheckout({
+      key: razorpay.keyId,
+      amount: razorpay.amount,
+      currency: razorpay.currency,
+      orderId: razorpay.orderId,
+      name: BRAND.name,
+      description: `Order ${order.orderNumber}`,
+      prefill: {
+        name: billingDetails.name,
+        email: billingDetails.email,
+        contact: billingDetails.phone,
+      },
+      onSuccess: async (paymentResponse) => {
+        setLoading(true);
+        const verifyResponse = await paymentAPI.verifyRazorpayPayment({
+          orderId: order.id,
+          razorpay_order_id: paymentResponse.razorpay_order_id,
+          razorpay_payment_id: paymentResponse.razorpay_payment_id,
+          razorpay_signature: paymentResponse.razorpay_signature,
+        });
+
+        if (!verifyResponse.success) {
+          throw new Error(verifyResponse.message || 'Payment verification failed');
+        }
+
+        await completeOrderSuccess(order.id);
+        return verifyResponse;
+      },
+      onDismiss: () => {
+        setLoading(false);
+        setIsPlacingOrder(false);
+      },
+    });
+  };
+
   const handlePayment = async () => {
     const validationError = getBillingValidationError();
     if (validationError) {
@@ -120,47 +210,24 @@ const Checkout = () => {
 
     setLoading(true);
     setIsPlacingOrder(true);
-    setIsProcessingOrder(true);
-    setProcessingStep(0);
 
     try {
-      setProcessingStep(1);
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setProcessingStep(2);
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setProcessingStep(3);
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setProcessingStep(4);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      const response = await orderAPI.createOrder(billingDetails, paymentMethod);
-
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to create order');
+      if (paymentMethod === 'COD') {
+        await placeCodOrder();
+      } else {
+        await placeOnlineOrder();
       }
-
-      const orderId = response.data.order.id;
-      setProcessingStep(5);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      setProcessingStep(6);
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
-      setIsProcessingOrder(false);
-      setLoading(false);
-      setShowSuccessModal(true);
-      await clearCart();
-
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        setTimeout(() => {
-          navigate(`/order-success?method=${paymentMethod}&orderId=${orderId}`);
-        }, 300);
-      }, 2000);
     } catch (err) {
       setIsPlacingOrder(false);
       setIsProcessingOrder(false);
       setLoading(false);
       setProcessingStep(0);
+
+      if (err.message === 'Payment cancelled') {
+        showAlert('Payment was cancelled. Your cart is still saved.', 'Payment Cancelled');
+        return;
+      }
+
       showAlert(err.message || 'Failed to place order. Please try again.', 'Order Failed');
     }
   };
@@ -207,7 +274,11 @@ const Checkout = () => {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h2>
-              <p className="text-gray-600 mb-6">Your license order has been confirmed. Redirecting...</p>
+              <p className="text-gray-600 mb-6">
+                Your order is confirmed. Download link will be sent to{' '}
+                <span className="font-semibold text-gray-900">{billingDetails.email}</span>. Please check
+                your email and download from there.
+              </p>
               <div className="flex justify-center">
                 <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
               </div>
@@ -229,18 +300,25 @@ const Checkout = () => {
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Placing Your Order</h3>
-                <p className="text-sm text-gray-600 mb-6">Please wait while we process your order...</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {paymentMethod === 'COD' ? 'Placing Your Order' : 'Preparing Payment'}
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  {paymentMethod === 'COD'
+                    ? 'Please wait while we process your order...'
+                    : 'Opening secure payment gateway...'}
+                </p>
 
                 <div className="space-y-3 text-left">
-                  {[
-                    'Validating order details',
-                    'Processing payment method',
-                    'Confirming license',
-                    'Creating order',
-                    'Sending download email',
-                    'Order confirmed',
-                  ].map((label, index) => {
+                  {(paymentMethod === 'COD'
+                    ? [
+                        'Validating order details',
+                        'Confirming license',
+                        'Creating order',
+                        'Order confirmed',
+                      ]
+                    : ['Validating order details', 'Creating secure payment', 'Opening Razorpay']
+                  ).map((label, index) => {
                     const step = index + 1;
                     const active = processingStep >= step;
                     const complete = processingStep > step;
@@ -311,7 +389,7 @@ const Checkout = () => {
                     placeholder="you@example.com"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Download links for your purchased resolution will be sent here.
+                    Download link for your purchased file will be sent to this email.
                   </p>
                 </div>
                 <div>
@@ -459,12 +537,18 @@ const Checkout = () => {
                   {loading || isProcessingOrder ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>{isProcessingOrder ? 'Placing Order...' : 'Processing...'}</span>
+                      <span>
+                        {isProcessingOrder
+                          ? paymentMethod === 'online'
+                            ? 'Opening Payment...'
+                            : 'Placing Order...'
+                          : 'Processing...'}
+                      </span>
                     </>
                   ) : (
                     <>
                       <IconPackage />
-                      <span>Place Order</span>
+                      <span>{paymentMethod === 'online' ? 'Pay Now' : 'Place Order'}</span>
                     </>
                   )}
                 </button>

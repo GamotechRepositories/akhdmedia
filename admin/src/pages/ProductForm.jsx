@@ -4,8 +4,6 @@ import {
   createProduct,
   fetchCategories,
   fetchProduct,
-  fetchTranscodeStatus,
-  retriggerTranscode,
   updateProduct,
 } from '../api/client'
 import FormStep from '../components/FormStep'
@@ -13,7 +11,6 @@ import MediaTypeSelector from '../components/MediaTypeSelector'
 import PricingModeSelector from '../components/PricingModeSelector'
 import ResolutionTierEditor from '../components/ResolutionTierEditor'
 import MediaUpload from '../components/MediaUpload'
-import TranscodeStatusPanel from '../components/TranscodeStatusPanel'
 import MasterQualitySelector from '../components/MasterQualitySelector'
 import VideoPreview from '../components/VideoPreview'
 import {
@@ -116,9 +113,8 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   deliveryFiles: buildEmptyDeliveryFiles(),
   masterVideoKey: '',
   masterVideoFilename: '',
+  masterVideoUrl: '',
   masterVideoTier: '',
-  transcodeStatus: 'idle',
-  transcodeError: '',
   isActive: true,
   videoInfo: {
     quality: '4K UHD (3840×2160)',
@@ -139,7 +135,6 @@ const ProductForm = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [retryingTranscode, setRetryingTranscode] = useState(false)
   const [showCreateSuccess, setShowCreateSuccess] = useState(false)
 
   useEffect(() => {
@@ -181,9 +176,8 @@ const ProductForm = () => {
             deliveryFiles: mergeDeliveryFiles(product),
             masterVideoKey: product.masterVideoKey || '',
             masterVideoFilename: product.masterVideoFilename || '',
+            masterVideoUrl: product.masterVideoUrl || '',
             masterVideoTier: product.masterVideoTier || '',
-            transcodeStatus: product.transcodeStatus || 'idle',
-            transcodeError: product.transcodeError || '',
             isActive: product.isActive ?? true,
             videoInfo: {
               quality: product.videoInfo?.quality || '',
@@ -203,35 +197,6 @@ const ProductForm = () => {
 
     loadData()
   }, [id, isEdit])
-
-  useEffect(() => {
-    if (!isEdit || !id) return undefined
-    if (!['pending', 'processing'].includes(form.transcodeStatus)) return undefined
-
-    const pollStatus = async () => {
-      try {
-        const response = await fetchTranscodeStatus(id)
-        const data = response.data.data
-        setForm((current) => ({
-          ...current,
-          transcodeStatus: data.transcodeStatus,
-          transcodeError: data.transcodeError || '',
-          masterVideoKey: data.masterVideoKey || current.masterVideoKey,
-          masterVideoFilename: data.masterVideoFilename || current.masterVideoFilename,
-          masterVideoTier: data.masterVideoTier || current.masterVideoTier,
-          deliveryFiles: data.deliveryFiles
-            ? { ...current.deliveryFiles, ...data.deliveryFiles }
-            : current.deliveryFiles,
-        }))
-      } catch {
-        // ignore polling errors
-      }
-    }
-
-    pollStatus()
-    const intervalId = window.setInterval(pollStatus, 3000)
-    return () => window.clearInterval(intervalId)
-  }, [form.transcodeStatus, id, isEdit])
 
   const isVideo = form.mediaType === MEDIA_TYPES.VIDEO
   const isUniformPricing = form.pricingMode === PRICING_MODES.UNIFORM
@@ -284,9 +249,6 @@ const ProductForm = () => {
         masterVideoTier,
         availableTiers: tiers,
         resolutionPricing: nextPricing,
-        transcodeStatus:
-          current.masterVideoKey && masterVideoTier ? 'pending' : current.transcodeStatus,
-        transcodeError: '',
       }
     })
   }
@@ -335,29 +297,8 @@ const ProductForm = () => {
       ...current,
       masterVideoKey: key,
       masterVideoFilename: meta.filename || '',
-      transcodeStatus: key ? 'pending' : 'idle',
-      transcodeError: '',
+      masterVideoUrl: meta.url || '',
     }))
-  }
-
-  const handleRetryTranscode = async () => {
-    if (!isEdit || !id) return
-
-    setRetryingTranscode(true)
-    setError('')
-
-    try {
-      await retriggerTranscode(id)
-      setForm((current) => ({
-        ...current,
-        transcodeStatus: 'pending',
-        transcodeError: '',
-      }))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setRetryingTranscode(false)
-    }
   }
 
   const updateImage = (index, value) => {
@@ -610,7 +551,7 @@ const ProductForm = () => {
           title="Master delivery file"
           hint={
             isVideo
-              ? 'Select master quality, then upload the original video. Lower tiers are generated automatically after save.'
+              ? 'Select master quality, then upload the original video. Customers receive this same master file for every quality tier they purchase.'
               : 'Select master quality, then upload the original image file.'
           }
           tone="amber"
@@ -632,9 +573,11 @@ const ProductForm = () => {
               uploadType={isVideo ? 'master-video' : 'master-image'}
               value={form.masterVideoKey}
               filename={form.masterVideoFilename}
+              accessUrl={form.masterVideoUrl}
               onChange={updateMasterVideo}
               valueKind="key"
-              placeholder="Or paste file key / URL"
+              showAccessUrl={Boolean(form.masterVideoUrl)}
+              placeholder="Storage key (auto-filled after upload)"
               disabled={!form.masterVideoTier}
             />
 
@@ -644,15 +587,10 @@ const ProductForm = () => {
               </p>
             )}
 
-            {isVideo && (
-              <TranscodeStatusPanel
-                status={form.transcodeStatus}
-                error={form.transcodeError}
-                selectedTiers={derivedAvailableTiers}
-                deliveryFiles={form.deliveryFiles}
-                onRetry={isEdit ? handleRetryTranscode : undefined}
-                retrying={retryingTranscode}
-              />
+            {isVideo && form.masterVideoKey && (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                Master file uploaded. All purchased quality tiers will deliver this same file.
+              </p>
             )}
           </div>
         </FormStep>

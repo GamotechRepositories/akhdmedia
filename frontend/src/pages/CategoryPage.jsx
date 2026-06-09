@@ -55,7 +55,7 @@ const CategoryPage = () => {
     }
 
     return {
-      title: 'All Stock Videos',
+      title: 'All Videos',
       breadcrumbs: [
         { label: 'Home', to: '/' },
         { label: 'Videos', to: null },

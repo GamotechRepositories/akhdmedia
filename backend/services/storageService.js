@@ -169,12 +169,19 @@ export const downloadPrivateFileToPath = async (key, destPath) => {
   return destPath
 }
 
-export const getPrivateDownloadUrl = async (key, filename = '') => {
+export const toAbsolutePrivateUrl = (url = '') => {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  return `${getApiBase()}${url.startsWith('/') ? url : `/${url}`}`
+}
+
+export const getPrivateDownloadUrl = async (key, filename = '', options = {}) => {
   if (!key) return null
 
   if (/^https?:\/\//i.test(key)) return key
 
   const downloadName = filename || getFilenameFromKey(key) || 'download'
+  const disposition = options.inline ? 'inline' : 'attachment'
 
   if (isAwsEnabled()) {
     const s3Key = key.startsWith(`${AWS_S3_PRIVATE_PREFIX}/`)
@@ -183,7 +190,7 @@ export const getPrivateDownloadUrl = async (key, filename = '') => {
     const command = new GetObjectCommand({
       Bucket: getAwsS3Bucket(),
       Key: s3Key,
-      ResponseContentDisposition: `attachment; filename="${downloadName}"`,
+      ResponseContentDisposition: `${disposition}; filename="${downloadName}"`,
     })
     return getSignedUrl(getS3(), command, { expiresIn: SIGNED_URL_EXPIRY_SECONDS })
   }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { handleImageError } from '../utils/imageFallback';
@@ -33,6 +34,19 @@ const IconArrowLeft = (props) => (
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, getCartTotal, loading } = useCart();
   const navigate = useNavigate();
+  const [removingId, setRemovingId] = useState(null);
+
+  const handleRemove = async (itemId) => {
+    if (removingId) return;
+    setRemovingId(itemId);
+    try {
+      await removeFromCart(itemId);
+    } catch {
+      window.alert('Could not remove item. Please try again.');
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   const cartTotal = getCartTotal();
   const freeShippingThreshold = 1000;
@@ -162,8 +176,9 @@ const Cart = () => {
                             <p className="mt-1 text-sm font-semibold text-gray-900">{formatCurrency(productPrice)}</p>
                             <button
                               type="button"
-                              onClick={() => removeFromCart(itemId)}
-                              className="sm:hidden mt-2 text-xs text-red-600 font-medium flex items-center hover:text-red-700"
+                              onClick={() => handleRemove(itemId)}
+                              disabled={removingId === itemId}
+                              className="sm:hidden mt-2 text-xs text-red-600 font-semibold flex items-center hover:text-red-700 disabled:opacity-50"
                             >
                               <IconTrash className="w-3 h-3 mr-1" /> Remove
                             </button>
@@ -199,8 +214,9 @@ const Cart = () => {
                             </p>
                             <button
                               type="button"
-                              onClick={() => removeFromCart(itemId)}
-                              className="hidden sm:flex items-center justify-end mt-2 text-xs text-gray-500 hover:text-red-600 transition-colors"
+                              onClick={() => handleRemove(itemId)}
+                              disabled={removingId === itemId}
+                              className="hidden sm:flex items-center justify-end mt-2 text-xs text-red-600 font-semibold hover:text-red-700 transition-colors disabled:opacity-50"
                             >
                               <IconTrash className="w-3 h-3 mr-1" /> Remove
                             </button>

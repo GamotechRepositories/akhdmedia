@@ -36,6 +36,14 @@ const orderSchema = new mongoose.Schema(
       default: 'online',
     },
     totalAmount: { type: Number, required: true, min: 0 },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed', 'invoice'],
+      default: 'pending',
+    },
+    razorpayOrderId: { type: String, default: '' },
+    razorpayPaymentId: { type: String, default: '' },
+    razorpaySignature: { type: String, default: '' },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'completed'],

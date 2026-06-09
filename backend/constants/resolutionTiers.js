@@ -79,12 +79,3 @@ export const getTiersAboveMaster = (masterTier, tiers = []) => {
 
 export const getDeliverableCustomerTiers = (masterTier, tiers = CUSTOMER_TIER_ORDER) =>
   getCustomerTiers(getTiersUpToMaster(masterTier, tiers))
-
-/** @deprecated use MIN_CUSTOMER_TIER */
-export const MIN_TRANSCODE_TIER = MIN_CUSTOMER_TIER
-
-/** @deprecated use getCustomerTiers */
-export const getTiersForTranscode = getCustomerTiers
-
-/** @deprecated no longer used — SD/HD are not sold */
-export const getTiersBelowMinTranscode = () => []
