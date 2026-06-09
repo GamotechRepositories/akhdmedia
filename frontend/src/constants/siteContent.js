@@ -1,0 +1,24 @@
+export const TICKER_ITEMS = [
+  '4K UHD & 2K DELIVERABLES ON EVERY CLIP',
+  'WATERMARKED PREVIEW — FULL RES AFTER CHECKOUT',
+  'COMMERCIAL LICENSE INCLUDED',
+  'NEW FOOTAGE UPLOADED EVERY WEEK',
+  'PRORES & H.265 MASTER FILES AVAILABLE',
+];
+
+export const MOBILE_HERO = {
+  link: '/videos',
+  badge: 'Stock Library',
+  headline: '4K Clips from ₹299',
+  subheadline: 'Preview free. Download instantly.',
+  image:
+    'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&h=600&auto=format&fit=crop&q=80',
+};
+
+export const HOME_SECTIONS = {
+  freshDrops: {
+    title: 'Latest Uploads',
+    subtitle: 'Newly graded footage from our contributor network',
+    viewAllLink: '/videos',
+  },
+};
