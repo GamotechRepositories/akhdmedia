@@ -79,7 +79,7 @@ const getPublicBaseUrl = () => {
 }
 
 const getApiBase = () =>
-  (process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`).replace(
+  (process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 5001}`).replace(
     /\/$/,
     '',
   )
