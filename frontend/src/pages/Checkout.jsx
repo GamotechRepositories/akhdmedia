@@ -21,6 +21,26 @@ const emptyBilling = {
   purchaseReasons: [],
 };
 
+const isMobileDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+const PAYMENT_OPTIONS = [
+  {
+    id: 'upi',
+    label: 'UPI',
+    hint: 'On phone: GPay, PhonePe, Paytm open directly. On laptop: scan QR with your phone.',
+  },
+  {
+    id: 'card',
+    label: 'Credit / Debit Card',
+    hint: 'Visa, Mastercard, RuPay',
+  },
+  {
+    id: 'netbanking',
+    label: 'Net Banking',
+    hint: 'HDFC, SBI, ICICI & more',
+  },
+];
+
 const IconCheck = ({ size = 14, className = '' }) => (
   <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24" className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -49,7 +69,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [alertPopup, setAlertPopup] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('online');
+  const [onlinePaymentMethod, setOnlinePaymentMethod] = useState('upi');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
@@ -121,30 +141,9 @@ const Checkout = () => {
     setTimeout(() => {
       setShowSuccessModal(false);
       setTimeout(() => {
-        navigate(`/order-success?method=${paymentMethod}&orderId=${orderId}`);
+        navigate(`/order-success?method=online&orderId=${orderId}`);
       }, 300);
     }, 2000);
-  };
-
-  const placeCodOrder = async () => {
-    setIsProcessingOrder(true);
-    setProcessingStep(0);
-
-    setProcessingStep(1);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setProcessingStep(2);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setProcessingStep(3);
-
-    const response = await orderAPI.createOrder(billingDetails, 'COD');
-
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to create order');
-    }
-
-    setProcessingStep(4);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await completeOrderSuccess(response.data.order.id);
   };
 
   const placeOnlineOrder = async () => {
@@ -173,6 +172,7 @@ const Checkout = () => {
       orderId: razorpay.orderId,
       name: BRAND.name,
       description: `Order ${order.orderNumber}`,
+      preferredMethod: onlinePaymentMethod,
       prefill: {
         name: billingDetails.name,
         email: billingDetails.email,
@@ -212,11 +212,7 @@ const Checkout = () => {
     setIsPlacingOrder(true);
 
     try {
-      if (paymentMethod === 'COD') {
-        await placeCodOrder();
-      } else {
-        await placeOnlineOrder();
-      }
+      await placeOnlineOrder();
     } catch (err) {
       setIsPlacingOrder(false);
       setIsProcessingOrder(false);
@@ -300,25 +296,11 @@ const Checkout = () => {
                     </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {paymentMethod === 'COD' ? 'Placing Your Order' : 'Preparing Payment'}
-                </h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  {paymentMethod === 'COD'
-                    ? 'Please wait while we process your order...'
-                    : 'Opening secure payment gateway...'}
-                </p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Preparing Payment</h3>
+                <p className="text-sm text-gray-600 mb-6">Opening secure payment gateway...</p>
 
                 <div className="space-y-3 text-left">
-                  {(paymentMethod === 'COD'
-                    ? [
-                        'Validating order details',
-                        'Confirming license',
-                        'Creating order',
-                        'Order confirmed',
-                      ]
-                    : ['Validating order details', 'Creating secure payment', 'Opening Razorpay']
-                  ).map((label, index) => {
+                  {['Validating order details', 'Creating secure payment', 'Opening Razorpay'].map((label, index) => {
                     const step = index + 1;
                     const active = processingStep >= step;
                     const complete = processingStep > step;
@@ -483,48 +465,39 @@ const Checkout = () => {
 
               <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Method</h3>
+                <p className="mb-3 text-xs text-gray-500">
+                  Secure payment via Razorpay — amount goes to our merchant account.
+                </p>
                 <div className="space-y-2.5">
-                  <label
-                    className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
-                      paymentMethod === 'online'
-                        ? 'border-gray-900 bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="online"
-                      checked={paymentMethod === 'online'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">Online Payment</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Cards, UPI, Wallets</div>
-                    </div>
-                  </label>
-                  <label
-                    className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-all ${
-                      paymentMethod === 'COD'
-                        ? 'border-gray-900 bg-gray-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="COD"
-                      checked={paymentMethod === 'COD'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-4 h-4 text-gray-900 focus:ring-gray-900 mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 break-words">Invoice / Net 30</div>
-                      <div className="text-xs text-gray-500 mt-0.5">For enterprise licensing</div>
-                    </div>
-                  </label>
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <label
+                      key={option.id}
+                      className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-all ${
+                        onlinePaymentMethod === option.id
+                          ? 'border-gray-900 bg-gray-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="onlinePaymentMethod"
+                        value={option.id}
+                        checked={onlinePaymentMethod === option.id}
+                        onChange={(e) => setOnlinePaymentMethod(e.target.value)}
+                        className="mt-0.5 h-4 w-4 text-gray-900 focus:ring-gray-900"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900">{option.label}</div>
+                        <div className="mt-0.5 text-xs text-gray-500">{option.hint}</div>
+                      </div>
+                    </label>
+                  ))}
                 </div>
+                {onlinePaymentMethod === 'upi' && !isMobileDevice() && (
+                  <p className="mt-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                    Laptop/desktop वर UPI साठी QR code दिसेल — phone वरून scan करा. Phone browser वर GPay / PhonePe / Paytm app direct उघडेल.
+                  </p>
+                )}
               </div>
 
               <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-white">
@@ -537,18 +510,18 @@ const Checkout = () => {
                   {loading || isProcessingOrder ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>
-                        {isProcessingOrder
-                          ? paymentMethod === 'online'
-                            ? 'Opening Payment...'
-                            : 'Placing Order...'
-                          : 'Processing...'}
-                      </span>
+                      <span>{isProcessingOrder ? 'Opening Payment...' : 'Processing...'}</span>
                     </>
                   ) : (
                     <>
                       <IconPackage />
-                      <span>{paymentMethod === 'online' ? 'Pay Now' : 'Place Order'}</span>
+                      <span>
+                        {onlinePaymentMethod === 'upi'
+                          ? 'Pay with UPI'
+                          : onlinePaymentMethod === 'netbanking'
+                            ? 'Pay with Net Banking'
+                            : 'Pay with Card'}
+                      </span>
                     </>
                   )}
                 </button>

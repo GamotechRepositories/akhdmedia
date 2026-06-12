@@ -1,7 +1,6 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
 import {
-  createOrderFromCart,
   createPendingOnlineOrderFromCart,
   getAdminOrderById,
   getAllOrders,
@@ -41,21 +40,10 @@ export const updateProfile = asyncHandler(async (req, res) => {
 })
 
 export const createOrder = asyncHandler(async (req, res) => {
-  const { billingAddress, paymentMethod } = req.body
+  const { billingAddress } = req.body
 
-  if (paymentMethod === 'COD') {
-    const order = await createOrderFromCart(req.sessionId, {
-      billingAddress,
-      paymentMethod: 'COD',
-    })
-
-    return res.status(201).json({
-      success: true,
-      message: 'Order placed successfully',
-      data: {
-        order: formatOrderResponse(order),
-      },
-    })
+  if (req.body.paymentMethod === 'COD') {
+    throw new AppError('COD payment is not available', 400)
   }
 
   const order = await createPendingOnlineOrderFromCart(req.sessionId, { billingAddress })

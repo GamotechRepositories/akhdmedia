@@ -71,7 +71,7 @@ const Login = () => {
                 required
                 autoComplete="email"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-                placeholder="admin@akhmidea.com"
+                placeholder="admin@akhdmedia.com"
               />
             </div>
 

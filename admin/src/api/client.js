@@ -94,6 +94,10 @@ export const fetchOrders = () => api.get('/admin/orders')
 
 export const fetchOrder = (id) => api.get(`/admin/orders/${id}`)
 
+export const fetchTransactions = () => api.get('/admin/transactions')
+
+export const fetchTransaction = (id) => api.get(`/admin/transactions/${id}`)
+
 export const reseedCatalog = () => api.post('/seed')
 
 export default api

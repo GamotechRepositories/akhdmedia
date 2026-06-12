@@ -12,6 +12,35 @@ export const loadRazorpayScript = () =>
     document.body.appendChild(script)
   })
 
+const isMobileDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+
+const METHOD_PRESETS = {
+  upi: {
+    upi: true,
+    card: false,
+    netbanking: false,
+    wallet: false,
+    paylater: false,
+    emi: false,
+  },
+  card: {
+    upi: false,
+    card: true,
+    netbanking: false,
+    wallet: false,
+    paylater: false,
+    emi: false,
+  },
+  netbanking: {
+    upi: false,
+    card: false,
+    netbanking: true,
+    wallet: false,
+    paylater: false,
+    emi: false,
+  },
+}
+
 export const openRazorpayCheckout = async ({
   key,
   amount,
@@ -20,6 +49,7 @@ export const openRazorpayCheckout = async ({
   name,
   description,
   prefill,
+  preferredMethod = 'upi',
   onSuccess,
   onDismiss,
 }) => {
@@ -38,6 +68,8 @@ export const openRazorpayCheckout = async ({
       order_id: orderId,
       prefill,
       theme: { color: '#111827' },
+      method: METHOD_PRESETS[preferredMethod] || METHOD_PRESETS.upi,
+      ...(isMobileDevice() && preferredMethod === 'upi' ? { webview_intent: true } : {}),
       handler: async (response) => {
         try {
           const result = await onSuccess(response)

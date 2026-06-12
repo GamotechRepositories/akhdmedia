@@ -1,4 +1,4 @@
 export const BRAND = {
-  name: 'AKHMEDIA',
+  name: 'AKHDMEDIA',
   logoTagline: 'Admin Console',
 };

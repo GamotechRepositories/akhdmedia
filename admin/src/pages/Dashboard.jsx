@@ -50,7 +50,7 @@ const Dashboard = () => {
       <PageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Manage categories and products for the AKHMEDIA storefront."
+        description="Manage categories and products for the AKHDMEDIA storefront."
       />
 
       {message && (

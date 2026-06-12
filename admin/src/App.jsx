@@ -8,6 +8,8 @@ import Products from './pages/Products'
 import ProductForm from './pages/ProductForm'
 import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
+import Transactions from './pages/Transactions'
+import TransactionDetail from './pages/TransactionDetail'
 import Login from './pages/Login'
 
 const App = () => (
@@ -24,6 +26,8 @@ const App = () => (
         <Route path="products/:id/edit" element={<ProductForm />} />
         <Route path="orders" element={<Orders />} />
         <Route path="orders/:id" element={<OrderDetail />} />
+        <Route path="transactions" element={<Transactions />} />
+        <Route path="transactions/:id" element={<TransactionDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Route>

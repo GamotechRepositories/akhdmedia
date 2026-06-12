@@ -49,8 +49,7 @@ export const verifyRazorpaySignature = ({ razorpayOrderId, razorpayPaymentId, ra
 }
 
 export const canAccessOrderDownloads = (order) => {
-  if (order.paymentMethod === 'COD') return true
-  if (order.paymentStatus === 'paid') return true
+  if (order.paymentStatus === 'paid' || order.paymentStatus === 'invoice') return true
   if (!order.paymentStatus && order.status === 'confirmed') return true
   return false
 }

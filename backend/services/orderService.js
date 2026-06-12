@@ -99,32 +99,6 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
   return { normalizedAddress, orderItems, total }
 }
 
-export const createOrderFromCart = async (
-  sessionId,
-  { billingAddress, paymentMethod = 'online' },
-) => {
-  const { normalizedAddress, orderItems, total } = await buildOrderPayloadFromCart(
-    sessionId,
-    billingAddress,
-  )
-
-  const order = await Order.create({
-    sessionId,
-    orderNumber: buildOrderNumber(),
-    items: orderItems,
-    billingAddress: normalizedAddress,
-    paymentMethod: 'COD',
-    totalAmount: total,
-    paymentStatus: 'invoice',
-    status: 'confirmed',
-  })
-
-  await saveCheckoutProfile(sessionId, normalizedAddress)
-  await clearCartItems(sessionId)
-
-  return order
-}
-
 export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress }) => {
   const { normalizedAddress, orderItems, total } = await buildOrderPayloadFromCart(
     sessionId,

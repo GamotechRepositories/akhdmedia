@@ -15,7 +15,7 @@ const OrderSuccess = () => {
   const orderTotal = order?.totalAmount || 0;
   const customerEmail = order?.billingAddress?.email || '';
 
-  const paymentLabel = paymentMethod === 'COD' ? 'Invoice / Net 30' : 'Online Payment';
+  const paymentLabel = 'Online Payment';
 
   const paymentPending =
     order?.paymentMethod === 'online' &&

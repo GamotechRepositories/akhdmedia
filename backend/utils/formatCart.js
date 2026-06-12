@@ -47,6 +47,8 @@ export const formatOrderResponse = (order) => ({
   paymentStatus: order.paymentStatus || '',
   totalAmount: order.totalAmount,
   status: order.status,
+  razorpayOrderId: order.razorpayOrderId || '',
+  razorpayPaymentId: order.razorpayPaymentId || '',
   createdAt: order.createdAt,
   updatedAt: order.updatedAt,
 })

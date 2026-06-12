@@ -119,7 +119,25 @@ const OrderDetail = () => {
             <div>
               <dt className="text-slate-500">Payment</dt>
               <dd className="font-medium text-slate-900">
-                {order.paymentMethod === 'COD' ? 'Invoice / Net 30' : 'Online Payment'}
+                Online Payment
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Payment status</dt>
+              <dd className="font-medium capitalize text-slate-900">
+                {order.paymentStatus || '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Razorpay order ID</dt>
+              <dd className="break-all font-mono text-xs text-slate-900">
+                {order.razorpayOrderId || '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Razorpay payment ID</dt>
+              <dd className="break-all font-mono text-xs text-slate-900">
+                {order.razorpayPaymentId || '—'}
               </dd>
             </div>
             <div>

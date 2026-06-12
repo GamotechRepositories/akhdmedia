@@ -100,7 +100,7 @@ export const syncAdminFromEnv = async () => {
     {
       email,
       password: hashedPassword,
-      name: 'AKHMEDIA',
+      name: 'AKHDMEDIA',
     },
     { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   )

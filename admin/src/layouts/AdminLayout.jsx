@@ -6,6 +6,7 @@ import {
   IconLogo,
   IconOrders,
   IconProducts,
+  IconTransactions,
 } from '../components/icons/AdminIcons'
 import { useAuth } from '../context/AuthContext'
 import { BRAND } from '../config/brand'
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/categories', label: 'Categories', icon: IconCategories, description: 'Navbar & subcategories' },
   { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
   { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
+  { to: '/transactions', label: 'Transactions', icon: IconTransactions, description: 'Payments & Razorpay' },
 ]
 
 const pageTitles = {
@@ -24,15 +26,21 @@ const pageTitles = {
   '/products': 'Products',
   '/products/new': 'Add Product',
   '/orders': 'Orders',
+  '/transactions': 'Transactions',
+}
+
+const getPageTitle = (pathname, pageTitles) => {
+  if (pageTitles[pathname]) return pageTitles[pathname]
+  if (pathname.startsWith('/transactions/')) return 'Transaction Details'
+  if (pathname.includes('/edit')) return 'Edit'
+  return 'Admin'
 }
 
 const AdminLayout = () => {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { admin, logout } = useAuth()
-  const pageTitle =
-    pageTitles[pathname] ||
-    (pathname.includes('/edit') ? 'Edit' : 'Admin')
+  const pageTitle = getPageTitle(pathname, pageTitles)
 
   const handleLogout = async () => {
     await logout()
@@ -107,7 +115,7 @@ const AdminLayout = () => {
               Signed in as
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-white">
-              {admin?.name || 'AKHMEDIA'}
+              {admin?.name || 'AKHDMEDIA'}
             </p>
             <p className="truncate text-xs text-slate-400">{admin?.email}</p>
           </div>
