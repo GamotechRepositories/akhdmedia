@@ -1,15 +1,26 @@
 const categoryPath = (slug) => `/videos/${slug}`;
 
-export const mapStoryCollections = (categories = []) =>
+export const mapStoryCollections = (categories = [], products = []) =>
   categories
     .filter((category) => category.coverImage)
-    .map((category) => ({
-      id: category.slug,
-      hashtag: category.breadcrumb,
-      label: category.label,
-      image: category.coverImage,
-      link: categoryPath(category.slug),
-    }));
+    .map((category) => {
+      const categoryProducts = products.filter(
+        (product) => product.categorySlug === category.slug,
+      );
+      const prices = categoryProducts
+        .map((product) => Number(product.price))
+        .filter((price) => Number.isFinite(price) && price > 0);
+
+      return {
+        id: category.slug,
+        hashtag: category.breadcrumb,
+        label: category.label,
+        image: category.coverImage,
+        link: categoryPath(category.slug),
+        clipCount: categoryProducts.length,
+        minPrice: prices.length ? Math.min(...prices) : null,
+      };
+    });
 
 export const mapCategoryPanels = (categories = []) =>
   categories

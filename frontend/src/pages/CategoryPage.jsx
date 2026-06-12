@@ -22,7 +22,6 @@ const CategoryPage = () => {
   const {
     products,
     catalogCategories,
-    subCategoriesMap,
     getSubCategoryLabel,
     loading: catalogLoading,
   } = useCatalog();
@@ -67,8 +66,6 @@ const CategoryPage = () => {
     () => filterByCategory(products, category, subCategory),
     [products, category, subCategory]
   );
-
-  const subCategoryOptions = category ? subCategoriesMap[category] : null;
 
   const filteredProducts = useCatalogFilters(baseProducts, filters);
   const { brands, resolutions, fps } = useMemo(
@@ -143,39 +140,6 @@ const CategoryPage = () => {
             </button>
           </div>
         </div>
-
-        {subCategoryOptions && (
-          <div className="mb-6">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">
-              Subcategories
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                to={`/videos/${category}`}
-                className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
-                  !subCategory
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-300 text-gray-600 hover:border-gray-900 hover:text-gray-900'
-                }`}
-              >
-                All {catalogCategories[category]?.breadcrumb}
-              </Link>
-              {Object.entries(subCategoryOptions).map(([slug, label]) => (
-                <Link
-                  key={slug}
-                  to={`/videos/${category}/${slug}`}
-                  className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
-                    subCategory === slug
-                      ? 'border-gray-900 bg-gray-900 text-white'
-                      : 'border-gray-300 text-gray-600 hover:border-gray-900 hover:text-gray-900'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="relative flex gap-6">
           <div

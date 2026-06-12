@@ -125,6 +125,40 @@ const FilterSidebar = ({
       </div>
 
       <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
+        {resolutions.length > 0 && (
+          <FilterSection
+            title="Resolution"
+            isOpen={openSections.resolution}
+            onToggle={() => toggle('resolution')}
+            activeCount={filters.resolutions?.length || 0}
+            icon={({ active }) => (
+              <svg className={`h-4 w-4 ${active ? 'text-gray-900' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5z" />
+              </svg>
+            )}
+          >
+            <div className="flex flex-wrap gap-2.5">
+              {resolutions.map((res) => {
+                const active = (filters.resolutions || []).includes(res);
+                return (
+                  <button
+                    key={res}
+                    type="button"
+                    onClick={() => toggleListItem('resolutions', res)}
+                    className={`min-w-[44px] rounded-lg border-2 px-4 py-2.5 text-sm font-bold transition ${
+                      active
+                        ? 'border-gray-900 bg-gray-900 text-white shadow-lg'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    {res}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+        )}
+
         <FilterSection
           title="Sort By"
           isOpen={openSections.sort}
@@ -211,40 +245,6 @@ const FilterSidebar = ({
                   onChange={() => toggleListItem('brands', brand)}
                 />
               ))}
-            </div>
-          </FilterSection>
-        )}
-
-        {resolutions.length > 0 && (
-          <FilterSection
-            title="Resolution"
-            isOpen={openSections.resolution}
-            onToggle={() => toggle('resolution')}
-            activeCount={filters.resolutions?.length || 0}
-            icon={({ active }) => (
-              <svg className={`h-4 w-4 ${active ? 'text-gray-900' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5z" />
-              </svg>
-            )}
-          >
-            <div className="flex flex-wrap gap-2.5">
-              {resolutions.map((res) => {
-                const active = (filters.resolutions || []).includes(res);
-                return (
-                  <button
-                    key={res}
-                    type="button"
-                    onClick={() => toggleListItem('resolutions', res)}
-                    className={`min-w-[44px] rounded-lg border-2 px-4 py-2.5 text-sm font-bold transition ${
-                      active
-                        ? 'border-gray-900 bg-gray-900 text-white shadow-lg'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
-                    }`}
-                  >
-                    {res}
-                  </button>
-                );
-              })}
             </div>
           </FilterSection>
         )}

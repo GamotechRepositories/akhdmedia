@@ -8,6 +8,7 @@ import { getHighestQualityLabel } from '../constants/imageSizes';
 import { formatCurrency } from '../utils/formatters';
 import OptimizedImage from './ui/OptimizedImage';
 import { IconPlay } from './icons/Icons';
+import { preventMediaContextMenu } from '../utils/mediaProtection';
 
 const THUMB_WIDTH = { compact: 400, default: 520 };
 const THUMB_HEIGHT = { compact: 500, default: 650 };
@@ -24,7 +25,10 @@ const ProductCard = ({ product, compact = false }) => {
   return (
     <article className="group relative w-full min-w-0 translate-z-0 transform-gpu select-none [content-visibility:auto] [contain-intrinsic-size:auto_320px]">
       <Link to={`/product/${product.id}`} className="block">
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm">
+        <div
+          className="protected-media-shell relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm"
+          onContextMenu={preventMediaContextMenu}
+        >
           <span className={`absolute left-2 top-2 z-20 rounded-md bg-black/80 font-bold uppercase tracking-wide text-white ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'left-3 top-3 px-2 py-1 text-[10px]'}`}>
             {getProductBadgeLabel(product)}
           </span>

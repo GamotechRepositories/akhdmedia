@@ -4,8 +4,9 @@ import { useCart } from '../context/CartContext';
 import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency } from '../utils/formatters';
-import { getCartItemImage, getCartItemPrice } from '../utils/cartHelpers';
 import { BRAND } from '../config/brand';
+
+const STEPS = ['billing', 'summary'];
 
 const PURCHASE_REASONS = [
   { id: 'personal', label: 'Personal use' },
@@ -24,22 +25,13 @@ const emptyBilling = {
 const isMobileDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 const PAYMENT_OPTIONS = [
-  {
-    id: 'upi',
-    label: 'UPI',
-    hint: 'On phone: GPay, PhonePe, Paytm open directly. On laptop: scan QR with your phone.',
-  },
-  {
-    id: 'card',
-    label: 'Credit / Debit Card',
-    hint: 'Visa, Mastercard, RuPay',
-  },
-  {
-    id: 'netbanking',
-    label: 'Net Banking',
-    hint: 'HDFC, SBI, ICICI & more',
-  },
+  { id: 'upi', label: 'UPI', hint: 'GPay, PhonePe, Paytm' },
+  { id: 'card', label: 'Card', hint: 'Visa, Mastercard, RuPay' },
+  { id: 'netbanking', label: 'Net Banking', hint: 'HDFC, SBI, ICICI' },
 ];
+
+const inputClass =
+  'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
 
 const IconCheck = ({ size = 14, className = '' }) => (
   <svg width={size} height={size} fill="none" stroke="currentColor" viewBox="0 0 24 24" className={className}>
@@ -47,14 +39,8 @@ const IconCheck = ({ size = 14, className = '' }) => (
   </svg>
 );
 
-const IconPackage = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-  </svg>
-);
-
 const IconAlert = () => (
-  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="h-8 w-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -64,16 +50,52 @@ const IconAlert = () => (
   </svg>
 );
 
+const StepIndicator = ({ step }) => (
+  <div className="mb-6 flex items-center justify-center gap-3">
+    {[
+      { id: 'billing', label: 'Billing' },
+      { id: 'summary', label: 'Payment' },
+    ].map((item, index) => {
+      const stepIndex = STEPS.indexOf(step);
+      const itemIndex = STEPS.indexOf(item.id);
+      const isActive = itemIndex === stepIndex;
+      const isDone = itemIndex < stepIndex;
+
+      return (
+        <div key={item.id} className="flex items-center gap-3">
+          {index > 0 && <div className={`h-px w-8 sm:w-12 ${isDone ? 'bg-gray-900' : 'bg-gray-200'}`} />}
+          <div className="flex items-center gap-2">
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                isDone
+                  ? 'bg-gray-900 text-white'
+                  : isActive
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-400'
+              }`}
+            >
+              {isDone ? <IconCheck size={14} className="text-white" /> : index + 1}
+            </span>
+            <span className={`text-sm font-medium ${isActive || isDone ? 'text-gray-900' : 'text-gray-400'}`}>
+              {item.label}
+            </span>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
 const Checkout = () => {
   const { cart, getCartTotal, clearCart, loading: cartLoading } = useCart();
   const navigate = useNavigate();
+  const [step, setStep] = useState('billing');
   const [loading, setLoading] = useState(false);
   const [alertPopup, setAlertPopup] = useState(null);
   const [onlinePaymentMethod, setOnlinePaymentMethod] = useState('upi');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
-  const [processingStep, setProcessingStep] = useState(0);
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
 
   useEffect(() => {
@@ -132,6 +154,16 @@ const Checkout = () => {
     return '';
   };
 
+  const handleContinueToSummary = () => {
+    const validationError = getBillingValidationError();
+    if (validationError) {
+      showAlert(validationError);
+      return;
+    }
+    setStep('summary');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const completeOrderSuccess = async (orderId) => {
     setIsProcessingOrder(false);
     setLoading(false);
@@ -148,7 +180,6 @@ const Checkout = () => {
 
   const placeOnlineOrder = async () => {
     setIsProcessingOrder(true);
-    setProcessingStep(1);
 
     const response = await orderAPI.createOrder(billingDetails, 'online');
 
@@ -163,7 +194,6 @@ const Checkout = () => {
     }
 
     setIsProcessingOrder(false);
-    setProcessingStep(0);
 
     await openRazorpayCheckout({
       key: razorpay.keyId,
@@ -202,12 +232,6 @@ const Checkout = () => {
   };
 
   const handlePayment = async () => {
-    const validationError = getBillingValidationError();
-    if (validationError) {
-      showAlert(validationError);
-      return;
-    }
-
     setLoading(true);
     setIsPlacingOrder(true);
 
@@ -217,7 +241,6 @@ const Checkout = () => {
       setIsPlacingOrder(false);
       setIsProcessingOrder(false);
       setLoading(false);
-      setProcessingStep(0);
 
       if (err.message === 'Payment cancelled') {
         showAlert('Payment was cancelled. Your cart is still saved.', 'Payment Cancelled');
@@ -234,117 +257,42 @@ const Checkout = () => {
 
   return (
     <>
-    <div
-      className="min-h-screen bg-gray-50 transition-opacity duration-300 overflow-x-hidden"
-      style={{
-        opacity: showSuccessModal ? 0.3 : 1,
-        pointerEvents: showSuccessModal ? 'none' : 'auto',
-        animation: 'fadeInPage 0.4s ease-out',
-      }}
-    >
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm overflow-x-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold text-gray-900 truncate">Checkout</h1>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">
-              {cart.length} {cart.length === 1 ? 'item' : 'items'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/cart')}
-            className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 font-medium flex-shrink-0"
-          >
-            ← Back to Cart
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 overflow-x-hidden">
-        {showSuccessModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
-              <div className="flex justify-center mb-4">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                  <IconCheck size={48} />
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h2>
-              <p className="text-gray-600 mb-6">
-                Your order is confirmed. Download link will be sent to{' '}
-                <span className="font-semibold text-gray-900">{billingDetails.email}</span>. Please check
-                your email and download from there.
+      <div
+        className="min-h-screen bg-[#f4f5f7]"
+        style={{
+          opacity: showSuccessModal ? 0.3 : 1,
+          pointerEvents: showSuccessModal ? 'none' : 'auto',
+        }}
+      >
+        <div className="border-b border-gray-200 bg-white">
+          <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-4 sm:px-6">
+            <div>
+              <h1 className="text-base font-semibold text-gray-900">Checkout</h1>
+              <p className="text-xs text-gray-500">
+                {cart.length} {cart.length === 1 ? 'item' : 'items'}
               </p>
-              <div className="flex justify-center">
-                <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => (step === 'summary' ? setStep('billing') : navigate('/cart'))}
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+            >
+              {step === 'summary' ? '← Back' : '← Cart'}
+            </button>
           </div>
-        )}
+        </div>
 
-        {isProcessingOrder && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 overflow-y-auto max-h-[90vh]">
-              <div className="text-center">
-                <div className="flex justify-center mb-6">
-                  <div className="relative">
-                    <div className="w-20 h-20 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">{processingStep}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Preparing Payment</h3>
-                <p className="text-sm text-gray-600 mb-6">Opening secure payment gateway...</p>
+        <div className="mx-auto max-w-xl px-4 py-6 sm:px-6 sm:py-8">
+          <StepIndicator step={step} />
 
-                <div className="space-y-3 text-left">
-                  {['Validating order details', 'Creating secure payment', 'Opening Razorpay'].map((label, index) => {
-                    const step = index + 1;
-                    const active = processingStep >= step;
-                    const complete = processingStep > step;
-                    return (
-                      <div
-                        key={label}
-                        className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
-                          active ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                        }`}
-                      >
-                        <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
-                            active ? 'bg-green-600' : 'bg-gray-300'
-                          }`}
-                        >
-                          {complete ? (
-                            <IconCheck size={16} className="text-white" />
-                          ) : processingStep === step ? (
-                            <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
-                          ) : (
-                            <div className="w-2.5 h-2.5 bg-gray-400 rounded-full" />
-                          )}
-                        </div>
-                        <span className={`text-sm font-medium transition-colors ${active ? 'text-gray-900' : 'text-gray-500'}`}>
-                          {label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          {step === 'billing' && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-bold text-gray-900">Billing Details</h2>
+              <p className="mt-1 text-sm text-gray-500">Download link will be sent to your email.</p>
 
-        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-                <h2 className="text-base font-semibold text-gray-900">Billing Details</h2>
-              </div>
-              <div className="p-4 sm:p-6 space-y-4">
+              <div className="mt-5 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -352,232 +300,188 @@ const Checkout = () => {
                     name="name"
                     value={billingDetails.name}
                     onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                    placeholder="Enter your full name"
+                    className={inputClass}
+                    placeholder="Your full name"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Email Address <span className="text-red-500">*</span>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     name="email"
                     value={billingDetails.email}
                     onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
+                    className={inputClass}
                     placeholder="you@example.com"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Download link for your purchased file will be sent to this email.
-                  </p>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Phone Number <span className="text-red-500">*</span>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Phone <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
                     name="phone"
                     value={billingDetails.phone}
                     onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                    placeholder="Enter your phone number"
+                    className={inputClass}
+                    placeholder="10-digit mobile number"
                   />
                 </div>
+
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Why are you purchasing this video? <span className="text-red-500">*</span>
+                  <p className="mb-2 text-sm font-medium text-gray-700">
+                    Why are you purchasing? <span className="text-red-500">*</span>
                   </p>
-                  <div className="space-y-2">
-                    {PURCHASE_REASONS.map((reason) => (
-                      <label
-                        key={reason.id}
-                        className={`flex items-center gap-3 p-3 border rounded-md cursor-pointer transition-all ${
-                          billingDetails.purchaseReasons.includes(reason.id)
-                            ? 'border-gray-900 bg-gray-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={billingDetails.purchaseReasons.includes(reason.id)}
-                          onChange={() => togglePurchaseReason(reason.id)}
-                          className="w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
-                        />
-                        <span className="text-sm text-gray-900">{reason.label}</span>
-                      </label>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {PURCHASE_REASONS.map((reason) => {
+                      const selected = billingDetails.purchaseReasons.includes(reason.id);
+                      return (
+                        <button
+                          key={reason.id}
+                          type="button"
+                          onClick={() => togglePurchaseReason(reason.id)}
+                          className={`rounded-lg border px-3 py-2.5 text-left text-sm transition ${
+                            selected
+                              ? 'border-gray-900 bg-gray-900 text-white'
+                              : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          {reason.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={handleContinueToSummary}
+                className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Continue to Payment
+              </button>
             </div>
-          </div>
+          )}
 
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:sticky lg:top-24 overflow-hidden">
-              <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-                <h2 className="text-base font-semibold text-gray-900">Order Summary</h2>
-              </div>
-              <div className="p-4 sm:p-6 space-y-4 max-h-64 overflow-y-auto">
-                {cart.map((item) => {
-                  const product = item.product || item;
-                  const price = getCartItemPrice(item);
-                  const image = getCartItemImage(item);
-                  return (
-                    <div key={item.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                      {image && (
-                        <div className="w-16 h-16 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200">
-                          <img src={image} alt={product.name} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-sm font-medium text-gray-900 break-words">{product.name}</p>
-                        {item.imageSize && (
-                          <p className="text-xs text-gray-500 mt-0.5">License: {item.imageSize}</p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-0.5">Qty: {item.quantity}</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">
-                          {formatCurrency(price * item.quantity)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 space-y-2.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(getCartTotal())}</span>
+          {step === 'summary' && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-5 flex items-end justify-between gap-3 border-b border-gray-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Payment</h2>
+                  <p className="mt-1 text-xs text-gray-500">Secure checkout via Razorpay</p>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery</span>
-                  <span className="font-medium text-green-600">Free</span>
-                </div>
-                <div className="border-t border-gray-200 pt-2.5 mt-2.5 flex justify-between">
-                  <span className="text-base font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-semibold text-gray-900">{formatCurrency(getCartTotal())}</span>
+                <div className="text-right">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(getCartTotal())}</p>
                 </div>
               </div>
 
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Method</h3>
-                <p className="mb-3 text-xs text-gray-500">
-                  Secure payment via Razorpay — amount goes to our merchant account.
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {PAYMENT_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setOnlinePaymentMethod(option.id)}
+                    className={`rounded-lg border px-4 py-3 text-left transition sm:px-2 sm:py-2.5 sm:text-center ${
+                      onlinePaymentMethod === option.id
+                        ? 'border-gray-900 bg-gray-900 text-white'
+                        : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <p className="text-sm font-bold sm:text-xs">{option.label}</p>
+                    <p className={`mt-0.5 text-xs sm:text-[10px] ${onlinePaymentMethod === option.id ? 'text-gray-300' : 'text-gray-400'}`}>
+                      {option.hint}
+                    </p>
+                  </button>
+                ))}
+              </div>
+
+              {onlinePaymentMethod === 'upi' && !isMobileDevice() && (
+                <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                  UPI on laptop shows QR — scan with your phone.
                 </p>
-                <div className="space-y-2.5">
-                  {PAYMENT_OPTIONS.map((option) => (
-                    <label
-                      key={option.id}
-                      className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-all ${
-                        onlinePaymentMethod === option.id
-                          ? 'border-gray-900 bg-gray-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="onlinePaymentMethod"
-                        value={option.id}
-                        checked={onlinePaymentMethod === option.id}
-                        onChange={(e) => setOnlinePaymentMethod(e.target.value)}
-                        className="mt-0.5 h-4 w-4 text-gray-900 focus:ring-gray-900"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900">{option.label}</div>
-                        <div className="mt-0.5 text-xs text-gray-500">{option.hint}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                {onlinePaymentMethod === 'upi' && !isMobileDevice() && (
-                  <p className="mt-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-800">
-                    Laptop/desktop वर UPI साठी QR code दिसेल — phone वरून scan करा. Phone browser वर GPay / PhonePe / Paytm app direct उघडेल.
-                  </p>
-                )}
-              </div>
+              )}
 
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-white">
-                <button
-                  type="button"
-                  onClick={handlePayment}
-                  disabled={loading || isProcessingOrder}
-                  className="w-full bg-gray-900 text-white py-2.5 rounded-md hover:bg-gray-800 transition-colors text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading || isProcessingOrder ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>{isProcessingOrder ? 'Opening Payment...' : 'Processing...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <IconPackage />
-                      <span>
-                        {onlinePaymentMethod === 'upi'
-                          ? 'Pay with UPI'
-                          : onlinePaymentMethod === 'netbanking'
-                            ? 'Pay with Net Banking'
-                            : 'Pay with Card'}
-                      </span>
-                    </>
-                  )}
-                </button>
-                <p className="text-xs text-gray-500 mt-3 text-center">
-                  By placing your order, you agree to {BRAND.name}&apos;s licensing terms
+              <div className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
+                <p>
+                  <span className="font-medium text-gray-800">{billingDetails.name}</span>
+                  {' · '}
+                  {billingDetails.email}
+                  {' · '}
+                  {billingDetails.phone}
                 </p>
               </div>
+
+              <button
+                type="button"
+                onClick={handlePayment}
+                disabled={loading || isProcessingOrder}
+                className="mt-4 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                {loading || isProcessingOrder ? 'Opening payment...' : `Pay ${formatCurrency(getCartTotal())}`}
+              </button>
+
+              <p className="mt-3 text-center text-[11px] text-gray-400">
+                By paying, you agree to {BRAND.name}&apos;s licensing terms
+              </p>
             </div>
-          </div>
+          )}
         </div>
+
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
+                <IconCheck size={28} />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">Order confirmed</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Download link sent to <strong>{billingDetails.email}</strong>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isProcessingOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="rounded-xl bg-white px-8 py-6 text-center shadow-xl">
+              <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900" />
+              <p className="text-sm font-medium text-gray-900">Opening secure payment...</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      <style>{`
-        @keyframes fadeInPage {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes popupIn {
-          from { opacity: 0; transform: scale(0.95) translateY(8px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
-    </div>
-
-    {alertPopup && (
-      <div
-        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-        onClick={() => setAlertPopup(null)}
-      >
+      {alertPopup && (
         <div
-          className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl animate-[popupIn_0.25s_ease-out]"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="checkout-alert-title"
-          aria-describedby="checkout-alert-message"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setAlertPopup(null)}
         >
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
-            <IconAlert />
-          </div>
-          <h2 id="checkout-alert-title" className="text-lg font-bold text-gray-900">
-            {alertPopup.title}
-          </h2>
-          <p id="checkout-alert-message" className="mt-2 text-sm leading-relaxed text-gray-600">
-            {alertPopup.message}
-          </p>
-          <button
-            type="button"
-            onClick={() => setAlertPopup(null)}
-            className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            OK
-          </button>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+              <IconAlert />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">{alertPopup.title}</h2>
+            <p className="mt-2 text-sm text-gray-600">{alertPopup.message}</p>
+            <button
+              type="button"
+              onClick={() => setAlertPopup(null)}
+              className="mt-5 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white"
+            >
+              OK
+            </button>
+          </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 };

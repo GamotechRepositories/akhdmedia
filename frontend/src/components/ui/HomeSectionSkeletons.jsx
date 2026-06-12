@@ -9,14 +9,18 @@ export const HeroSkeleton = () => (
 );
 
 export const StoryRailSkeleton = () => (
-  <section className="border-b border-gray-100 bg-white py-6 shadow-sm sm:py-8">
+  <section className="border-b border-gray-100 bg-gray-50 py-8 sm:py-10">
     <div className={PAGE_CONTAINER}>
-      <div className="mx-auto mb-4 h-4 w-40 animate-pulse rounded bg-gray-200 sm:mb-5" />
-      <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:gap-6 md:mx-0 md:justify-center md:px-0">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex shrink-0 flex-col items-center gap-1.5 sm:gap-2">
-            <div className="h-16 w-16 animate-pulse rounded-full bg-gray-200 sm:h-20 sm:w-20" />
-            <div className="h-2.5 w-12 animate-pulse rounded bg-gray-100" />
+      <div className="mb-5 border-b border-gray-200 pb-4 sm:mb-6">
+        <div className="h-3 w-36 animate-pulse rounded bg-gray-100" />
+        <div className="mt-2 h-8 w-56 animate-pulse rounded bg-gray-200 sm:h-9" />
+        <div className="mt-2 h-4 w-72 max-w-full animate-pulse rounded bg-gray-100" />
+      </div>
+      <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:gap-5 md:mx-0 md:px-0">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="w-[220px] shrink-0 sm:w-[260px]">
+            <div className="aspect-video animate-pulse rounded-xl bg-gray-200" />
+            <div className="mt-2 h-3 w-24 animate-pulse rounded bg-gray-100" />
           </div>
         ))}
       </div>
@@ -32,11 +36,11 @@ export const CategoryAccordionSkeleton = () => (
         <div className="mx-auto mt-3 h-8 w-56 animate-pulse rounded bg-gray-200 sm:h-9 sm:w-72" />
       </div>
 
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:hidden">
-        {Array.from({ length: 3 }, (_, i) => (
+      <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-3 md:hidden">
+        {Array.from({ length: 4 }, (_, i) => (
           <div
             key={i}
-            className="aspect-[3/4] w-[70vw] max-w-[280px] shrink-0 animate-pulse rounded-xl bg-gray-200 sm:w-[45vw]"
+            className="aspect-[4/5] w-[44vw] max-w-[155px] shrink-0 animate-pulse rounded-lg bg-gray-200"
           />
         ))}
       </div>

@@ -5,16 +5,23 @@ import ProductMediaGallery from '../components/product/ProductMediaGallery';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../components/ToastContainer';
 import { useCatalog } from '../context/CatalogContext';
+import { BRAND } from '../config/brand';
 import {
   getDefaultImageSize,
   sortImageSizeEntries,
 } from '../constants/imageSizes';
 import {
   getProductTypeLabel,
-  getResolutionSectionCopy,
   isVideoProduct,
 } from '../constants/mediaTypes';
 import { formatCurrency } from '../utils/formatters';
+
+const SpecItem = ({ label, value }) => (
+  <div className="rounded-lg border border-gray-200/80 bg-white px-3 py-2">
+    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+    <p className="mt-0.5 text-xs font-semibold text-gray-900 sm:text-sm">{value}</p>
+  </div>
+);
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -34,21 +41,21 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h1>
-        <p className="text-gray-500 mb-6">The item you are looking for doesn't exist.</p>
-        <Link to="/" className="bg-gray-900 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors">
-          Back to Home
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-4 text-center text-white">
+        <h1 className="mb-2 text-2xl font-bold">Clip Not Found</h1>
+        <p className="mb-6 text-gray-400">This footage may have been removed from the library.</p>
+        <Link to="/videos" className="rounded-lg bg-white px-8 py-3 font-medium text-gray-900 hover:bg-gray-100">
+          Browse Footage
         </Link>
       </div>
     );
   }
 
   const isVideo = isVideoProduct(product);
-  const finalPrice = product.imageSizes[selectedImageSize]?.price || product.price;
   const relatedProducts = getRelatedProducts(product.id);
-  const resolutionCopy = getResolutionSectionCopy(product);
-  const nameWords = product.name.split(' ');
+  const resolutionEntries = sortImageSizeEntries(product.imageSizes);
+  const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
+  const listingPrice = lowestTierInfo?.price ?? product.price;
 
   const handleAddToCart = async () => {
     try {
@@ -68,191 +75,194 @@ const ProductDetail = () => {
     }
   };
 
-  const resolutionSection = (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-3.5">
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-900">
-          {resolutionCopy.title}
-        </h3>
-        <p className="text-[11px] text-gray-500">{resolutionCopy.subtitle}</p>
-      </div>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">        {sortImageSizeEntries(product.imageSizes).map(([size, info]) => {
-          const isSelected = selectedImageSize === size;
-          return (
-            <button
-              key={size}
-              type="button"
-              onClick={() => setSelectedImageSize(size)}
-              className={`rounded-md border px-2 py-1.5 text-left transition-all ${
-                isSelected
-                  ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[11px] font-bold leading-tight text-gray-900">{size}</span>
-                {isSelected && (
-                  <svg className="h-3 w-3 shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </div>
-              <p className="text-[10px] leading-tight text-gray-400">{info.size}</p>
-              <p className="text-[11px] font-semibold leading-tight text-gray-900">{formatCurrency(info.price)}</p>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  const mediaInfoSection = (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
-      <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide flex items-center gap-2">
-        {isVideo ? (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        ) : (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        )}
-        {isVideo ? 'Video Information' : 'Image Information'}
-      </h3>
-
-      {isVideo ? (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Quality</p>
-              <p className="text-sm font-semibold text-gray-900">{product.videoInfo.quality}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">FPS</p>
-              <p className="text-sm font-semibold text-gray-900">{product.videoInfo.fps}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">File Size</p>
-              <p className="text-sm font-semibold text-gray-900">{product.videoInfo.size}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Duration</p>
-              <p className="text-sm font-semibold text-gray-900">{product.videoInfo.duration}</p>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Format</span>
-              <span className="font-medium text-gray-900">{product.videoInfo.format}</span>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Max Quality</p>
-            <p className="text-sm font-semibold text-gray-900">{product.videoInfo?.quality || '4K'}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">File Size</p>
-            <p className="text-sm font-semibold text-gray-900">{product.videoInfo?.size || '—'}</p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 sm:col-span-2">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Format</p>
-            <p className="text-sm font-semibold text-gray-900">{product.videoInfo?.format || 'JPEG / PNG'}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const specItems = isVideo
+    ? [
+        { label: 'Quality', value: product.videoInfo?.quality },
+        { label: 'Frame rate', value: product.videoInfo?.fps },
+        { label: 'Duration', value: product.videoInfo?.duration },
+        { label: 'Master size', value: product.videoInfo?.size },
+        { label: 'Format', value: product.videoInfo?.format },
+      ].filter((item) => item.value)
+    : [
+        { label: 'Quality', value: product.videoInfo?.quality },
+        { label: 'File size', value: product.videoInfo?.size },
+        { label: 'Format', value: product.videoInfo?.format || 'JPEG / PNG' },
+      ].filter((item) => item.value);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          back
-        </button>
+    <div className="min-h-screen bg-[#f4f5f7]">
+      <div className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1.5 text-sm text-gray-600 transition hover:text-gray-900"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+          </button>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+            {BRAND.tagline}
+          </span>
+        </div>
+      </div>
 
-        <div className="grid items-start gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
-          <div className="relative order-first h-fit lg:sticky lg:top-8 lg:self-start">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-8">
+          <div className="lg:sticky lg:top-6 lg:self-start">
             <ProductMediaGallery product={product} />
           </div>
 
-          <div className="flex flex-col space-y-6 lg:space-y-8">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-5 py-5 text-white sm:px-6">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
                 {product.brand && (
-                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/90">
                     {product.brand}
                   </span>
                 )}
-                <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                  {isVideo ? 'Video' : 'Image'}
+                <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
+                  {isVideo ? 'Stock Video' : 'Stock Image'}
+                </span>
+                {isVideo && product.videoInfo?.duration && (
+                  <span className="rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold text-white/90">
+                    {product.videoInfo.duration}
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-xl font-bold leading-snug sm:text-2xl lg:text-[1.65rem]">
+                {product.name}
+              </h1>
+              <p className="mt-1.5 text-sm text-white/65">
+                {product.category} · {getProductTypeLabel(product)}
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-white/10 pt-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                    License from · {lowestTierName || '—'}
+                  </p>
+                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(listingPrice)}</p>
+                </div>
+                {lowestTierInfo && (
+                  <div className="text-right text-xs text-white/70">
+                    <p>{lowestTierInfo.size} deliverable</p>
+                    <p className="mt-0.5 text-white/50">Commercial use included</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 px-5 py-4 sm:px-6">
+              <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 px-3.5 py-3">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs leading-relaxed text-blue-900">
+                  Preview is watermarked. After purchase, the full-resolution file download link is sent to your email.
+                </p>
+              </div>
+
+              {product.description && (
+                <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>
+              )}
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-gray-800 active:scale-[0.99]"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Add to Cart
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
+                >
+                  Buy Now
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 bg-gray-50/60 px-5 py-4 sm:px-6">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-gray-900">
+                  Select download quality
+                </h3>
+                <span className="text-[10px] font-medium text-gray-500">
+                  {isVideo ? 'Video + stills' : 'Licensed file'}
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
-                {nameWords.map((word, idx) => (
-                  <span key={idx} className="inline-block mr-2">{word}</span>
-                ))}
-              </h1>
-              <p className="text-sm text-gray-500">
-                {product.category} {getProductTypeLabel(product)}
-              </p>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {resolutionEntries.map(([size, info]) => {
+                  const isSelected = selectedImageSize === size;
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setSelectedImageSize(size)}
+                      className={`relative rounded-xl border px-3 py-2.5 text-left transition ${
+                        isSelected
+                          ? 'border-gray-900 bg-gray-900 text-white shadow-md ring-2 ring-gray-900/20'
+                          : 'border-gray-200 bg-white text-gray-900 hover:border-gray-400 hover:shadow-sm'
+                      }`}
+                    >
+                      {isSelected && (
+                        <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-white text-gray-900">
+                          <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
+                      <p className="pr-5 text-sm font-bold">{size}</p>
+                      <p className={`mt-0.5 text-[10px] ${isSelected ? 'text-gray-300' : 'text-gray-400'}`}>
+                        {info.size}
+                      </p>
+                      <p className={`mt-1 text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-800'}`}>
+                        {formatCurrency(info.price)}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex items-baseline gap-3 pb-4 border-b border-gray-200">
-              <span className="text-3xl lg:text-4xl font-bold text-gray-900">{formatCurrency(finalPrice)}</span>
-            </div>
-
-            <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:bg-gray-800 hover:shadow-xl active:scale-[0.98] sm:px-6 sm:text-base"
-              >                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span>Add to Cart</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-gray-900 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 shadow-md transition-all hover:bg-gray-50 hover:shadow-lg active:scale-[0.98] sm:px-6 sm:text-base"
-              >                <span>Buy Now</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4 lg:hidden">
-              {resolutionSection}
-              {mediaInfoSection}
-            </div>
-
-            <div className="hidden lg:block space-y-4">
-              {resolutionSection}
-              {mediaInfoSection}
-            </div>
+            {specItems.length > 0 && (
+              <div className="border-t border-gray-100 px-5 py-4 sm:px-6">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-900">
+                  {isVideo ? 'Clip specifications' : 'File details'}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {specItems.map((item) => (
+                    <SpecItem key={item.label} label={item.label} value={item.value} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-gray-200 mb-12 sm:mb-20">
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-6">You may also like</h2>
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4">            {relatedProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+        {relatedProducts.length > 0 && (
+          <div className="mt-10 border-t border-gray-200 pt-8 sm:mt-12">
+            <h2 className="mb-5 text-lg font-bold text-gray-900 sm:text-xl">More like this</h2>
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4">
+              {relatedProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

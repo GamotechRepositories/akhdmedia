@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { handleImageError } from '../utils/imageFallback';
+import { PROTECTED_MEDIA_CLASS, getProtectedImageProps, preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
 import { getCartItemImage, getCartItemPrice } from '../utils/cartHelpers';
 
@@ -153,12 +154,16 @@ const Cart = () => {
                     <div key={itemId} className="p-5 sm:p-6 border-b border-gray-100 last:border-0 hover:bg-gray-50/30 transition-colors">
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
                         <div className="sm:col-span-6 flex gap-4">
-                          <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200">
+                          <div
+                            className="protected-media-shell relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200"
+                            onContextMenu={preventMediaContextMenu}
+                          >
                             <img
                               src={productImage}
                               alt={product.name || 'Product'}
-                              className="w-full h-full object-cover"
+                              className={`w-full h-full object-cover ${PROTECTED_MEDIA_CLASS}`}
                               onError={(e) => handleImageError(e, 200, 200)}
+                              {...getProtectedImageProps()}
                             />
                           </div>
                           <div className="flex flex-col justify-center min-w-0 flex-1">

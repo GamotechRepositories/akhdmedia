@@ -29,13 +29,13 @@ export const buildProductMediaItems = (product) => {
   }
 
   return [
-    ...images,
     {
       type: 'video',
       src: product.demoVideo,
       poster: product.videoPoster || product.images?.[0],
       label: 'Demo Video',
     },
+    ...images,
   ];
 };
 
