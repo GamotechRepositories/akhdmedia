@@ -36,8 +36,8 @@ export const getTiersAboveMaster = (masterTier, tiers = []) => {
   return sortTierList(tiers).filter((tier) => getTierRank(tier) > masterRank)
 }
 
-/** Lowest tier offered to customers (SD/HD are excluded) */
-export const MIN_CUSTOMER_TIER = 'Full HD'
+/** Lowest tier offered to customers (SD is excluded) */
+export const MIN_CUSTOMER_TIER = 'HD'
 
 export const CUSTOMER_TIER_ORDER = RESOLUTION_ORDER.filter(
   (tier) => getTierRank(tier) >= getTierRank(MIN_CUSTOMER_TIER),

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { RESOLUTION_ORDER, RESOLUTION_TIERS, isStandardTier } from '../constants/resolutionTiers'
+import { RESOLUTION_TIERS, isStandardTier } from '../constants/resolutionTiers'
 import { inputClass } from './ui/adminUi'
 
 const AvailableTierSelector = ({
+  eligibleTiers = [],
   selected = [],
   onToggle,
   onAddCustom,
@@ -40,31 +41,35 @@ const AvailableTierSelector = ({
   return (
     <div>
       <p className="mb-2 text-sm font-medium text-slate-700">
-        Which qualities are available for this product?
+        Which qualities are available for customers?
       </p>
       <p className="mb-3 text-xs text-slate-500">
-        Select standard tiers or add a custom size. Only selected tiers appear below and on the storefront.
+        Tick the qualities you want to sell. Only checked options appear on the storefront and in pricing below.
       </p>
 
-      <div className="flex flex-wrap gap-2">
-        {RESOLUTION_ORDER.map((tier) => {
+      <div className="space-y-2">
+        {eligibleTiers.map((tier) => {
           const isSelected = selected.includes(tier)
           return (
-            <button
+            <label
               key={tier}
-              type="button"
-              onClick={() => onToggle(tier)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+              className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-all ${
                 isSelected
-                  ? 'border-violet-600 bg-violet-600 text-white shadow-sm'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  ? 'border-violet-300 bg-violet-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
               }`}
             >
-              {tier}
-              <span className={`ml-1.5 font-normal ${isSelected ? 'text-violet-100' : 'text-slate-400'}`}>
-                {RESOLUTION_TIERS[tier].resolution}
-              </span>
-            </button>
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => onToggle(tier)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-slate-900">{tier}</div>
+                <div className="text-xs text-slate-500">{RESOLUTION_TIERS[tier]?.resolution}</div>
+              </div>
+            </label>
           )
         })}
       </div>
@@ -90,31 +95,33 @@ const AvailableTierSelector = ({
         </div>
       )}
 
-      <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50/80 p-3">
-        <p className="mb-2 text-xs font-semibold text-slate-700">Add custom quality</p>
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-          <input
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            className={inputClass}
-            placeholder="Name (e.g. 5K, 1080p Pro)"
-          />
-          <input
-            value={customResolution}
-            onChange={(e) => setCustomResolution(e.target.value)}
-            className={inputClass}
-            placeholder="Dimensions (e.g. 5120×2880)"
-          />
-          <button
-            type="button"
-            onClick={handleAddCustom}
-            className="rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-          >
-            Add
-          </button>
+      {onAddCustom && (
+        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50/80 p-3">
+          <p className="mb-2 text-xs font-semibold text-slate-700">Add custom quality</p>
+          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <input
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              className={inputClass}
+              placeholder="Name (e.g. 5K, 1080p Pro)"
+            />
+            <input
+              value={customResolution}
+              onChange={(e) => setCustomResolution(e.target.value)}
+              className={inputClass}
+              placeholder="Dimensions (e.g. 5120×2880)"
+            />
+            <button
+              type="button"
+              onClick={handleAddCustom}
+              className="rounded-md border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+            >
+              Add
+            </button>
+          </div>
+          {customError && <p className="mt-1.5 text-[11px] text-red-600">{customError}</p>}
         </div>
-        {customError && <p className="mt-1.5 text-[11px] text-red-600">{customError}</p>}
-      </div>
+      )}
     </div>
   )
 }

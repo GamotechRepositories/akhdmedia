@@ -92,7 +92,15 @@ const mergeTierConfig = (product = {}) => {
 
 const mergeAvailableTiers = (product = {}) => {
   const stored = product.availableTiers || []
-  return stored.length ? sortTierList(stored) : [...RESOLUTION_ORDER]
+  const tiers = stored.length
+    ? sortTierList(stored)
+    : getCustomerTiers([...RESOLUTION_ORDER])
+
+  if (product.masterVideoTier) {
+    return getDeliverableCustomerTiers(product.masterVideoTier, tiers)
+  }
+
+  return getCustomerTiers(tiers)
 }
 
 const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
@@ -201,10 +209,15 @@ const ProductForm = () => {
   const isVideo = form.mediaType === MEDIA_TYPES.VIDEO
   const isUniformPricing = form.pricingMode === PRICING_MODES.UNIFORM
 
-  const derivedAvailableTiers = useMemo(() => {
-    if (!form.masterVideoTier) return getCustomerTiers(sortTierList(form.availableTiers))
+  const eligibleTiers = useMemo(() => {
+    if (!form.masterVideoTier) return []
     return getDeliverableCustomerTiers(form.masterVideoTier, CUSTOMER_TIER_ORDER)
-  }, [form.masterVideoTier, form.availableTiers])
+  }, [form.masterVideoTier])
+
+  const derivedAvailableTiers = useMemo(() => {
+    if (!eligibleTiers.length) return []
+    return sortTierList(form.availableTiers).filter((tier) => eligibleTiers.includes(tier))
+  }, [form.availableTiers, eligibleTiers])
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.slug === form.categorySlug),
@@ -237,8 +250,11 @@ const ProductForm = () => {
     const tiers = getDeliverableCustomerTiers(masterVideoTier, CUSTOMER_TIER_ORDER)
 
     setForm((current) => {
+      const preserved = current.availableTiers.filter((tier) => tiers.includes(tier))
+      const nextAvailable = preserved.length ? preserved : tiers
       const nextPricing = { ...current.resolutionPricing }
-      tiers.forEach((tier) => {
+
+      nextAvailable.forEach((tier) => {
         if (!nextPricing[tier]) {
           nextPricing[tier] = buildDefaultTierConfig(current.price)[tier]
         }
@@ -247,9 +263,19 @@ const ProductForm = () => {
       return {
         ...current,
         masterVideoTier,
-        availableTiers: tiers,
+        availableTiers: nextAvailable,
         resolutionPricing: nextPricing,
       }
+    })
+  }
+
+  const toggleAvailableTier = (tier) => {
+    setForm((current) => {
+      const next = current.availableTiers.includes(tier)
+        ? current.availableTiers.filter((item) => item !== tier)
+        : [...current.availableTiers, tier]
+
+      return { ...current, availableTiers: sortTierList(next) }
     })
   }
 
@@ -327,7 +353,7 @@ const ProductForm = () => {
     if (!imageCount) return 'At least one preview image is required'
     if (isVideo && !form.demoVideo.trim()) return 'Demo video URL is required for video products'
     if (!derivedAvailableTiers.length) {
-      return 'Master quality must be Full HD or above — SD and HD are not sold to customers'
+      return 'Select at least one quality for customers in Step 5'
     }
 
     const missingSize = derivedAvailableTiers.find((tier) => {
@@ -656,27 +682,9 @@ const ProductForm = () => {
             </p>
           ) : (
             <>
-              <div className="mb-4">
-                <p className="mb-2 text-sm font-medium text-slate-700">
-                  Available qualities for customers
-                </p>
-                <p className="mb-3 text-xs text-slate-500">
-                  Master upload: <strong>{form.masterVideoTier}</strong> — Full HD and above (up to master quality) are sold to customers.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {derivedAvailableTiers.map((tier) => (
-                    <span
-                      key={tier}
-                      className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800"
-                    >
-                      {tier}
-                      <span className="ml-1.5 font-normal text-violet-600">
-                        {RESOLUTION_TIERS[tier]?.resolution}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <p className="mb-4 text-xs text-slate-500">
+                Master upload: <strong>{form.masterVideoTier}</strong> — tick the top-right checkbox on each quality you want to sell.
+              </p>
 
               <div className="mb-4">
                 <PricingModeSelector value={form.pricingMode} onChange={updatePricingMode} />
@@ -697,8 +705,10 @@ const ProductForm = () => {
               )}
 
               <ResolutionTierEditor
-                order={derivedAvailableTiers}
+                order={eligibleTiers}
                 tiers={form.resolutionPricing}
+                selectedTiers={form.availableTiers}
+                onToggleTier={toggleAvailableTier}
                 showPrice={!isUniformPricing}
                 uniformPrice={form.price}
                 onFieldChange={updateTierField}

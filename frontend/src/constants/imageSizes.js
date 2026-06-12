@@ -10,7 +10,7 @@ export const IMAGE_SIZE_TIERS = {
 
 export const IMAGE_SIZE_ORDER = Object.keys(IMAGE_SIZE_TIERS);
 
-export const MIN_CUSTOMER_TIER = 'Full HD';
+export const MIN_CUSTOMER_TIER = 'HD';
 
 const getTierRank = (tier) => {
   const index = IMAGE_SIZE_ORDER.indexOf(tier);

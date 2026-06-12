@@ -170,7 +170,7 @@ export const validateProductPayload = (payload) => {
 
   if (!enabledTiers.length) {
     errors.push(
-      `Select master quality ${MIN_CUSTOMER_TIER} or above — SD and HD are not sold to customers`,
+      `Select at least one customer quality (${MIN_CUSTOMER_TIER} and above). SD is not sold.`,
     )
   }
 

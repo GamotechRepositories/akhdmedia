@@ -24,8 +24,8 @@ export const getTierRank = (tier) => {
   return index === -1 ? RESOLUTION_ORDER.length : index
 }
 
-/** Lowest tier offered to customers (SD/HD are excluded) */
-export const MIN_CUSTOMER_TIER = 'Full HD'
+/** Lowest tier offered to customers (SD is excluded) */
+export const MIN_CUSTOMER_TIER = 'HD'
 
 export const CUSTOMER_TIER_ORDER = RESOLUTION_ORDER.filter(
   (tier) => getTierRank(tier) >= getTierRank(MIN_CUSTOMER_TIER),
@@ -36,8 +36,15 @@ export const getCustomerTiers = (tiers = []) =>
 
 export const getAvailableTiers = (productOrBody = {}) => {
   const selected = sortTierList(productOrBody.availableTiers || [])
-  const base = selected.length ? selected : [...RESOLUTION_ORDER]
-  return getCustomerTiers(base)
+  const customerPool = selected.length
+    ? getCustomerTiers(selected)
+    : getCustomerTiers([...RESOLUTION_ORDER])
+
+  if (productOrBody.masterVideoTier) {
+    return getTiersUpToMaster(productOrBody.masterVideoTier, customerPool)
+  }
+
+  return customerPool
 }
 
 export const parseResolutionString = (value = '') => {
