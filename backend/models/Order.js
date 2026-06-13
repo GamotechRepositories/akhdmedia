@@ -3,6 +3,8 @@ import mongoose from 'mongoose'
 const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: String, required: true },
+    clipId: { type: String, default: '' },
+    licenseNumber: { type: String, default: '' },
     name: { type: String, required: true },
     brand: { type: String, default: '' },
     imageSize: { type: String, default: '' },

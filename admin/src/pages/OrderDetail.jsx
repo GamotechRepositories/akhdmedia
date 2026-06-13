@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchOrder } from '../api/client'
 import PageHeader from '../components/PageHeader'
 import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
@@ -31,6 +31,10 @@ const formatDate = (value) => {
 
 const OrderDetail = () => {
   const { id } = useParams()
+  const location = useLocation()
+  const backState = location.state?.fromList
+    ? { restore: location.state.fromList }
+    : undefined
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -60,7 +64,7 @@ const OrderDetail = () => {
     return (
       <div className="space-y-4">
         <p className="text-sm text-red-600">{error || 'Order not found'}</p>
-        <Link to="/orders" className={secondaryBtnClass}>
+        <Link to="/orders" state={backState} className={secondaryBtnClass}>
           Back to Orders
         </Link>
       </div>
@@ -79,7 +83,7 @@ const OrderDetail = () => {
           title={`Order #${order.orderNumber?.slice(-8).toUpperCase()}`}
           description={`Placed on ${formatDate(order.createdAt)}`}
         />
-        <Link to="/orders" className={secondaryBtnClass}>
+        <Link to="/orders" state={backState} className={secondaryBtnClass}>
           Back to Orders
         </Link>
       </div>
@@ -162,7 +166,9 @@ const OrderDetail = () => {
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Product</th>
+              <th className="px-4 py-3">Clip ID</th>
               <th className="px-4 py-3">License</th>
+              <th className="px-4 py-3">License No</th>
               <th className="px-4 py-3">Qty</th>
               <th className="px-4 py-3">Price</th>
               <th className="px-4 py-3">Line total</th>
@@ -172,7 +178,9 @@ const OrderDetail = () => {
             {order.items?.map((item, index) => (
               <tr key={`${item.productId}-${item.imageSize}-${index}`}>
                 <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
+                <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.clipId || '—'}</td>
                 <td className="px-4 py-3 text-slate-600">{item.imageSize || '—'}</td>
+                <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.licenseNumber || '—'}</td>
                 <td className="px-4 py-3 text-slate-600">{item.quantity}</td>
                 <td className="px-4 py-3 text-slate-600">{formatCurrency(item.price)}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">

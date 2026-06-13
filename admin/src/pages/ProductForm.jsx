@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   createProduct,
   fetchCategories,
@@ -106,6 +106,7 @@ const mergeAvailableTiers = (product = {}) => {
 const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   mediaType,
   pricingMode: PRICING_MODES.UNIFORM,
+  clipId: '',
   name: '',
   categorySlug: '',
   subCategorySlug: '',
@@ -136,7 +137,10 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
 const ProductForm = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const isEdit = Boolean(id)
+  const listState = location.state?.fromList
+  const backState = listState ? { restore: listState } : undefined
 
   const [categories, setCategories] = useState([])
   const [form, setForm] = useState(emptyForm())
@@ -166,6 +170,7 @@ const ProductForm = () => {
             mediaType,
             pricingMode: product.pricingMode || PRICING_MODES.UNIFORM,
             name: product.name,
+            clipId: product.clipId || '',
             categorySlug: product.categorySlug,
             subCategorySlug: product.subCategory || '',
             brand: product.brand || '',
@@ -434,7 +439,11 @@ const ProductForm = () => {
     try {
       if (isEdit) {
         await updateProduct(id, payload)
-        navigate('/products')
+        navigate('/products', {
+          state: listState
+            ? { restore: { ...listState, productId: id } }
+            : undefined,
+        })
       } else {
         await createProduct(payload)
         setForm(emptyForm(form.mediaType))
@@ -462,7 +471,7 @@ const ProductForm = () => {
             {isEdit ? 'Edit Product' : 'Add Product'}
           </h1>
         </div>
-        <Link to="/products" className={secondaryBtnClass}>
+        <Link to="/products" state={backState} className={secondaryBtnClass}>
           Back
         </Link>
       </div>
@@ -520,6 +529,19 @@ const ProductForm = () => {
             <label className="block text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Product Name</span>
               <input required value={form.name} onChange={(e) => updateField('name', e.target.value)} className={inputClass} />
+            </label>
+
+            <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Clip ID</span>
+              <input
+                value={form.clipId}
+                onChange={(e) => updateField('clipId', e.target.value.toUpperCase())}
+                placeholder="AKHD-12345 (auto-generated if empty)"
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Unique stock clip identifier shown to customers. Leave empty to auto-generate.
+              </p>
             </label>
 
             <label className="block text-sm">
@@ -754,7 +776,7 @@ const ProductForm = () => {
           <button type="submit" disabled={saving} className={`${primaryBtnClass} disabled:opacity-60`}>
             {saving ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
           </button>
-          <Link to="/products" className={secondaryBtnClass}>Cancel</Link>
+          <Link to="/products" state={backState} className={secondaryBtnClass}>Cancel</Link>
         </div>
       </form>
     </div>

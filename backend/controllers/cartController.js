@@ -9,6 +9,7 @@ import {
   clearCartItems,
   fetchPopulatedCart,
   removeCartItem,
+  replaceCartWithItem,
   updateCartItemQuantity,
 } from '../services/cartService.js'
 
@@ -38,6 +39,26 @@ export const addToCart = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Item added to cart',
+    data: {
+      cart: formatCartResponse(cart, categoryMap),
+    },
+  })
+})
+
+export const buyNow = asyncHandler(async (req, res) => {
+  const { productId, quantity = 1, imageSize = '' } = req.body
+
+  if (!productId) {
+    res.status(400).json({ success: false, message: 'Product ID is required' })
+    return
+  }
+
+  const cart = await replaceCartWithItem(req.sessionId, { productId, quantity, imageSize })
+  const categoryMap = await getCategoryMap()
+
+  res.json({
+    success: true,
+    message: 'Ready for checkout',
     data: {
       cart: formatCartResponse(cart, categoryMap),
     },

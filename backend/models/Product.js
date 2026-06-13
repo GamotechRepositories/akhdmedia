@@ -35,6 +35,7 @@ const videoInfoSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
   {
+    clipId: { type: String, unique: true, sparse: true, trim: true, uppercase: true, index: true },
     name: { type: String, required: true, trim: true },
     mediaType: {
       type: String,

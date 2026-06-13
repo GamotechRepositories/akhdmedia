@@ -89,6 +89,7 @@ export const normalizeProductPayload = (body = {}) => {
       : PRICING_MODES.UNIFORM
 
   const payload = {
+    clipId: body.clipId?.trim().toUpperCase() || '',
     name: body.name?.trim(),
     mediaType,
     pricingMode,

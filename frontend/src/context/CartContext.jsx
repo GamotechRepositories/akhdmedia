@@ -58,6 +58,12 @@ export const CartProvider = ({ children }) => {
     return response;
   }, [applyCartResponse]);
 
+  const buyNow = useCallback(async (product, quantity = 1, imageSize = '') => {
+    const response = await cartAPI.buyNow(product.id, quantity, imageSize);
+    applyCartResponse(response);
+    return response;
+  }, [applyCartResponse]);
+
   const removeFromCart = useCallback(async (itemId) => {
     if (!itemId) return;
 
@@ -101,6 +107,7 @@ export const CartProvider = ({ children }) => {
         cart,
         loading,
         addToCart,
+        buyNow,
         removeFromCart,
         updateQuantity,
         clearCart,

@@ -42,6 +42,8 @@ export const getOrderItemDownloads = async (order) => {
     if (!tier) {
       downloads.push({
         productId: item.productId,
+        clipId: item.clipId || '',
+        licenseNumber: item.licenseNumber || '',
         name: item.name,
         imageSize: item.imageSize,
         files: [],
@@ -86,6 +88,8 @@ export const getOrderItemDownloads = async (order) => {
 
     downloads.push({
       productId: item.productId,
+      clipId: item.clipId || '',
+      licenseNumber: item.licenseNumber || '',
       name: item.name,
       imageSize: item.imageSize,
       files,

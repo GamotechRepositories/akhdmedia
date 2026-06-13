@@ -162,7 +162,7 @@ const AdminLayout = () => {
         </header>
 
         <main className="min-h-[calc(100vh-4rem)] px-8 py-8">
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>
         </main>

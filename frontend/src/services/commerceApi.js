@@ -11,6 +11,11 @@ export const cartAPI = {
     return data
   },
 
+  buyNow: async (productId, quantity = 1, imageSize = '') => {
+    const { data } = await api.post('/cart/buy-now', { productId, quantity, imageSize })
+    return data
+  },
+
   updateCartItem: async (itemId, quantity) => {
     const { data } = await api.patch(`/cart/items/${itemId}`, { quantity })
     return data
@@ -54,6 +59,11 @@ export const orderAPI = {
 
   getOrder: async (orderId) => {
     const { data } = await api.get(`/orders/${orderId}`)
+    return data
+  },
+
+  getOrderDownloads: async (orderId) => {
+    const { data } = await api.get(`/orders/${orderId}/downloads`)
     return data
   },
 }

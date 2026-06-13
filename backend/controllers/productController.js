@@ -3,6 +3,11 @@ import Product from '../models/Product.js'
 import asyncHandler from '../utils/asyncHandler.js'
 import formatProduct, { buildCategoryMap } from '../utils/formatProduct.js'
 import {
+  assertClipIdAvailable,
+  generateClipId,
+  resolveClipId,
+} from '../utils/licenseIds.js'
+import {
   normalizeProductPayload,
   validateProductPayload,
 } from '../utils/normalizeProduct.js'
@@ -24,6 +29,14 @@ export const getProducts = asyncHandler(async (req, res) => {
   }
 
   const products = await Product.find(filter).sort({ createdAt: -1 })
+
+  for (const product of products) {
+    if (!product.clipId) {
+      product.clipId = await generateClipId()
+      await product.save()
+    }
+  }
+
   const categoryMap = await getCategoryMap()
 
   const includeDelivery = req.query.admin === 'true'
@@ -39,6 +52,11 @@ export const getProductById = asyncHandler(async (req, res) => {
   if (!product) {
     res.status(404).json({ message: 'Product not found' })
     return
+  }
+
+  if (!product.clipId) {
+    product.clipId = await generateClipId()
+    await product.save()
   }
 
   const categoryMap = await getCategoryMap()
@@ -59,6 +77,8 @@ export const createProduct = asyncHandler(async (req, res) => {
   }
 
   const payload = validateProductPayload(normalizeProductPayload(req.body))
+  payload.clipId = await resolveClipId(payload.clipId)
+  await assertClipIdAvailable(payload.clipId)
 
   const product = await Product.create(payload)
   const categoryMap = await getCategoryMap()
@@ -84,6 +104,8 @@ export const updateProduct = asyncHandler(async (req, res) => {
   }
 
   const payload = validateProductPayload(normalizeProductPayload(req.body))
+  payload.clipId = await resolveClipId(payload.clipId, existing.clipId || '')
+  await assertClipIdAvailable(payload.clipId, existing._id.toString())
 
   const product = await Product.findByIdAndUpdate(req.params.id, payload, {
     new: true,

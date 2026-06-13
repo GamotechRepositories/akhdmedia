@@ -27,7 +27,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getProductById, getRelatedProducts, loading: catalogLoading } = useCatalog();
-  const { addToCart } = useCart();
+  const { addToCart, buyNow } = useCart();
   const { success } = useToast();
 
   const [product, setProduct] = useState(null);
@@ -68,7 +68,7 @@ const ProductDetail = () => {
 
   const handleBuyNow = async () => {
     try {
-      await addToCart(product, 1, selectedImageSize);
+      await buyNow(product, 1, selectedImageSize);
       navigate('/checkout');
     } catch (error) {
       console.error(error);
@@ -136,6 +136,9 @@ const ProductDetail = () => {
               <h1 className="text-xl font-bold leading-snug sm:text-2xl lg:text-[1.65rem]">
                 {product.name}
               </h1>
+              {product.clipId && (
+                <p className="mt-1 font-mono text-xs text-white/55">Clip ID · {product.clipId}</p>
+              )}
               <p className="mt-1.5 text-sm text-white/65">
                 {product.category} · {getProductTypeLabel(product)}
               </p>

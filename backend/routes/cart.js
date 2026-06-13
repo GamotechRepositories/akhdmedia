@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   addToCart,
+  buyNow,
   clearCart,
   deleteCartItem,
   getCart,
@@ -14,6 +15,7 @@ router.use(cartSession)
 
 router.get('/', getCart)
 router.post('/items', addToCart)
+router.post('/buy-now', buyNow)
 router.patch('/items/:itemId', updateCartItem)
 router.delete('/items/:itemId', deleteCartItem)
 router.delete('/', clearCart)

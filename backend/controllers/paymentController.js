@@ -1,6 +1,8 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
 import { confirmOnlineOrderPayment, getOrderById } from '../services/orderService.js'
+import { getOrderItemDownloads } from '../services/downloadService.js'
+import { sendOrderLicenseEmail } from '../services/emailService.js'
 import {
   getRazorpayKeyId,
   verifyRazorpaySignature,
@@ -48,6 +50,13 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     razorpaySignature,
     razorpayOrderId,
   })
+
+  try {
+    const downloads = await getOrderItemDownloads(confirmedOrder)
+    await sendOrderLicenseEmail({ order: confirmedOrder, downloads })
+  } catch (emailError) {
+    console.error('[email] Failed to send license email:', emailError.message)
+  }
 
   res.json({
     success: true,

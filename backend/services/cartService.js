@@ -100,6 +100,30 @@ export const removeCartItem = async (sessionId, itemId) => {
   return fetchPopulatedCart(sessionId)
 }
 
+export const replaceCartWithItem = async (sessionId, { productId, quantity = 1, imageSize = '' }) => {
+  const product = await Product.findOne({ _id: productId, isActive: true })
+
+  if (!product) {
+    throw new AppError('Product not found', 404)
+  }
+
+  const normalizedQuantity = Math.max(1, Number(quantity) || 1)
+  const price = resolveItemPrice(product, imageSize)
+  const cart = await getOrCreateCart(sessionId)
+
+  cart.items = [
+    {
+      product: productId,
+      quantity: normalizedQuantity,
+      imageSize: imageSize || '',
+      price,
+    },
+  ]
+
+  await cart.save()
+  return fetchPopulatedCart(sessionId)
+}
+
 export const clearCartItems = async (sessionId) => {
   const cart = await getOrCreateCart(sessionId)
   cart.items = []

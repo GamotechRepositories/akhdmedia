@@ -48,6 +48,7 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
       Object.entries(allPricing).filter(([tier]) => enabledTiers.includes(tier)),
     ),
     imageSizes,
+    clipId: product.clipId || '',
     name: product.name,
     category: category?.breadcrumb || product.categorySlug,
     categorySlug: product.categorySlug,

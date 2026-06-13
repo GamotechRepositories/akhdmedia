@@ -1,13 +1,15 @@
 import Order from '../models/Order.js'
+import Product from '../models/Product.js'
 import CheckoutProfile from '../models/CheckoutProfile.js'
 import AppError from '../utils/AppError.js'
+import { generateClipId, generateLicenseNumber } from '../utils/licenseIds.js'
+import formatProduct from '../utils/formatProduct.js'
+import { getCategoryMap } from '../utils/formatCart.js'
 import {
   clearCartItems,
   fetchPopulatedCart,
   getCartTotals,
 } from './cartService.js'
-import formatProduct from '../utils/formatProduct.js'
-import { getCategoryMap } from '../utils/formatCart.js'
 
 const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
 
@@ -63,6 +65,16 @@ export const saveCheckoutProfile = async (sessionId, billingAddress) => {
   return profile.billingAddress
 }
 
+const ensureProductClipId = async (productDoc) => {
+  if (productDoc?.clipId) {
+    return productDoc.clipId
+  }
+
+  const clipId = await generateClipId()
+  await Product.findByIdAndUpdate(productDoc._id, { clipId })
+  return clipId
+}
+
 const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
   const normalizedAddress = validateBillingAddress(billingAddress)
   const cart = await fetchPopulatedCart(sessionId)
@@ -72,14 +84,17 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
   }
 
   const categoryMap = await getCategoryMap()
-  const orderItems = cart.items
-    .filter((item) => item.product)
-    .map((item) => {
+  const filteredItems = cart.items.filter((item) => item.product)
+  const orderItems = await Promise.all(
+    filteredItems.map(async (item) => {
+      const clipId = await ensureProductClipId(item.product)
       const product = formatProduct(item.product, categoryMap)
       const lineTotal = item.price * item.quantity
 
       return {
         productId: product.id,
+        clipId,
+        licenseNumber: '',
         name: product.name,
         brand: product.brand || '',
         imageSize: item.imageSize || '',
@@ -88,7 +103,8 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
         price: item.price,
         lineTotal,
       }
-    })
+    }),
+  )
 
   if (orderItems.length === 0) {
     throw new AppError('No valid items found in cart', 400)
@@ -143,6 +159,13 @@ export const confirmOnlineOrderPayment = async (
   if (razorpayOrderId) {
     order.razorpayOrderId = razorpayOrderId
   }
+
+  order.items.forEach((item) => {
+    if (!item.licenseNumber) {
+      item.licenseNumber = generateLicenseNumber()
+    }
+  })
+  order.markModified('items')
 
   await order.save()
   await clearCartItems(sessionId)

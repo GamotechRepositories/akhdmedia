@@ -7,20 +7,20 @@ const OrderSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
+  const [downloads, setDownloads] = useState([]);
   const [loadingOrder, setLoadingOrder] = useState(true);
 
-  const paymentMethod = searchParams.get('method') || order?.paymentMethod || 'online';
   const orderId = searchParams.get('orderId') || '';
   const orderNumber = order?.orderNumber?.slice(-8).toUpperCase() || '--------';
   const orderTotal = order?.totalAmount || 0;
   const customerEmail = order?.billingAddress?.email || '';
 
-  const paymentLabel = 'Online Payment';
-
   const paymentPending =
     order?.paymentMethod === 'online' &&
     order?.paymentStatus === 'pending' &&
     order?.status === 'pending';
+
+  const isPaid = order?.paymentStatus === 'paid';
 
   useEffect(() => {
     if (!orderId) {
@@ -28,12 +28,20 @@ const OrderSuccess = () => {
       return;
     }
 
-    const fetchOrder = async () => {
+    const fetchOrderData = async () => {
       setLoadingOrder(true);
       try {
         const response = await orderAPI.getOrder(orderId);
         if (response.success) {
-          setOrder(response.data.order);
+          const nextOrder = response.data.order;
+          setOrder(nextOrder);
+
+          if (nextOrder.paymentStatus === 'paid') {
+            const downloadResponse = await orderAPI.getOrderDownloads(orderId);
+            if (downloadResponse.success) {
+              setDownloads(downloadResponse.data.downloads || []);
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch order:', error);
@@ -42,7 +50,7 @@ const OrderSuccess = () => {
       }
     };
 
-    fetchOrder();
+    fetchOrderData();
   }, [orderId]);
 
   if (loadingOrder) {
@@ -75,23 +83,64 @@ const OrderSuccess = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+      <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
             <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Order Placed!</h1>
+          <h1 className="text-2xl font-bold text-gray-900">License Issued</h1>
           <p className="mt-1 text-sm text-gray-500">Order #{orderNumber}</p>
         </div>
 
+        {isPaid && downloads.length > 0 && (
+          <div className="mt-5 space-y-3">
+            {downloads.map((item) => (
+              <div
+                key={`${item.productId}-${item.licenseNumber}`}
+                className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                <div className="mt-2 space-y-1 text-xs text-gray-600">
+                  <p>
+                    Clip ID: <span className="font-mono font-medium text-gray-900">{item.clipId || '—'}</span>
+                  </p>
+                  <p>
+                    License tier: <span className="font-medium text-gray-900">{item.imageSize || 'Standard'}</span>
+                  </p>
+                  <p>
+                    License No: <span className="font-mono font-medium text-gray-900">{item.licenseNumber || '—'}</span>
+                  </p>
+                </div>
+
+                {item.files?.length > 0 ? (
+                  <div className="mt-3 flex flex-col gap-2">
+                    {item.files.map((file) => (
+                      <a
+                        key={file.url}
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-gray-800"
+                      >
+                        Download {file.label}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-amber-700">{item.message || 'Files are being prepared.'}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          <p className="font-semibold">Download link coming to your email</p>
+          <p className="font-semibold">Email copy sent</p>
           <p className="mt-1 leading-relaxed text-blue-800">
-            We will send the download link to{' '}
-            <span className="font-medium">{customerEmail || 'your email'}</span>. Check your inbox
-            and download from there.
+            License details and download links were also sent to{' '}
+            <span className="font-medium">{customerEmail || 'your email'}</span>.
           </p>
         </div>
 
@@ -102,7 +151,7 @@ const OrderSuccess = () => {
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-gray-600">Payment</span>
-            <span className="font-medium text-gray-900">{paymentLabel}</span>
+            <span className="font-medium text-gray-900">Online Payment</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-gray-600">Date</span>
