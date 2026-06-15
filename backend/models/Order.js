@@ -22,6 +22,7 @@ const billingAddressSchema = new mongoose.Schema(
     email: { type: String, default: '' },
     phone: { type: String, default: '' },
     purchaseReasons: { type: [String], default: [] },
+    purchaseReasonOther: { type: String, default: '' },
   },
   { _id: false },
 )

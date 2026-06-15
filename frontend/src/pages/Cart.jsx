@@ -49,10 +49,6 @@ const Cart = () => {
     }
   };
 
-  const cartTotal = getCartTotal();
-  const freeShippingThreshold = 1000;
-  const progress = Math.min((cartTotal / freeShippingThreshold) * 100, 100);
-  const remainingForFreeShip = freeShippingThreshold - cartTotal;
 
   if (loading) {
     return (
@@ -115,27 +111,6 @@ const Cart = () => {
 
         <div className="lg:grid lg:grid-cols-12 lg:gap-10 items-start">
           <div className="lg:col-span-8">
-            <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-700">
-                  {remainingForFreeShip > 0
-                    ? `Add ${formatCurrency(remainingForFreeShip)} more for free instant delivery`
-                    : '✓ Free instant delivery unlocked'}
-                </span>
-                {remainingForFreeShip > 0 && (
-                  <span className="text-xs font-semibold text-gray-600">{Math.round(progress)}%</span>
-                )}
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-2 rounded-full transition-all duration-1000 ease-out ${
-                    remainingForFreeShip > 0 ? 'bg-gray-700' : 'bg-green-600'
-                  }`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3.5 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 <div className="col-span-6">Product</div>
@@ -283,9 +258,6 @@ const Cart = () => {
                 >
                   Proceed to Checkout
                 </button>
-                <p className="mt-3 text-center text-xs text-gray-500">
-                  Free instant delivery on orders over {formatCurrency(freeShippingThreshold)}
-                </p>
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-200">

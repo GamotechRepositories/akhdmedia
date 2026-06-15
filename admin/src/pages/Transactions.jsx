@@ -5,10 +5,17 @@ import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
-  personal: 'Personal use',
+  personal: 'Personal collection',
   digital: 'Digital media',
   outlet: 'Outlet media',
   other: 'Other',
+}
+
+const formatPurchaseReason = (reason, otherText = '') => {
+  if (reason === 'other' && otherText.trim()) {
+    return `Other: ${otherText.trim()}`
+  }
+  return PURCHASE_REASON_LABELS[reason] || reason
 }
 
 const formatCurrency = (amount = 0) =>
@@ -46,7 +53,7 @@ const shortOrderNumber = (orderNumber = '') => orderNumber?.slice(-8).toUpperCas
 
 const buildTransactionSearchText = (txn) => {
   const reasons = (txn.purchaseReasons || [])
-    .map((reason) => PURCHASE_REASON_LABELS[reason] || reason)
+    .map((reason) => formatPurchaseReason(reason, txn.purchaseReasonOther))
     .join(' ')
 
   const itemFields = (txn.items || []).flatMap((item) => [

@@ -35,7 +35,13 @@ export const validateBillingAddress = (billingAddress = {}) => {
     .filter((reason) => VALID_PURCHASE_REASONS.has(reason))
 
   if (!purchaseReasons.length) {
-    throw new AppError('Please select why you are purchasing this video', 400)
+    throw new AppError('Please select where you will use the video', 400)
+  }
+
+  const purchaseReasonOther = String(billingAddress.purchaseReasonOther || '').trim()
+
+  if (purchaseReasons.includes('other') && !purchaseReasonOther) {
+    throw new AppError('Please describe how you will use the video', 400)
   }
 
   return {
@@ -43,6 +49,7 @@ export const validateBillingAddress = (billingAddress = {}) => {
     email,
     phone: billingAddress.phone.trim(),
     purchaseReasons,
+    purchaseReasonOther: purchaseReasons.includes('other') ? purchaseReasonOther : '',
   }
 }
 

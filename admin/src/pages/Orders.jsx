@@ -4,10 +4,17 @@ import { fetchOrders } from '../api/client'
 import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass } from '../components/ui/adminUi'
 const PURCHASE_REASON_LABELS = {
-  personal: 'Personal use',
+  personal: 'Personal collection',
   digital: 'Digital media',
   outlet: 'Outlet media',
   other: 'Other',
+}
+
+const formatPurchaseReason = (reason, otherText = '') => {
+  if (reason === 'other' && otherText.trim()) {
+    return `Other: ${otherText.trim()}`
+  }
+  return PURCHASE_REASON_LABELS[reason] || reason
 }
 
 const PAYMENT_FILTERS = [
@@ -46,7 +53,7 @@ const shortOrderNumber = (orderNumber = '') => orderNumber.slice(-8).toUpperCase
 
 const buildOrderSearchText = (order) => {
   const reasons = (order.billingAddress?.purchaseReasons || [])
-    .map((reason) => PURCHASE_REASON_LABELS[reason] || reason)
+    .map((reason) => formatPurchaseReason(reason, order.billingAddress?.purchaseReasonOther))
     .join(' ')
 
   const itemFields = (order.items || []).flatMap((item) => [

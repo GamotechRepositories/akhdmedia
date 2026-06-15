@@ -6,10 +6,17 @@ import PageHeader from '../components/PageHeader'
 import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
-  personal: 'Personal use',
+  personal: 'Personal collection',
   digital: 'Digital media',
   outlet: 'Outlet media',
   other: 'Other',
+}
+
+const formatPurchaseReason = (reason, otherText = '') => {
+  if (reason === 'other' && otherText.trim()) {
+    return `Other: ${otherText.trim()}`
+  }
+  return PURCHASE_REASON_LABELS[reason] || reason
 }
 
 const statusStyles = {
@@ -85,8 +92,8 @@ const TransactionDetail = () => {
     )
   }
 
-  const reasons = (transaction.purchaseReasons || []).map(
-    (reason) => PURCHASE_REASON_LABELS[reason] || reason,
+  const reasons = (transaction.purchaseReasons || []).map((reason) =>
+    formatPurchaseReason(reason, transaction.purchaseReasonOther),
   )
 
   return (

@@ -44,6 +44,7 @@ export const formatTransactionResponse = (order) => {
     customerEmail: order.billingAddress?.email || '',
     customerPhone: order.billingAddress?.phone || '',
     purchaseReasons: order.billingAddress?.purchaseReasons || [],
+    purchaseReasonOther: order.billingAddress?.purchaseReasonOther || '',
     amount: order.totalAmount,
     currency: 'INR',
     paymentMethod: order.paymentMethod,

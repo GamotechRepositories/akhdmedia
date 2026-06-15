@@ -9,7 +9,7 @@ import { BRAND } from '../config/brand';
 const STEPS = ['billing', 'summary'];
 
 const PURCHASE_REASONS = [
-  { id: 'personal', label: 'Personal use' },
+  { id: 'personal', label: 'Personal collection' },
   { id: 'digital', label: 'Digital media' },
   { id: 'outlet', label: 'Outlet media' },
   { id: 'other', label: 'Other' },
@@ -20,6 +20,7 @@ const emptyBilling = {
   email: '',
   phone: '',
   purchaseReasons: [],
+  purchaseReasonOther: '',
 };
 
 const isMobileDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -29,6 +30,9 @@ const PAYMENT_OPTIONS = [
   { id: 'card', label: 'Card', hint: 'Visa, Mastercard, RuPay' },
   { id: 'netbanking', label: 'Net Banking', hint: 'HDFC, SBI, ICICI' },
 ];
+
+const LICENSE_TERMS_TEXT =
+  'You may not use these videos commercially or associate them with any brand. This is illegal. If you keep them personally or a media agency uses them digitally, and they do not involve any commercial use, you may use them freely, but do not associate them with that brand. If you agree then click on the checkbox.';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
@@ -97,6 +101,7 @@ const Checkout = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -110,6 +115,7 @@ const Checkout = () => {
             email: saved.email || '',
             phone: saved.phone || '',
             purchaseReasons: saved.purchaseReasons || [],
+            purchaseReasonOther: saved.purchaseReasonOther || '',
           });
         }
       } catch (profileError) {
@@ -133,10 +139,17 @@ const Checkout = () => {
 
   const togglePurchaseReason = (reasonId) => {
     setBillingDetails((prev) => {
-      const selected = prev.purchaseReasons.includes(reasonId)
+      const isRemoving = prev.purchaseReasons.includes(reasonId);
+      const purchaseReasons = isRemoving
         ? prev.purchaseReasons.filter((id) => id !== reasonId)
         : [...prev.purchaseReasons, reasonId];
-      return { ...prev, purchaseReasons: selected };
+
+      return {
+        ...prev,
+        purchaseReasons,
+        purchaseReasonOther:
+          reasonId === 'other' && isRemoving ? '' : prev.purchaseReasonOther,
+      };
     });
   };
 
@@ -149,7 +162,16 @@ const Checkout = () => {
     if (!billingDetails.email.trim()) return 'Please enter your email address';
     if (!billingDetails.phone.trim()) return 'Please enter your phone number';
     if (!billingDetails.purchaseReasons.length) {
-      return 'Please select why you are purchasing this video';
+      return 'Please select where you will use the video';
+    }
+    if (
+      billingDetails.purchaseReasons.includes('other') &&
+      !billingDetails.purchaseReasonOther.trim()
+    ) {
+      return 'Please describe how you will use the video';
+    }
+    if (!acceptedTerms) {
+      return 'Please accept the terms and conditions to continue';
     }
     return '';
   };
@@ -335,7 +357,7 @@ const Checkout = () => {
 
                 <div>
                   <p className="mb-2 text-sm font-medium text-gray-700">
-                    Why are you purchasing? <span className="text-red-500">*</span>
+                    Where will you use the video? <span className="text-red-500">*</span>
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {PURCHASE_REASONS.map((reason) => {
@@ -356,13 +378,44 @@ const Checkout = () => {
                       );
                     })}
                   </div>
+                  {billingDetails.purchaseReasons.includes('other') && (
+                    <div className="mt-3">
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                        Please specify <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="purchaseReasonOther"
+                        value={billingDetails.purchaseReasonOther}
+                        onChange={handleInputChange}
+                        className={inputClass}
+                        placeholder="Where will you use this video?"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
+
+              <label className="mt-5 flex cursor-pointer gap-2.5 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                />
+                <span className="text-[10px] leading-snug text-gray-500 sm:text-[11px]">
+                  <span className="mb-1 block text-[11px] font-semibold text-gray-800 sm:text-xs">
+                    Terms &amp; Conditions
+                  </span>
+                  {LICENSE_TERMS_TEXT}
+                </span>
+              </label>
 
               <button
                 type="button"
                 onClick={handleContinueToSummary}
-                className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                disabled={!acceptedTerms}
+                className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 Continue to Payment
               </button>
