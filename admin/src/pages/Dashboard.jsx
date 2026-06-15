@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import OrdersBarChart, { buildMonthlyOrderStats } from '../components/OrdersBarChart'
+import OrdersBarChart, {
+  buildMonthlyOrderStats,
+  getChartYearOptions,
+} from '../components/OrdersBarChart'
 import { cardClass, primaryBtnClass } from '../components/ui/adminUi'
-import { BRAND } from '../config/brand'
 import {
   fetchCategories,
   fetchOrders,
@@ -31,14 +33,36 @@ const formatDate = (value) => {
 
 const shortOrderNumber = (orderNumber = '') => orderNumber.slice(-8).toUpperCase()
 
+const accentBackgrounds = {
+  'bg-violet-500': 'bg-violet-50',
+  'bg-slate-900': 'bg-slate-100',
+  'bg-emerald-500': 'bg-emerald-50',
+  'bg-sky-500': 'bg-sky-50',
+  'bg-amber-500': 'bg-amber-50',
+  'bg-rose-500': 'bg-rose-50',
+  'bg-teal-500': 'bg-teal-50',
+  'bg-indigo-500': 'bg-indigo-50',
+}
+
+const isToday = (value) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+
+  const today = new Date()
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  )
+}
+
 const StatCard = ({ label, value, hint, accent, to, linkLabel }) => (
-  <div className={`${cardClass} relative overflow-hidden p-6`}>
-    <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
-    <p className="text-sm font-medium text-slate-500">{label}</p>
-    <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
-    {hint && <p className="mt-2 text-xs text-slate-400">{hint}</p>}
+  <div className={`${accentBackgrounds[accent] || 'bg-white'} border-b border-slate-200 px-5 py-5 sm:px-6 sm:py-6`}>
+    <p className="text-sm font-medium text-slate-600">{label}</p>
+    <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+    {hint && <p className="mt-1.5 text-xs text-slate-500">{hint}</p>}
     {to && (
-      <Link to={to} className="mt-5 inline-flex text-sm font-semibold text-slate-900 hover:underline">
+      <Link to={to} className="mt-4 inline-flex text-sm font-semibold text-slate-900 hover:underline">
         {linkLabel} →
       </Link>
     )}
@@ -69,6 +93,7 @@ const Dashboard = () => {
   const [transactionSummary, setTransactionSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [chartYear, setChartYear] = useState(() => new Date().getFullYear())
 
   const loadDashboard = async () => {
     setLoading(true)
@@ -95,7 +120,12 @@ const Dashboard = () => {
     loadDashboard()
   }, [])
 
-  const monthlyStats = useMemo(() => buildMonthlyOrderStats(orders, 6), [orders])
+  const chartYearOptions = useMemo(() => getChartYearOptions(), [])
+
+  const monthlyStats = useMemo(
+    () => buildMonthlyOrderStats(orders, chartYear),
+    [orders, chartYear],
+  )
 
   const paidOrders = useMemo(
     () => orders.filter((order) => order.paymentStatus === 'paid').length,
@@ -106,6 +136,20 @@ const Dashboard = () => {
     () => orders.filter((order) => order.paymentStatus === 'pending').length,
     [orders],
   )
+
+  const todayStats = useMemo(() => {
+    const todayOrders = orders.filter((order) => isToday(order.createdAt))
+    const todayPaidOrders = todayOrders.filter((order) => order.paymentStatus === 'paid')
+
+    return {
+      orderCount: todayOrders.length,
+      paidCount: todayPaidOrders.length,
+      revenue: todayPaidOrders.reduce(
+        (sum, order) => sum + (Number(order.totalAmount) || 0),
+        0,
+      ),
+    }
+  }, [orders])
 
   const activeProducts = useMemo(
     () => products.filter((product) => product.isActive).length,
@@ -141,48 +185,68 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-8 text-white shadow-xl shadow-slate-900/10">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-400">Admin Overview</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Welcome back, {BRAND.name}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-              Track sales performance, monitor orders, and manage your stock media catalog from one place.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Today</p>
-            <p className="mt-1 text-sm font-semibold text-white">{todayLabel}</p>
-          </div>
-        </div>
-      </section>
+      <p className="text-sm font-semibold text-slate-700">{todayLabel}</p>
 
       {message && (
         <div className={`${cardClass} px-5 py-4 text-sm text-slate-700`}>{message}</div>
       )}
 
       <section className={`${cardClass} p-6 sm:p-8`}>
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sales analytics</p>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">Orders by month</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Monthly order volume across the last 6 months
+              Monthly order volume for {chartYear} (Jan–Dec)
             </p>
           </div>
-          <Link
-            to="/orders"
-            className="inline-flex text-sm font-semibold text-slate-900 hover:underline"
-          >
-            View all orders →
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              Year
+              <select
+                value={chartYear}
+                onChange={(event) => setChartYear(Number(event.target.value))}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm outline-none focus:border-slate-400"
+              >
+                {chartYearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link
+              to="/orders"
+              className="inline-flex text-sm font-semibold text-slate-900 hover:underline"
+            >
+              View all orders →
+            </Link>
+          </div>
         </div>
         <OrdersBarChart data={monthlyStats} loading={loading} />
       </section>
 
-      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="overflow-hidden border-y border-slate-200">
+        <div className="grid sm:grid-cols-2">
+          <StatCard
+            label="Today's revenue"
+            value={loading ? '—' : formatCurrency(todayStats.revenue)}
+            hint={`${todayStats.paidCount} paid order${todayStats.paidCount === 1 ? '' : 's'} today`}
+            accent="bg-teal-500"
+            to="/transactions"
+            linkLabel="View transactions"
+          />
+          <StatCard
+            label="Today's orders"
+            value={loading ? '—' : todayStats.orderCount}
+            hint="Orders placed today"
+            accent="bg-indigo-500"
+            to="/orders"
+            linkLabel="View orders"
+          />
+        </div>
+
+        <div className="grid border-t border-slate-200 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Total revenue"
           value={loading ? '—' : formatCurrency(transactionSummary?.revenue || 0)}
@@ -237,6 +301,7 @@ const Dashboard = () => {
           hint="Based on paid orders"
           accent="bg-rose-500"
         />
+        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">

@@ -7,6 +7,17 @@ const SALT_ROUNDS = 10
 const TOKEN_EXPIRY = '7d'
 const COOKIE_NAME = 'fv_admin_token'
 
+/** Legacy typo from old .env — maps to the synced admin email */
+const ADMIN_EMAIL_ALIASES = {
+  'admin@akhmidea.com': 'admin@akhdmedia.com',
+  'admin@akhdmidea.com': 'admin@akhdmedia.com',
+}
+
+const resolveAdminEmail = (email = '') => {
+  const normalized = email.trim().toLowerCase()
+  return ADMIN_EMAIL_ALIASES[normalized] || normalized
+}
+
 export const getAdminCookieName = () => COOKIE_NAME
 
 export const getAdminCookieOptions = () => ({
@@ -44,7 +55,7 @@ export const verifyAdminToken = (token) => {
 }
 
 export const authenticateAdmin = async (email, password) => {
-  const normalizedEmail = email?.trim().toLowerCase()
+  const normalizedEmail = resolveAdminEmail(email)
 
   if (!normalizedEmail || !password) {
     throw new AppError('Email and password are required', 400)

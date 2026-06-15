@@ -26,7 +26,7 @@ const OrdersBarChart = ({ data = [], loading = false }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex h-64 items-end gap-3 sm:gap-4">
+      <div className="flex h-64 items-end gap-1.5 sm:gap-2 md:gap-3">
         {data.map((item) => {
           const height = item.orders > 0 ? Math.max((item.orders / maxOrders) * 100, 12) : 4
 
@@ -41,8 +41,7 @@ const OrdersBarChart = ({ data = [], loading = false }) => {
                 />
               </div>
               <div className="mt-3 text-center">
-                <p className="text-xs font-semibold text-slate-700">{item.label}</p>
-                <p className="text-[10px] text-slate-400">{item.year}</p>
+                <p className="text-[10px] font-semibold text-slate-700 sm:text-xs">{item.label}</p>
               </div>
             </div>
           )
@@ -50,7 +49,9 @@ const OrdersBarChart = ({ data = [], loading = false }) => {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
-        <p>Monthly order count (last {data.length} months)</p>
+        <p>
+          Monthly order count ({data[0]?.year || new Date().getFullYear()})
+        </p>
         <p>
           Total revenue in period:{' '}
           <span className="font-semibold text-slate-900">
@@ -62,16 +63,23 @@ const OrdersBarChart = ({ data = [], loading = false }) => {
   )
 }
 
-export const buildMonthlyOrderStats = (orders = [], monthCount = 6) => {
-  const buckets = []
-  const now = new Date()
+/** Current year and the previous 5 years — no future years */
+export const getChartYearOptions = () => {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: 6 }, (_, index) => currentYear - index)
+}
 
-  for (let offset = monthCount - 1; offset >= 0; offset -= 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+export const getAvailableOrderYears = getChartYearOptions
+
+export const buildMonthlyOrderStats = (orders = [], year = new Date().getFullYear()) => {
+  const buckets = []
+
+  for (let month = 0; month < 12; month += 1) {
+    const date = new Date(year, month, 1)
     buckets.push({
-      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+      key: `${year}-${String(month + 1).padStart(2, '0')}`,
       label: date.toLocaleDateString('en-IN', { month: 'short' }),
-      year: date.getFullYear(),
+      year,
       orders: 0,
       revenue: 0,
     })

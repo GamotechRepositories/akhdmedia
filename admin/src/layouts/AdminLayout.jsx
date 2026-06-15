@@ -1,8 +1,8 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   IconCategories,
   IconDashboard,
-  IconExternal,
   IconLogo,
   IconOrders,
   IconProducts,
@@ -45,26 +45,64 @@ const AdminLayout = () => {
   const navigate = useNavigate()
   const { admin, logout } = useAuth()
   const pageTitle = getPageTitle(pathname, pageTitles)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [sidebarOpen])
 
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
   }
 
+  const closeSidebar = () => setSidebarOpen(false)
+
   return (
     <div className="min-h-screen bg-[#eef2f6]">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-72 flex-col border-r border-slate-800/10 bg-[#0f172a] text-white">
+      <div
+        className={`fixed inset-0 z-30 bg-black/50 transition-opacity lg:hidden ${
+          sidebarOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+        }`}
+        onClick={closeSidebar}
+        aria-hidden={!sidebarOpen}
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-800/10 bg-[#0f172a] text-white transition-transform duration-300 ease-out lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="border-b border-white/10 px-6 py-6">
-          <div className="flex items-center gap-3">
-            <div className="text-white">
-              <IconLogo />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="text-white">
+                <IconLogo />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">
+                  {BRAND.name}
+                </p>
+                <h1 className="text-lg font-bold text-white">{BRAND.logoTagline}</h1>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">
-                {BRAND.name}
-              </p>
-              <h1 className="text-lg font-bold text-white">{BRAND.logoTagline}</h1>
-            </div>
+            <button
+              type="button"
+              onClick={closeSidebar}
+              className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden"
+              aria-label="Close menu"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -79,6 +117,7 @@ const AdminLayout = () => {
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                onClick={closeSidebar}
                 className={({ isActive }) =>
                   `group flex items-start gap-3 rounded-xl px-3 py-3 transition-all ${
                     isActive
@@ -123,15 +162,6 @@ const AdminLayout = () => {
             </p>
             <p className="truncate text-xs text-slate-400">{admin?.email}</p>
           </div>
-          <a
-            href="http://localhost:5173"
-            target="_blank"
-            rel="noreferrer"
-            className="mb-2 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-          >
-            <span>View Storefront</span>
-            <IconExternal />
-          </a>
           <button
             type="button"
             onClick={handleLogout}
@@ -142,12 +172,25 @@ const AdminLayout = () => {
         </div>
       </aside>
 
-      <div className="pl-72">
+      <div className="lg:pl-72">
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-          <div className="flex h-16 items-center justify-between px-8">
-            <div>
-              <p className="text-xs font-medium text-slate-400">Admin / {pageTitle}</p>
-              <p className="text-sm font-semibold text-slate-900">{pageTitle}</p>
+          <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="inline-flex rounded-lg border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50 lg:hidden"
+                aria-label="Open menu"
+                aria-expanded={sidebarOpen}
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-slate-400">Admin / {pageTitle}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">{pageTitle}</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-xs font-medium text-slate-600 sm:flex">
@@ -165,7 +208,7 @@ const AdminLayout = () => {
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] px-8 py-8">
+        <main className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>
