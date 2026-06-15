@@ -1,5 +1,6 @@
 import Category from '../models/Category.js'
 import formatProduct, { buildCategoryMap } from './formatProduct.js'
+import { MAX_LICENSE_EMAIL_RESENDS } from '../config/email.js'
 
 export const getCategoryMap = async () => {
   const categories = await Category.find().lean()
@@ -38,19 +39,26 @@ export const formatCartResponse = (cart, categoryMap) => {
   }
 }
 
-export const formatOrderResponse = (order) => ({
-  id: order._id.toString(),
-  orderNumber: order.orderNumber,
-  items: order.items,
-  billingAddress: order.billingAddress,
-  paymentMethod: order.paymentMethod,
-  paymentStatus: order.paymentStatus || '',
-  totalAmount: order.totalAmount,
-  status: order.status,
-  razorpayOrderId: order.razorpayOrderId || '',
-  razorpayPaymentId: order.razorpayPaymentId || '',
-  createdAt: order.createdAt,
-  updatedAt: order.updatedAt,
-})
+export const formatOrderResponse = (order) => {
+  const licenseEmailResendCount = order.licenseEmailResendCount || 0
+
+  return {
+    id: order._id.toString(),
+    orderNumber: order.orderNumber,
+    items: order.items,
+    billingAddress: order.billingAddress,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus || '',
+    totalAmount: order.totalAmount,
+    status: order.status,
+    razorpayOrderId: order.razorpayOrderId || '',
+    razorpayPaymentId: order.razorpayPaymentId || '',
+    licenseEmailResendCount,
+    maxLicenseEmailResends: MAX_LICENSE_EMAIL_RESENDS,
+    licenseEmailResendsRemaining: Math.max(0, MAX_LICENSE_EMAIL_RESENDS - licenseEmailResendCount),
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+  }
+}
 
 export default formatCartResponse

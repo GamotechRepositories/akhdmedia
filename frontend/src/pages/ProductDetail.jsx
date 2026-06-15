@@ -14,6 +14,7 @@ import {
   getProductTypeLabel,
   isVideoProduct,
 } from '../constants/mediaTypes';
+import { PURCHASE_UNAVAILABLE_MESSAGE } from '../constants/purchase';
 import { formatCurrency } from '../utils/formatters';
 
 const SpecItem = ({ label, value }) => (
@@ -28,10 +29,11 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { getProductById, getRelatedProducts, loading: catalogLoading } = useCatalog();
   const { addToCart, buyNow } = useCart();
-  const { success } = useToast();
+  const { success, error: showError } = useToast();
 
   const [product, setProduct] = useState(null);
   const [selectedImageSize, setSelectedImageSize] = useState('');
+  const [showUnavailableModal, setShowUnavailableModal] = useState(false);
 
   useEffect(() => {
     const found = getProductById(id);
@@ -52,26 +54,39 @@ const ProductDetail = () => {
   }
 
   const isVideo = isVideoProduct(product);
+  const isPurchasable = Boolean(product.isPurchasable);
   const relatedProducts = getRelatedProducts(product.id);
   const resolutionEntries = sortImageSizeEntries(product.imageSizes);
   const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
   const listingPrice = lowestTierInfo?.price ?? product.price;
 
+  const openUnavailableModal = () => setShowUnavailableModal(true);
+
   const handleAddToCart = async () => {
+    if (!isPurchasable) {
+      openUnavailableModal();
+      return;
+    }
+
     try {
       await addToCart(product, 1, selectedImageSize);
       success('Added to cart');
     } catch (error) {
-      console.error(error);
+      showError(error.message || 'Could not add to cart');
     }
   };
 
   const handleBuyNow = async () => {
+    if (!isPurchasable) {
+      openUnavailableModal();
+      return;
+    }
+
     try {
       await buyNow(product, 1, selectedImageSize);
       navigate('/checkout');
     } catch (error) {
-      console.error(error);
+      showError(error.message || 'Could not start checkout');
     }
   };
 
@@ -160,6 +175,17 @@ const ProductDetail = () => {
             </div>
 
             <div className="space-y-4 px-5 py-4 sm:px-6">
+              {!isPurchasable && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+                  <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <p className="text-xs leading-relaxed text-amber-900">
+                    This video is not available for purchase right now. Please check back later.
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 px-3.5 py-3">
                 <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -177,7 +203,11 @@ const ProductDetail = () => {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-gray-800 active:scale-[0.99]"
+                  className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold shadow-md transition active:scale-[0.99] ${
+                    isPurchasable
+                      ? 'bg-gray-900 text-white hover:bg-gray-800'
+                      : 'cursor-not-allowed bg-gray-400 text-white shadow-none'
+                  }`}
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -187,7 +217,11 @@ const ProductDetail = () => {
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]"
+                  className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-semibold transition active:scale-[0.99] ${
+                    isPurchasable
+                      ? 'border-gray-900 bg-white text-gray-900 hover:bg-gray-50'
+                      : 'cursor-not-allowed border-gray-300 bg-white text-gray-400'
+                  }`}
                 >
                   Buy Now
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,6 +301,36 @@ const ProductDetail = () => {
           </div>
         )}
       </div>
+
+      {showUnavailableModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="unavailable-title"
+          >
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+              <svg className="h-6 w-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <h2 id="unavailable-title" className="text-center text-lg font-bold text-gray-900">
+              Video Not Available
+            </h2>
+            <p className="mt-3 text-center text-sm leading-relaxed text-gray-600">
+              {PURCHASE_UNAVAILABLE_MESSAGE}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowUnavailableModal(false)}
+              className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

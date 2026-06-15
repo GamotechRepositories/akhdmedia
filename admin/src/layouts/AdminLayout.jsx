@@ -6,6 +6,7 @@ import {
   IconLogo,
   IconOrders,
   IconProducts,
+  IconSupport,
   IconTransactions,
 } from '../components/icons/AdminIcons'
 import { useAuth } from '../context/AuthContext'
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
   { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
   { to: '/transactions', label: 'Transactions', icon: IconTransactions, description: 'Payments & Razorpay' },
+  { to: '/support', label: 'Support', icon: IconSupport, description: 'Customer help requests' },
 ]
 
 const pageTitles = {
@@ -27,11 +29,13 @@ const pageTitles = {
   '/products/new': 'Add Product',
   '/orders': 'Orders',
   '/transactions': 'Transactions',
+  '/support': 'Support',
 }
 
 const getPageTitle = (pathname, pageTitles) => {
   if (pageTitles[pathname]) return pageTitles[pathname]
   if (pathname.startsWith('/transactions/')) return 'Transaction Details'
+  if (pathname.startsWith('/support/')) return 'Support Request'
   if (pathname.includes('/edit')) return 'Edit'
   return 'Admin'
 }

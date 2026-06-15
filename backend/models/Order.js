@@ -51,6 +51,7 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'confirmed', 'completed'],
       default: 'confirmed',
     },
+    licenseEmailResendCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },
 )

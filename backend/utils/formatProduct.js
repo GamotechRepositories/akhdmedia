@@ -5,6 +5,7 @@ import {
   resolveImageSizes,
   serializeResolutionPricing,
 } from './resolveImageSizes.js'
+import { hasDeliverableMasterFile } from './productDelivery.js'
 
 export const serializeDeliveryFiles = (deliveryFiles, availableTiers = []) => {
   const source =
@@ -63,6 +64,7 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     videoPoster: product.videoPoster,
     videoInfo: product.videoInfo,
     isActive: product.isActive,
+    isPurchasable: hasDeliverableMasterFile(product),
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   }

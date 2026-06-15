@@ -18,6 +18,10 @@ import {
   getRazorpayKeyId,
 } from '../services/paymentService.js'
 import { sendOrderLicenseEmail } from '../services/emailService.js'
+import {
+  LICENSE_EMAIL_RESEND_LIMIT_MESSAGE,
+  MAX_LICENSE_EMAIL_RESENDS,
+} from '../config/email.js'
 import AppError from '../utils/AppError.js'
 export const getProfile = asyncHandler(async (req, res) => {
   const profile = await getCheckoutProfile(req.sessionId)
@@ -110,6 +114,10 @@ export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {
     throw new AppError('Payment is required before license email can be sent', 402)
   }
 
+  if ((order.licenseEmailResendCount || 0) >= MAX_LICENSE_EMAIL_RESENDS) {
+    throw new AppError(LICENSE_EMAIL_RESEND_LIMIT_MESSAGE, 429)
+  }
+
   const downloads = await getOrderItemDownloads(order)
   const emailResult = await sendOrderLicenseEmail({ order, downloads })
 
@@ -117,10 +125,16 @@ export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {
     throw new AppError(`Could not send license email (${emailResult.reason})`, 500)
   }
 
+  order.licenseEmailResendCount = (order.licenseEmailResendCount || 0) + 1
+  await order.save()
+
   res.json({
     success: true,
     message: 'License email sent',
-    data: { email: emailResult },
+    data: {
+      email: emailResult,
+      order: formatOrderResponse(order),
+    },
   })
 })
 

@@ -172,6 +172,12 @@ const Navbar = () => {
                 </svg>
               </button>
 
+              <Link to="/support" className={`hidden rounded-full p-2 text-gray-800 transition hover:bg-gray-100 md:inline-flex ${location.pathname === '/support' ? 'bg-gray-100' : ''}`} aria-label="Support">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </Link>
+
               <Link to="/cart" className="relative rounded-full p-2 text-gray-800 transition hover:bg-gray-100" aria-label="Cart">
                 <svg className="h-5 w-5 md:h-[22px] md:w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -250,6 +256,7 @@ const Navbar = () => {
           <div className="space-y-4">
             <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Home</Link>
             <Link to="/videos" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">All Videos</Link>
+            <Link to="/support" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Support</Link>
           </div>
           <div className="h-px w-12 bg-gray-200" />
           <div>

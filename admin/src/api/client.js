@@ -98,6 +98,12 @@ export const fetchTransactions = () => api.get('/admin/transactions')
 
 export const fetchTransaction = (id) => api.get(`/admin/transactions/${id}`)
 
+export const fetchSupportRequests = () => api.get('/admin/support')
+
+export const fetchSupportRequest = (id) => api.get(`/admin/support/${id}`)
+
+export const updateSupportRequest = (id, payload) => api.patch(`/admin/support/${id}`, payload)
+
 export const reseedCatalog = () => api.post('/seed')
 
 export default api

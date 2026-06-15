@@ -10,6 +10,7 @@ import {
   fetchPopulatedCart,
   getCartTotals,
 } from './cartService.js'
+import { assertProductPurchasable } from '../utils/productDelivery.js'
 
 const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
 
@@ -87,6 +88,7 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
   const filteredItems = cart.items.filter((item) => item.product)
   const orderItems = await Promise.all(
     filteredItems.map(async (item) => {
+      assertProductPurchasable(item.product)
       const clipId = await ensureProductClipId(item.product)
       const product = formatProduct(item.product, categoryMap)
       const lineTotal = item.price * item.quantity

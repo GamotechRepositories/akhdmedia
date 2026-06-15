@@ -72,3 +72,10 @@ export const orderAPI = {
     return data
   },
 }
+
+export const supportAPI = {
+  submitRequest: async (payload) => {
+    const { data } = await api.post('/support', payload)
+    return data
+  },
+}

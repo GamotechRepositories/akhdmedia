@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { getFrontendUrl, getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
+import { getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
 
 let resendClient = null
 
@@ -72,9 +72,8 @@ const LICENSE_EMAIL_TEMPLATE = `<!DOCTYPE html>
 </body>
 </html>`
 
-const buildDownloadSection = ({ downloadUrl, orderPageUrl }) => {
-  if (downloadUrl) {
-    return `<div style="text-align:center;margin:30px 0;">
+const buildDownloadSection = (downloadUrl) =>
+  `<div style="text-align:center;margin:30px 0;">
       <a
         href="${downloadUrl}"
         style="
@@ -90,28 +89,6 @@ const buildDownloadSection = ({ downloadUrl, orderPageUrl }) => {
         Download Video
       </a>
     </div>`
-  }
-
-  return `<div style="text-align:center;margin:30px 0;">
-      <p style="font-size:14px;color:#4b5563;margin-bottom:16px;">
-        Your download link is being prepared. You can also open your order page anytime.
-      </p>
-      <a
-        href="${orderPageUrl}"
-        style="
-          background:#2563eb;
-          color:white;
-          text-decoration:none;
-          padding:14px 24px;
-          border-radius:6px;
-          display:inline-block;
-          font-weight:bold;
-        "
-      >
-        View Order &amp; Download
-      </a>
-    </div>`
-}
 
 const fillLicenseEmailTemplate = ({
   customerName,
@@ -120,7 +97,6 @@ const fillLicenseEmailTemplate = ({
   licenseNumber,
   purchaseDate,
   downloadUrl,
-  orderPageUrl,
   currentYear,
 }) =>
   LICENSE_EMAIL_TEMPLATE.replace(/{{customer_name}}/g, escapeHtml(customerName))
@@ -128,17 +104,11 @@ const fillLicenseEmailTemplate = ({
     .replace(/{{clip_id}}/g, escapeHtml(clipId))
     .replace(/{{license_number}}/g, escapeHtml(licenseNumber))
     .replace(/{{purchase_date}}/g, escapeHtml(purchaseDate))
-    .replace(
-      /{{download_section}}/g,
-      buildDownloadSection({ downloadUrl, orderPageUrl }),
-    )
+    .replace(/{{download_section}}/g, buildDownloadSection(downloadUrl))
     .replace(/{{current_year}}/g, String(currentYear))
 
 const getPrimaryDownloadFile = (item) =>
   item.files?.find((file) => file.type === 'video') || item.files?.[0] || null
-
-const getOrderPageUrl = (order) =>
-  `${getFrontendUrl()}/order-success?method=online&orderId=${order._id}`
 
 export const sendOrderLicenseEmail = async ({ order, downloads }) => {
   const customerEmail = order.billingAddress?.email?.trim()
@@ -161,7 +131,6 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
   })
   const currentYear = new Date().getFullYear()
   const customerName = order.billingAddress?.name || 'there'
-  const orderPageUrl = getOrderPageUrl(order)
 
   if (!downloads?.length) {
     console.warn('[email] No order items to email')
@@ -172,6 +141,10 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
 
   for (const item of downloads) {
     const downloadFile = getPrimaryDownloadFile(item)
+    if (!downloadFile?.url) {
+      console.warn(`[email] Skipped item "${item.name}" — no download URL available`)
+      continue
+    }
 
     const html = fillLicenseEmailTemplate({
       customerName,
@@ -179,8 +152,7 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
       clipId: item.clipId || '—',
       licenseNumber: item.licenseNumber || '—',
       purchaseDate,
-      downloadUrl: downloadFile?.url || '',
-      orderPageUrl,
+      downloadUrl: downloadFile.url,
       currentYear,
     })
 
@@ -197,6 +169,11 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
     }
 
     sentCount += 1
+  }
+
+  if (sentCount === 0) {
+    console.warn('[email] No license emails sent — no downloadable files on order')
+    return { sent: false, reason: 'no_download_files' }
   }
 
   console.log(`[email] License email sent to ${customerEmail} (${sentCount} item(s))`)

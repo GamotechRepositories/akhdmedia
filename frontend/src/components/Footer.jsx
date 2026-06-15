@@ -43,6 +43,11 @@ const Footer = () => {
         <div>
           <h3 className="mb-4 text-lg font-semibold text-white">Contact</h3>
           <ul className="space-y-2 text-sm text-gray-400">
+            <li>
+              <Link to="/support" className="font-medium text-white transition hover:text-gray-200">
+                Contact Support
+              </Link>
+            </li>
             <li>{BRAND.supportEmail}</li>
             <li>{BRAND.supportPhone}</li>
             <li>Mon–Sat · 9AM – 6PM IST</li>

@@ -9,6 +9,8 @@ import paymentRoutes from './payments.js'
 import uploadRoutes from './upload.js'
 import fileRoutes from './files.js'
 import authRoutes from './auth.js'
+import supportRoutes from './support.js'
+import adminSupportRoutes from './adminSupport.js'
 import asyncHandler from '../utils/asyncHandler.js'
 import { reseedCatalog } from '../seed/seedCatalog.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
@@ -40,6 +42,8 @@ router.use('/orders', orderRoutes)
 router.use('/admin/orders', requireAdmin, adminOrderRoutes)
 router.use('/admin/transactions', requireAdmin, adminTransactionRoutes)
 router.use('/payments', paymentRoutes)
+router.use('/support', supportRoutes)
+router.use('/admin/support', requireAdmin, adminSupportRoutes)
 router.use('/upload', requireAdmin, uploadRoutes)
 router.use('/files', fileRoutes)
 

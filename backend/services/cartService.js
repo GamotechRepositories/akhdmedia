@@ -5,6 +5,7 @@ import {
   getListingPrice,
   resolveImageSizes,
 } from '../utils/resolveImageSizes.js'
+import { assertProductPurchasable } from '../utils/productDelivery.js'
 
 const resolveItemPrice = (product, imageSize = '') => {
   const imageSizes = resolveImageSizes(product)
@@ -45,6 +46,8 @@ export const addCartItem = async (sessionId, { productId, quantity = 1, imageSiz
   if (!product) {
     throw new AppError('Product not found', 404)
   }
+
+  assertProductPurchasable(product)
 
   const normalizedQuantity = Math.max(1, Number(quantity) || 1)
   const price = resolveItemPrice(product, imageSize)
@@ -106,6 +109,8 @@ export const replaceCartWithItem = async (sessionId, { productId, quantity = 1, 
   if (!product) {
     throw new AppError('Product not found', 404)
   }
+
+  assertProductPurchasable(product)
 
   const normalizedQuantity = Math.max(1, Number(quantity) || 1)
   const price = resolveItemPrice(product, imageSize)

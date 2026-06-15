@@ -10,6 +10,8 @@ import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
 import Transactions from './pages/Transactions'
 import TransactionDetail from './pages/TransactionDetail'
+import Support from './pages/Support'
+import SupportDetail from './pages/SupportDetail'
 import Login from './pages/Login'
 
 const App = () => (
@@ -28,6 +30,8 @@ const App = () => (
         <Route path="orders/:id" element={<OrderDetail />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="transactions/:id" element={<TransactionDetail />} />
+        <Route path="support" element={<Support />} />
+        <Route path="support/:id" element={<SupportDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Route>
