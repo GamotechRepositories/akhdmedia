@@ -9,6 +9,8 @@ const OrderSuccess = () => {
   const [order, setOrder] = useState(null);
   const [downloads, setDownloads] = useState([]);
   const [loadingOrder, setLoadingOrder] = useState(true);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [emailNotice, setEmailNotice] = useState('');
 
   const orderId = searchParams.get('orderId') || '';
   const orderNumber = order?.orderNumber?.slice(-8).toUpperCase() || '--------';
@@ -21,6 +23,25 @@ const OrderSuccess = () => {
     order?.status === 'pending';
 
   const isPaid = order?.paymentStatus === 'paid';
+  const hasDownloadFiles = downloads.some((item) => item.files?.length > 0);
+
+  const handleResendEmail = async () => {
+    if (!orderId || resendingEmail) return;
+
+    setResendingEmail(true);
+    setEmailNotice('');
+
+    try {
+      const response = await orderAPI.resendLicenseEmail(orderId);
+      if (response.success) {
+        setEmailNotice(`License email sent to ${customerEmail || 'your email'}.`);
+      }
+    } catch (error) {
+      setEmailNotice(error.message || 'Could not send license email. Please try again.');
+    } finally {
+      setResendingEmail(false);
+    }
+  };
 
   useEffect(() => {
     if (!orderId) {
@@ -137,11 +158,27 @@ const OrderSuccess = () => {
         )}
 
         <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          <p className="font-semibold">Email copy sent</p>
+          <p className="font-semibold">License email</p>
           <p className="mt-1 leading-relaxed text-blue-800">
-            License details and download links were also sent to{' '}
-            <span className="font-medium">{customerEmail || 'your email'}</span>.
+            License details{hasDownloadFiles ? ' and download links' : ''} are sent to{' '}
+            <span className="font-medium">{customerEmail || 'your email'}</span> after payment.
           </p>
+          {!hasDownloadFiles && (
+            <p className="mt-2 text-xs text-amber-800">
+              Download file is not uploaded for this product yet. You will still receive your license by email.
+            </p>
+          )}
+          {emailNotice && <p className="mt-2 text-xs font-medium text-blue-900">{emailNotice}</p>}
+          {isPaid && orderId && (
+            <button
+              type="button"
+              onClick={handleResendEmail}
+              disabled={resendingEmail}
+              className="mt-3 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-900 transition hover:bg-blue-100 disabled:opacity-60"
+            >
+              {resendingEmail ? 'Sending...' : 'Resend license email'}
+            </button>
+          )}
         </div>
 
         <div className="mt-4 space-y-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">

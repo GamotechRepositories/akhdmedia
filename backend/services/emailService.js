@@ -1,79 +1,146 @@
-import nodemailer from 'nodemailer'
-import { BRAND_NAME, getFrontendUrl, isEmailConfigured } from '../config/email.js'
+import { Resend } from 'resend'
+import { getFrontendUrl, getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
 
-let transporter = null
+let resendClient = null
 
-const getTransporter = () => {
-  if (transporter) return transporter
+const getResendClient = () => {
+  if (resendClient) return resendClient
 
-  if (!isEmailConfigured()) {
-    return null
+  const apiKey = getResendApiKey()
+  if (!apiKey) return null
+
+  resendClient = new Resend(apiKey)
+  return resendClient
+}
+
+const escapeHtml = (value = '') =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+const LICENSE_EMAIL_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Video License</title>
+</head>
+<body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
+
+  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;padding:30px;">
+
+    <h1 style="text-align:center;color:#111827;">
+      Akhd Media
+    </h1>
+
+    <h2>Thank You For Your Purchase!</h2>
+
+    <p>Hi {{customer_name}},</p>
+
+    <p>
+      Your payment has been successfully processed and your licensed video
+      is now ready for download.
+    </p>
+
+    <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0;">
+      <p><strong>Video Title:</strong> {{video_title}}</p>
+      <p><strong>Clip ID:</strong> {{clip_id}}</p>
+      <p><strong>License Number:</strong> {{license_number}}</p>
+      <p><strong>Purchase Date:</strong> {{purchase_date}}</p>
+    </div>
+
+    {{download_section}}
+
+    <p>
+      Please keep this email for your records. Your license number serves
+      as proof of purchase.
+    </p>
+
+    <p>
+      If you have any questions, simply reply to this email.
+    </p>
+
+    <hr>
+
+    <p style="font-size:12px;color:#666;text-align:center;">
+      © {{current_year}} Akhd Media. All rights reserved.
+    </p>
+
+  </div>
+
+</body>
+</html>`
+
+const buildDownloadSection = ({ downloadUrl, orderPageUrl }) => {
+  if (downloadUrl) {
+    return `<div style="text-align:center;margin:30px 0;">
+      <a
+        href="${downloadUrl}"
+        style="
+          background:#2563eb;
+          color:white;
+          text-decoration:none;
+          padding:14px 24px;
+          border-radius:6px;
+          display:inline-block;
+          font-weight:bold;
+        "
+      >
+        Download Video
+      </a>
+    </div>`
   }
 
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-
-  return transporter
+  return `<div style="text-align:center;margin:30px 0;">
+      <p style="font-size:14px;color:#4b5563;margin-bottom:16px;">
+        Your download link is being prepared. You can also open your order page anytime.
+      </p>
+      <a
+        href="${orderPageUrl}"
+        style="
+          background:#2563eb;
+          color:white;
+          text-decoration:none;
+          padding:14px 24px;
+          border-radius:6px;
+          display:inline-block;
+          font-weight:bold;
+        "
+      >
+        View Order &amp; Download
+      </a>
+    </div>`
 }
 
-const buildLicenseEmailHtml = ({ order, downloads, customerName }) => {
-  const orderRef = order.orderNumber?.slice(-8).toUpperCase() || '—'
-  const successUrl = `${getFrontendUrl()}/order-success?method=online&orderId=${order._id}`
+const fillLicenseEmailTemplate = ({
+  customerName,
+  videoTitle,
+  clipId,
+  licenseNumber,
+  purchaseDate,
+  downloadUrl,
+  orderPageUrl,
+  currentYear,
+}) =>
+  LICENSE_EMAIL_TEMPLATE.replace(/{{customer_name}}/g, escapeHtml(customerName))
+    .replace(/{{video_title}}/g, escapeHtml(videoTitle))
+    .replace(/{{clip_id}}/g, escapeHtml(clipId))
+    .replace(/{{license_number}}/g, escapeHtml(licenseNumber))
+    .replace(/{{purchase_date}}/g, escapeHtml(purchaseDate))
+    .replace(
+      /{{download_section}}/g,
+      buildDownloadSection({ downloadUrl, orderPageUrl }),
+    )
+    .replace(/{{current_year}}/g, String(currentYear))
 
-  const itemBlocks = downloads
-    .map((item) => {
-      const fileLinks = item.files
-        .map(
-          (file) =>
-            `<li><a href="${file.url}" style="color:#111827;">${file.label}</a> (${file.type})</li>`,
-        )
-        .join('')
+const getPrimaryDownloadFile = (item) =>
+  item.files?.find((file) => file.type === 'video') || item.files?.[0] || null
 
-      return `
-        <div style="margin-bottom:16px;padding:14px;border:1px solid #e5e7eb;border-radius:12px;">
-          <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#111827;">${item.name}</p>
-          <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">Clip ID: <strong>${item.clipId || '—'}</strong></p>
-          <p style="margin:0 0 4px;font-size:13px;color:#4b5563;">License: <strong>${item.imageSize || 'Standard'}</strong></p>
-          <p style="margin:0 0 8px;font-size:13px;color:#4b5563;">License No: <strong>${item.licenseNumber || '—'}</strong></p>
-          ${
-            fileLinks
-              ? `<ul style="margin:0;padding-left:18px;font-size:13px;color:#374151;">${fileLinks}</ul>`
-              : `<p style="margin:0;font-size:13px;color:#b45309;">Download files are being prepared. Open your order page shortly.</p>`
-          }
-        </div>
-      `
-    })
-    .join('')
-
-  return `
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#111827;">
-      <h1 style="font-size:22px;margin-bottom:8px;">Your ${BRAND_NAME} license is ready</h1>
-      <p style="font-size:14px;color:#4b5563;line-height:1.6;">
-        Hi ${customerName || 'there'},<br/>
-        Thank you for your purchase. Your commercial license and download links are below.
-      </p>
-      <p style="font-size:13px;color:#6b7280;">Order #${orderRef}</p>
-      ${itemBlocks}
-      <p style="margin-top:18px;font-size:13px;color:#4b5563;">
-        You can also view this order anytime:
-        <a href="${successUrl}" style="color:#111827;">${successUrl}</a>
-      </p>
-      <p style="margin-top:20px;font-size:12px;color:#9ca3af;">
-        Links expire after a limited time. Save your files and license numbers for your records.
-      </p>
-    </div>
-  `
-}
+const getOrderPageUrl = (order) =>
+  `${getFrontendUrl()}/order-success?method=online&orderId=${order._id}`
 
 export const sendOrderLicenseEmail = async ({ order, downloads }) => {
-  const transport = getTransporter()
   const customerEmail = order.billingAddress?.email?.trim()
 
   if (!customerEmail) {
@@ -81,23 +148,57 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
     return { sent: false, reason: 'missing_email' }
   }
 
-  if (!transport) {
-    console.warn('[email] SMTP not configured — license email not sent')
-    return { sent: false, reason: 'smtp_not_configured' }
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — license email not sent')
+    return { sent: false, reason: 'resend_not_configured' }
   }
 
-  const html = buildLicenseEmailHtml({
-    order,
-    downloads,
-    customerName: order.billingAddress?.name,
+  const purchaseDate = new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   })
+  const currentYear = new Date().getFullYear()
+  const customerName = order.billingAddress?.name || 'there'
+  const orderPageUrl = getOrderPageUrl(order)
 
-  await transport.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: customerEmail,
-    subject: `${BRAND_NAME} — Your license & download links (Order #${order.orderNumber?.slice(-8).toUpperCase()})`,
-    html,
-  })
+  if (!downloads?.length) {
+    console.warn('[email] No order items to email')
+    return { sent: false, reason: 'no_order_items' }
+  }
 
-  return { sent: true }
+  let sentCount = 0
+
+  for (const item of downloads) {
+    const downloadFile = getPrimaryDownloadFile(item)
+
+    const html = fillLicenseEmailTemplate({
+      customerName,
+      videoTitle: item.name,
+      clipId: item.clipId || '—',
+      licenseNumber: item.licenseNumber || '—',
+      purchaseDate,
+      downloadUrl: downloadFile?.url || '',
+      orderPageUrl,
+      currentYear,
+    })
+
+    const { error } = await resend.emails.send({
+      from: getResendFrom(),
+      to: customerEmail,
+      subject: 'Your Video License & Download Link',
+      html,
+    })
+
+    if (error) {
+      console.error('[email] Resend API error:', error)
+      throw new Error(error.message || 'Resend API error')
+    }
+
+    sentCount += 1
+  }
+
+  console.log(`[email] License email sent to ${customerEmail} (${sentCount} item(s))`)
+  return { sent: true, count: sentCount }
 }

@@ -66,4 +66,9 @@ export const orderAPI = {
     const { data } = await api.get(`/orders/${orderId}/downloads`)
     return data
   },
+
+  resendLicenseEmail: async (orderId) => {
+    const { data } = await api.post(`/orders/${orderId}/resend-email`)
+    return data
+  },
 }

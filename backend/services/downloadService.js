@@ -18,15 +18,35 @@ const getTierDelivery = (product, imageSize) => {
   return deliveryMap[imageSize] || null
 }
 
-/** Video products always deliver the master file — quality tier is licensing only */
-const getProductDelivery = (product, imageSize) => {
-  if (product.mediaType === 'video' && product.masterVideoKey) {
+const getAnyVideoDelivery = (product) => {
+  if (product.masterVideoKey) {
     return {
       videoKey: product.masterVideoKey,
       videoFilename: product.masterVideoFilename || '',
       imageKeys: [],
       imageFilenames: [],
     }
+  }
+
+  const deliveryMap = readDeliveryMap(product.deliveryFiles)
+  for (const tier of Object.values(deliveryMap)) {
+    if (tier?.videoKey) {
+      return {
+        videoKey: tier.videoKey,
+        videoFilename: tier.videoFilename || '',
+        imageKeys: tier.imageKeys || [],
+        imageFilenames: tier.imageFilenames || [],
+      }
+    }
+  }
+
+  return null
+}
+
+/** Video products always deliver the master file — quality tier is licensing only */
+const getProductDelivery = (product, imageSize) => {
+  if (product.mediaType === 'video') {
+    return getAnyVideoDelivery(product) || getTierDelivery(product, imageSize)
   }
   return getTierDelivery(product, imageSize)
 }
