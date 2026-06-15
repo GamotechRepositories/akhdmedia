@@ -143,6 +143,18 @@ export const getHighestQualityLabel = (product = {}) => {
   return null;
 };
 
+const QUALITY_BADGE_ALIASES = {
+  'Full HD': 'FHD',
+};
+
+/** Short labels for quality badges on product cards */
+export const formatQualityBadgeLabel = (label = '') => {
+  const trimmed = String(label).trim();
+  if (!trimmed) return 'HD';
+  if (/^full\s*hd$/i.test(trimmed)) return 'FHD';
+  return QUALITY_BADGE_ALIASES[trimmed] ?? trimmed;
+};
+
 export const formatImageSizeList = (imageSizes = {}) =>
   sortImageSizeEntries(imageSizes)
     .map(([key]) => key)

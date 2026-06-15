@@ -1,5 +1,5 @@
 import ProductSkeleton from './ProductSkeleton';
-import { DUAL_CATEGORY_PRODUCT_GRID, HOME_PRODUCT_GRID, PAGE_CONTAINER } from '../../constants/layout';
+import { HOME_PRODUCT_GRID, PAGE_CONTAINER } from '../../constants/layout';
 
 export const HeroSkeleton = () => (
   <section className="relative w-full overflow-hidden bg-gray-950">
@@ -55,18 +55,17 @@ export const CategoryAccordionSkeleton = () => (
 );
 
 export const DualCategoryGridSkeleton = () => (
-  <section className={`${PAGE_CONTAINER} py-8 sm:py-12`}>
-    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:gap-12">
-      {Array.from({ length: 4 }, (_, i) => (
+  <section className={`${PAGE_CONTAINER} pb-8 sm:pb-10`}>
+    <div className="flex flex-col gap-8 lg:gap-10">
+      {Array.from({ length: 3 }, (_, i) => (
         <div key={i}>
-          <div className="mb-4 flex items-end justify-between gap-3 border-b border-gray-200 pb-4 sm:mb-5">
+          <div className="mb-6 flex flex-col gap-3 border-b border-gray-200 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0 flex-1">
-              <div className="h-6 w-32 animate-pulse rounded bg-gray-200 sm:h-7 sm:w-40" />
-              <div className="mt-2 h-3 w-16 animate-pulse rounded bg-gray-100" />
+              <div className="h-8 w-40 animate-pulse rounded bg-gray-200 sm:h-9 sm:w-48" />
             </div>
-            <div className="h-9 w-20 shrink-0 animate-pulse rounded-full bg-gray-200 sm:w-24" />
+            <div className="hidden h-10 w-24 shrink-0 animate-pulse rounded-full bg-gray-200 sm:block" />
           </div>
-          <div className={DUAL_CATEGORY_PRODUCT_GRID}>
+          <div className={HOME_PRODUCT_GRID}>
             {Array.from({ length: 4 }, (_, j) => (
               <ProductSkeleton key={j} />
             ))}

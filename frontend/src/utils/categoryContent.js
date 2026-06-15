@@ -1,5 +1,17 @@
 const categoryPath = (slug) => `/videos/${slug}`;
 
+const MIN_HOME_CATEGORY_PRODUCTS = 2;
+const EXPANDED_HOME_CATEGORY_THRESHOLD = 5;
+const DEFAULT_HOME_CATEGORY_PREVIEW = 4;
+const EXPANDED_HOME_CATEGORY_PREVIEW = 8;
+
+const getHomeCategoryPreviewLimit = (clipCount) => {
+  if (clipCount >= EXPANDED_HOME_CATEGORY_THRESHOLD) {
+    return EXPANDED_HOME_CATEGORY_PREVIEW;
+  }
+  return Math.min(clipCount, DEFAULT_HOME_CATEGORY_PREVIEW);
+};
+
 export const mapStoryCollections = (categories = [], products = []) =>
   categories
     .filter((category) => category.coverImage)
@@ -66,13 +78,15 @@ export const mapDualGridSections = (categories = [], products = []) =>
       const categoryProducts = products.filter(
         (product) => product.categorySlug === category.slug,
       );
+      const clipCount = categoryProducts.length;
 
       return {
         id: category.slug,
         title: category.breadcrumb,
         link: categoryPath(category.slug),
-        clipCount: categoryProducts.length,
-        products: categoryProducts.slice(0, 4),
+        clipCount,
+        products: categoryProducts.slice(0, getHomeCategoryPreviewLimit(clipCount)),
       };
     })
-    .filter((section) => section.clipCount >= 3);
+    .filter((section) => section.clipCount >= MIN_HOME_CATEGORY_PRODUCTS)
+    .sort((a, b) => b.clipCount - a.clipCount);
