@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchSupportRequests } from '../api/client'
 import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass } from '../components/ui/adminUi'
@@ -20,30 +20,18 @@ const SUBJECT_LABELS = {
   other: 'Other',
 }
 
-const statusStyles = {
-  open: 'bg-amber-50 text-amber-700',
-  in_progress: 'bg-blue-50 text-blue-700',
-  resolved: 'bg-emerald-50 text-emerald-700',
-  closed: 'bg-slate-100 text-slate-600',
-}
-
-const formatDate = (value) => {
-  if (!value) return '—'
-  return new Date(value).toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 const Support = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const tableContainerRef = useRef(null)
+  const restore = location.state?.restore
+
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [search, setSearch] = useState(restore?.searchQuery || '')
+  const [statusFilter, setStatusFilter] = useState(restore?.statusFilter || 'all')
+  const [highlightedId, setHighlightedId] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -61,6 +49,31 @@ const Support = () => {
 
     load()
   }, [])
+
+  useEffect(() => {
+    const nextRestore = location.state?.restore
+    if (!nextRestore || loading) return
+
+    if (nextRestore.searchQuery !== undefined) setSearch(nextRestore.searchQuery)
+    if (nextRestore.statusFilter) setStatusFilter(nextRestore.statusFilter)
+
+    const frame = requestAnimationFrame(() => {
+      if (tableContainerRef.current && typeof nextRestore.scrollTop === 'number') {
+        tableContainerRef.current.scrollTop = nextRestore.scrollTop
+      }
+
+      if (nextRestore.requestId) {
+        setHighlightedId(nextRestore.requestId)
+        const row = document.getElementById(`support-row-${nextRestore.requestId}`)
+        row?.scrollIntoView({ block: 'center', behavior: 'auto' })
+        window.setTimeout(() => setHighlightedId(''), 2500)
+      }
+
+      navigate('/support', { replace: true, state: {} })
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [loading, location.state, navigate])
 
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -101,7 +114,7 @@ const Support = () => {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search ticket, name, email, order..."
+            placeholder="Search ticket, name, email, phone..."
             className={`${inputClass} lg:max-w-md`}
           />
           <div className="flex flex-wrap gap-2">
@@ -127,58 +140,56 @@ const Support = () => {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!loading && !error && (
-        <div className={`${cardClass} overflow-x-auto`}>
+        <div ref={tableContainerRef} className={`${cardClass} max-h-[70vh] overflow-x-auto overflow-y-auto`}>
           <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">Ticket</th>
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Issue</th>
-                <th className="px-4 py-3">Message</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Submitted</th>
+                <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
                     No support requests found.
                   </td>
                 </tr>
               ) : (
                 filteredRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-3 align-top">
-                      <Link to={`/support/${request.id}`} className="font-mono text-xs font-semibold text-slate-900 hover:underline">
-                        {request.ticketNumber}
-                      </Link>
-                      {request.orderNumber && (
-                        <p className="mt-1 text-[11px] text-slate-500">Order: {request.orderNumber}</p>
-                      )}
+                  <tr
+                    key={request.id}
+                    id={`support-row-${request.id}`}
+                    className={`hover:bg-slate-50/80 ${
+                      highlightedId === request.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-900">
+                      {request.ticketNumber}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{request.name}</p>
                       <p className="text-xs text-slate-500">{request.email}</p>
                     </td>
-                    <td className="px-4 py-3 align-top text-slate-700">
-                      {request.phone || '—'}
+                    <td className="px-4 py-3 text-slate-700">{request.phone || '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        to={`/support/${request.id}`}
+                        state={{
+                          fromList: {
+                            searchQuery: search,
+                            statusFilter,
+                            scrollTop: tableContainerRef.current?.scrollTop ?? 0,
+                            requestId: request.id,
+                          },
+                        }}
+                        className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        View request
+                      </Link>
                     </td>
-                    <td className="px-4 py-3 align-top text-slate-600">
-                      {SUBJECT_LABELS[request.subject] || request.subject}
-                    </td>
-                    <td className="max-w-xs px-4 py-3 align-top">
-                      <p className="line-clamp-3 whitespace-pre-wrap text-sm text-slate-700">
-                        {request.message || '—'}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${statusStyles[request.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {request.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 align-top text-slate-500">{formatDate(request.createdAt)}</td>
                   </tr>
                 ))
               )}

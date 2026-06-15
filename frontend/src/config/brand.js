@@ -1,5 +1,5 @@
 export const BRAND = {
-  name: 'AKHDMEDIA',
+  name: 'AKHD MEDIA & CO',
   tagline: 'Premium Video Marketplace',
   domain: 'akhdmedia.com',
   supportEmail: 'support@akhdmedia.com',

@@ -5,21 +5,18 @@ const Logo = ({ variant = 'default', theme = 'light', className = '' }) => {
   const isCompact = variant === 'compact';
   const isDark = theme === 'dark';
 
+  const sizeClass = isCompact
+    ? 'text-[11px] sm:text-xs'
+    : 'text-xs min-[360px]:text-sm sm:text-base md:text-base lg:text-lg xl:text-lg';
+
   return (
     <Link
       to="/"
       aria-label={`${BRAND.name} home`}
-      className={`group inline-flex items-center gap-2.5 ${className}`}
+      className={`group inline-flex max-w-full items-center ${className}`}
     >
       <span
-        className={`flex shrink-0 items-center justify-center rounded-lg font-black tracking-tight ${
-          isCompact ? 'h-8 w-8 text-xs' : 'h-9 w-9 text-sm'
-        } ${isDark ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'}`}
-      >
-        AK
-      </span>
-      <span
-        className={`font-black uppercase tracking-[0.14em] leading-none ${isCompact ? 'text-xs' : 'text-sm'} ${
+        className={`truncate whitespace-nowrap font-black uppercase leading-none tracking-[0.04em] min-[360px]:tracking-[0.05em] sm:tracking-[0.06em] md:tracking-[0.07em] ${sizeClass} ${
           isDark ? 'text-white' : 'text-gray-900'
         }`}
       >

@@ -88,6 +88,13 @@ const buildOrderSearchText = (order) => {
     .toLowerCase()
 }
 
+const matchesCustomerEmail = (order, email = '') => {
+  const filterEmail = email.trim().toLowerCase()
+  if (!filterEmail) return true
+
+  return (order.billingAddress?.email || '').trim().toLowerCase() === filterEmail
+}
+
 const matchesSearch = (order, query) => {
   const normalized = query.trim().toLowerCase()
   if (!normalized) return true
@@ -132,6 +139,7 @@ const Orders = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState(restore?.searchQuery || '')
+  const [customerEmailFilter, setCustomerEmailFilter] = useState(restore?.customerEmail || '')
   const [paymentFilter, setPaymentFilter] = useState(restore?.paymentFilter || 'all')
   const [statusFilter, setStatusFilter] = useState(restore?.statusFilter || 'all')
   const [dateFrom, setDateFrom] = useState(restore?.dateFrom || '')
@@ -159,6 +167,10 @@ const Orders = () => {
     if (!nextRestore || loading) return
 
     if (nextRestore.searchQuery !== undefined) setSearchQuery(nextRestore.searchQuery)
+    if (nextRestore.customerEmail !== undefined) {
+      setCustomerEmailFilter(nextRestore.customerEmail)
+      setSearchQuery(nextRestore.customerEmail)
+    }
     if (nextRestore.paymentFilter) setPaymentFilter(nextRestore.paymentFilter)
     if (nextRestore.statusFilter) setStatusFilter(nextRestore.statusFilter)
     if (nextRestore.dateFrom !== undefined) setDateFrom(nextRestore.dateFrom)
@@ -196,12 +208,17 @@ const Orders = () => {
         return false
       }
 
+      if (!matchesCustomerEmail(order, customerEmailFilter)) {
+        return false
+      }
+
       return matchesSearch(order, searchQuery)
     })
-  }, [orders, paymentFilter, searchQuery, statusFilter, dateFrom, dateTo])
+  }, [orders, paymentFilter, searchQuery, statusFilter, dateFrom, dateTo, customerEmailFilter])
 
   const hasActiveFilters =
     searchQuery.trim() ||
+    customerEmailFilter.trim() ||
     paymentFilter !== 'all' ||
     statusFilter !== 'all' ||
     dateFrom ||
@@ -209,6 +226,7 @@ const Orders = () => {
 
   const clearFilters = () => {
     setSearchQuery('')
+    setCustomerEmailFilter('')
     setPaymentFilter('all')
     setStatusFilter('all')
     setDateFrom('')
@@ -220,8 +238,18 @@ const Orders = () => {
       <PageHeader
         eyebrow="Sales"
         title="Orders"
-        description="Search and filter orders by customer, payment, license, or product details."
+        description={
+          customerEmailFilter
+            ? `Showing orders placed by ${customerEmailFilter}`
+            : 'Search and filter orders by customer, payment, license, or product details.'
+        }
       />
+
+      {customerEmailFilter && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Filtered by customer email: <span className="font-semibold">{customerEmailFilter}</span>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

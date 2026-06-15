@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { fetchCatalog } from '../services/catalogApi';
 import { getSubCategoryLabel as resolveSubCategoryLabel } from '../utils/catalogHelpers';
+import { matchesProductSearch } from '../utils/productSearch';
 
 const CatalogContext = createContext(null);
 
@@ -62,25 +63,23 @@ export const CatalogProvider = ({ children }) => {
       let results = [...catalog.products];
 
       if (search) {
-        const query = normalize(search);
-        results = results.filter(
-          (product) =>
-            normalize(product.name).includes(query) ||
-            normalize(product.category).includes(query) ||
-            normalize(product.brand).includes(query),
+        results = results.filter((product) =>
+          matchesProductSearch(product, search, catalog.subCategoriesMap),
         );
       }
 
       if (category) {
         const normalizedCategory = normalize(category);
         results = results.filter(
-          (product) => normalize(product.category) === normalizedCategory,
+          (product) =>
+            normalize(product.category) === normalizedCategory ||
+            normalize(product.categorySlug) === normalizedCategory,
         );
       }
 
       return results;
     },
-    [catalog.products],
+    [catalog.products, catalog.subCategoriesMap],
   );
 
   const getSubCategoryLabel = useCallback(

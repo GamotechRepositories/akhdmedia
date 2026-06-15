@@ -134,7 +134,7 @@ const ProductDetail = () => {
             <div className="border-b border-gray-100 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-5 py-5 text-white sm:px-6">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {product.brand && (
-                  <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/90">
+                  <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
                     {product.brand}
                   </span>
                 )}
@@ -142,7 +142,7 @@ const ProductDetail = () => {
                   {isVideo ? 'Stock Video' : 'Stock Image'}
                 </span>
                 {isVideo && product.videoInfo?.duration && (
-                  <span className="rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold text-white/90">
+                  <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
                     {product.videoInfo.duration}
                   </span>
                 )}

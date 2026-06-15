@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/catalog/FilterSidebar';
 import Pagination from '../components/catalog/Pagination';
@@ -19,9 +19,12 @@ import { usePagination } from '../hooks/usePagination';
 
 const CategoryPage = () => {
   const { category, subCategory } = useParams();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search')?.trim() || '';
   const {
     products,
     catalogCategories,
+    filterProducts,
     getSubCategoryLabel,
     loading: catalogLoading,
   } = useCatalog();
@@ -35,6 +38,17 @@ const CategoryPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const pageMeta = useMemo(() => {
+    if (searchQuery) {
+      return {
+        title: `Search results for "${searchQuery}"`,
+        breadcrumbs: [
+          { label: 'Home', to: '/' },
+          { label: 'Videos', to: '/videos' },
+          { label: 'Search', to: null },
+        ],
+      };
+    }
+
     if (category && catalogCategories[category]) {
       const meta = catalogCategories[category];
       const breadcrumbs = [
@@ -60,12 +74,15 @@ const CategoryPage = () => {
         { label: 'Videos', to: null },
       ],
     };
-  }, [category, subCategory, subCategoryLabel, catalogCategories]);
+  }, [category, subCategory, subCategoryLabel, catalogCategories, searchQuery]);
 
-  const baseProducts = useMemo(
-    () => filterByCategory(products, category, subCategory),
-    [products, category, subCategory]
-  );
+  const baseProducts = useMemo(() => {
+    if (searchQuery) {
+      return filterProducts({ search: searchQuery });
+    }
+
+    return filterByCategory(products, category, subCategory);
+  }, [products, category, subCategory, searchQuery, filterProducts]);
 
   const filteredProducts = useCatalogFilters(baseProducts, filters);
   const { brands, resolutions, fps } = useMemo(
@@ -81,11 +98,17 @@ const CategoryPage = () => {
     setIsLoading(true);
     const timer = window.setTimeout(() => setIsLoading(false), 300);
     return () => window.clearTimeout(timer);
-  }, [category, subCategory, filters, catalogLoading]);
+  }, [category, subCategory, filters, catalogLoading, searchQuery]);
 
   useEffect(() => {
     setFilters(DEFAULT_CATALOG_FILTERS);
   }, [category, subCategory]);
+
+  useEffect(() => {
+    if (searchQuery) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [searchQuery]);
 
   const toggleFilters = () => {
     if (window.innerWidth >= 1024) {
@@ -203,14 +226,27 @@ const CategoryPage = () => {
               </>
             ) : (
               <div className="py-12 text-center">
-                <p className="mb-4 text-lg text-gray-600">No clips match your filters.</p>
-                <button
-                  type="button"
-                  onClick={() => setFilters(DEFAULT_CATALOG_FILTERS)}
-                  className="font-medium text-gray-900 underline underline-offset-4"
-                >
-                  Clear filters
-                </button>
+                <p className="mb-4 text-lg text-gray-600">
+                  {searchQuery
+                    ? `No clips found for "${searchQuery}".`
+                    : 'No clips match your filters.'}
+                </p>
+                {searchQuery ? (
+                  <Link
+                    to="/videos"
+                    className="font-medium text-gray-900 underline underline-offset-4"
+                  >
+                    Browse all videos
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setFilters(DEFAULT_CATALOG_FILTERS)}
+                    className="font-medium text-gray-900 underline underline-offset-4"
+                  >
+                    Clear filters
+                  </button>
+                )}
               </div>
             )}
           </div>
