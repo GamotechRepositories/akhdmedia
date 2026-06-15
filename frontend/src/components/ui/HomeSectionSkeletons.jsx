@@ -56,27 +56,22 @@ export const CategoryAccordionSkeleton = () => (
 
 export const DualCategoryGridSkeleton = () => (
   <section className={`${PAGE_CONTAINER} py-8 sm:py-12`}>
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-      {Array.from({ length: 2 }, (_, i) => (
-        <article
-          key={i}
-          className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-        >
-          <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-5 sm:py-5">
+    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:gap-12">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i}>
+          <div className="mb-4 flex items-end justify-between gap-3 border-b border-gray-200 pb-4 sm:mb-5">
             <div className="min-w-0 flex-1">
               <div className="h-6 w-32 animate-pulse rounded bg-gray-200 sm:h-7 sm:w-40" />
               <div className="mt-2 h-3 w-16 animate-pulse rounded bg-gray-100" />
             </div>
             <div className="h-9 w-20 shrink-0 animate-pulse rounded-full bg-gray-200 sm:w-24" />
           </div>
-          <div className="flex-1 p-4 sm:p-5">
-            <div className={DUAL_CATEGORY_PRODUCT_GRID}>
-              {Array.from({ length: 4 }, (_, j) => (
-                <ProductSkeleton key={j} />
-              ))}
-            </div>
+          <div className={DUAL_CATEGORY_PRODUCT_GRID}>
+            {Array.from({ length: 4 }, (_, j) => (
+              <ProductSkeleton key={j} />
+            ))}
           </div>
-        </article>
+        </div>
       ))}
     </div>
   </section>

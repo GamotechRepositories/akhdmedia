@@ -62,13 +62,17 @@ export const mapFeaturedCollections = (categories = []) =>
 
 export const mapDualGridSections = (categories = [], products = []) =>
   categories
-    .slice(0, 2)
-    .map((category) => ({
-      id: category.slug,
-      title: category.breadcrumb,
-      link: categoryPath(category.slug),
-      products: products
-        .filter((product) => product.categorySlug === category.slug)
-        .slice(0, 4),
-    }))
-    .filter((section) => section.products.length > 0);
+    .map((category) => {
+      const categoryProducts = products.filter(
+        (product) => product.categorySlug === category.slug,
+      );
+
+      return {
+        id: category.slug,
+        title: category.breadcrumb,
+        link: categoryPath(category.slug),
+        clipCount: categoryProducts.length,
+        products: categoryProducts.slice(0, 4),
+      };
+    })
+    .filter((section) => section.clipCount >= 3);
