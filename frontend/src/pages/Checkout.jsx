@@ -23,7 +23,6 @@ const emptyBilling = {
   purchaseReasonOther: '',
 };
 
-const isMobileDevice = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 const PAYMENT_OPTIONS = [
   { id: 'upi', label: 'UPI', hint: 'GPay, PhonePe, Paytm' },
@@ -454,12 +453,6 @@ const Checkout = () => {
                   </button>
                 ))}
               </div>
-
-              {onlinePaymentMethod === 'upi' && !isMobileDevice() && (
-                <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
-                  UPI on laptop shows QR — scan with your phone.
-                </p>
-              )}
 
               <div className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
                 <p>

@@ -1,6 +1,11 @@
 import Category from '../models/Category.js'
 import formatProduct, { buildCategoryMap } from './formatProduct.js'
-import { MAX_LICENSE_EMAIL_RESENDS } from '../config/email.js'
+import {
+  getLicenseResendWindowEndsAt,
+  isLicenseResendWindowOpen,
+  LICENSE_EMAIL_RESEND_WINDOW_MS,
+  MAX_LICENSE_EMAIL_RESENDS,
+} from '../config/email.js'
 
 export const getCategoryMap = async () => {
   const categories = await Category.find().lean()
@@ -41,6 +46,8 @@ export const formatCartResponse = (cart, categoryMap) => {
 
 export const formatOrderResponse = (order) => {
   const licenseEmailResendCount = order.licenseEmailResendCount || 0
+  const resendsRemaining = Math.max(0, MAX_LICENSE_EMAIL_RESENDS - licenseEmailResendCount)
+  const resendWindowOpen = isLicenseResendWindowOpen(order.createdAt)
 
   return {
     id: order._id.toString(),
@@ -55,7 +62,11 @@ export const formatOrderResponse = (order) => {
     razorpayPaymentId: order.razorpayPaymentId || '',
     licenseEmailResendCount,
     maxLicenseEmailResends: MAX_LICENSE_EMAIL_RESENDS,
-    licenseEmailResendsRemaining: Math.max(0, MAX_LICENSE_EMAIL_RESENDS - licenseEmailResendCount),
+    licenseEmailResendsRemaining: resendsRemaining,
+    licenseEmailResendWindowMs: LICENSE_EMAIL_RESEND_WINDOW_MS,
+    licenseEmailResendWindowEndsAt: getLicenseResendWindowEndsAt(order.createdAt).toISOString(),
+    isLicenseEmailResendWindowOpen: resendWindowOpen,
+    canResendLicenseEmail: resendWindowOpen && resendsRemaining > 0,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
   }

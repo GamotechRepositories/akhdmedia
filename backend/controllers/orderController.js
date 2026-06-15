@@ -20,7 +20,9 @@ import {
 import { sendOrderLicenseEmail } from '../services/emailService.js'
 import {
   LICENSE_EMAIL_RESEND_LIMIT_MESSAGE,
+  LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE,
   MAX_LICENSE_EMAIL_RESENDS,
+  isLicenseResendWindowOpen,
 } from '../config/email.js'
 import AppError from '../utils/AppError.js'
 export const getProfile = asyncHandler(async (req, res) => {
@@ -116,6 +118,10 @@ export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {
 
   if ((order.licenseEmailResendCount || 0) >= MAX_LICENSE_EMAIL_RESENDS) {
     throw new AppError(LICENSE_EMAIL_RESEND_LIMIT_MESSAGE, 429)
+  }
+
+  if (!isLicenseResendWindowOpen(order.createdAt)) {
+    throw new AppError(LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE, 429)
   }
 
   const downloads = await getOrderItemDownloads(order)

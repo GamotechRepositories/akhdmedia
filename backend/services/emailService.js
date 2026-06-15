@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
+import { SIGNED_URL_EXPIRY_SECONDS } from '../config/storage.js'
 
 let resendClient = null
 
@@ -72,7 +73,20 @@ const LICENSE_EMAIL_TEMPLATE = `<!DOCTYPE html>
 </body>
 </html>`
 
-const buildDownloadSection = (downloadUrl) =>
+const formatLinkExpiry = (fromDate = new Date()) => {
+  const expiresAt = new Date(fromDate.getTime() + SIGNED_URL_EXPIRY_SECONDS * 1000)
+  return expiresAt.toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  })
+}
+
+const buildDownloadSection = (downloadUrl, linkExpiry) =>
   `<div style="text-align:center;margin:30px 0;">
       <a
         href="${downloadUrl}"
@@ -88,6 +102,9 @@ const buildDownloadSection = (downloadUrl) =>
       >
         Download Video
       </a>
+      <p style="font-size:13px;color:#6b7280;margin-top:14px;line-height:1.5;">
+        Download link valid until <strong style="color:#374151;">${escapeHtml(linkExpiry)}</strong> (IST)
+      </p>
     </div>`
 
 const fillLicenseEmailTemplate = ({
@@ -97,6 +114,7 @@ const fillLicenseEmailTemplate = ({
   licenseNumber,
   purchaseDate,
   downloadUrl,
+  linkExpiry,
   currentYear,
 }) =>
   LICENSE_EMAIL_TEMPLATE.replace(/{{customer_name}}/g, escapeHtml(customerName))
@@ -104,7 +122,7 @@ const fillLicenseEmailTemplate = ({
     .replace(/{{clip_id}}/g, escapeHtml(clipId))
     .replace(/{{license_number}}/g, escapeHtml(licenseNumber))
     .replace(/{{purchase_date}}/g, escapeHtml(purchaseDate))
-    .replace(/{{download_section}}/g, buildDownloadSection(downloadUrl))
+    .replace(/{{download_section}}/g, buildDownloadSection(downloadUrl, linkExpiry))
     .replace(/{{current_year}}/g, String(currentYear))
 
 const getPrimaryDownloadFile = (item) =>
@@ -146,6 +164,9 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
       continue
     }
 
+    const sentAt = new Date()
+    const linkExpiry = formatLinkExpiry(sentAt)
+
     const html = fillLicenseEmailTemplate({
       customerName,
       videoTitle: item.name,
@@ -153,6 +174,7 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
       licenseNumber: item.licenseNumber || '—',
       purchaseDate,
       downloadUrl: downloadFile.url,
+      linkExpiry,
       currentYear,
     })
 

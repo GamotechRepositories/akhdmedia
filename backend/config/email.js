@@ -13,7 +13,18 @@ export const getFrontendUrl = () => {
   return raw.split(',')[0].trim()
 }
 
-export const MAX_LICENSE_EMAIL_RESENDS = 3
+export const MAX_LICENSE_EMAIL_RESENDS = 2
+
+export const LICENSE_EMAIL_RESEND_WINDOW_MS = 5 * 60 * 1000
 
 export const LICENSE_EMAIL_RESEND_LIMIT_MESSAGE =
   'You have reached the maximum number of resend attempts. Please contact our support team for help.'
+
+export const LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE =
+  'The resend period has ended. Resend is only available within 5 minutes of your order. Please contact support if you need help.'
+
+export const getLicenseResendWindowEndsAt = (orderCreatedAt) =>
+  new Date(new Date(orderCreatedAt).getTime() + LICENSE_EMAIL_RESEND_WINDOW_MS)
+
+export const isLicenseResendWindowOpen = (orderCreatedAt, now = Date.now()) =>
+  now < getLicenseResendWindowEndsAt(orderCreatedAt).getTime()

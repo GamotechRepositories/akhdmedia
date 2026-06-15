@@ -18,8 +18,8 @@ import { PURCHASE_UNAVAILABLE_MESSAGE } from '../constants/purchase';
 import { formatCurrency } from '../utils/formatters';
 
 const SpecItem = ({ label, value }) => (
-  <div className="rounded-lg border border-gray-200/80 bg-white px-3 py-2">
-    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+  <div>
+    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
     <p className="mt-0.5 text-xs font-semibold text-gray-900 sm:text-sm">{value}</p>
   </div>
 );
@@ -157,6 +157,9 @@ const ProductDetail = () => {
               <p className="mt-1.5 text-sm text-white/65">
                 {product.category} · {getProductTypeLabel(product)}
               </p>
+              {product.description && (
+                <p className="mt-3 text-sm leading-relaxed text-white/75">{product.description}</p>
+              )}
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-white/10 pt-4">
                 <div>
@@ -174,31 +177,27 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            <div className="space-y-4 px-5 py-4 sm:px-6">
-              {!isPurchasable && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
-                  <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                  </svg>
-                  <p className="text-xs leading-relaxed text-amber-900">
-                    This video is not available for purchase right now. Please check back later.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 px-3.5 py-3">
-                <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            {!isPurchasable && (
+              <div className="flex items-start gap-2.5 border-t border-amber-200 bg-amber-50 px-5 py-3.5 sm:px-6">
+                <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
-                <p className="text-xs leading-relaxed text-blue-900">
-                  Preview is watermarked. After purchase, the full-resolution file download link is sent to your email.
+                <p className="text-xs leading-relaxed text-amber-900">
+                  This video is not available for purchase right now. Please check back later.
                 </p>
               </div>
+            )}
 
-              {product.description && (
-                <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>
-              )}
+            <div className="flex items-start gap-2.5 border-t border-blue-200 bg-blue-50 px-5 py-3.5 sm:px-6">
+              <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs leading-relaxed text-blue-900">
+                Preview is watermarked. After purchase, the full-resolution file download link is sent to your email.
+              </p>
+            </div>
 
+            <div className="space-y-4 px-5 py-4 sm:px-6">
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <button
                   type="button"
@@ -276,11 +275,11 @@ const ProductDetail = () => {
             </div>
 
             {specItems.length > 0 && (
-              <div className="border-t border-gray-100 px-5 py-4 sm:px-6">
+              <div className="border-t border-slate-200 bg-slate-100 px-5 py-4 sm:px-6">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-900">
                   {isVideo ? 'Clip specifications' : 'File details'}
                 </h3>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
                   {specItems.map((item) => (
                     <SpecItem key={item.label} label={item.label} value={item.value} />
                   ))}
