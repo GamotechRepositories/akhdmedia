@@ -41,9 +41,6 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
         <h2 className={`font-black leading-tight tracking-tight ${compact ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl lg:text-5xl'}`}>
           {slide.headline}
         </h2>
-        <p className={`mt-2 max-w-xl leading-relaxed text-white/80 sm:mt-4 ${compact ? 'text-xs line-clamp-2 sm:text-sm sm:line-clamp-none' : 'text-sm sm:text-base'}`}>
-          {slide.subheadline}
-        </p>
         <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-900 sm:mt-6 sm:px-5 sm:py-2.5 sm:text-xs">
           {slide.cta}
           <IconChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -110,7 +107,6 @@ const FallbackHero = () => (
         {MOBILE_HERO.badge}
       </span>
       <h2 className="mt-2 text-xl font-black sm:text-3xl">{MOBILE_HERO.headline}</h2>
-      <p className="mt-1 text-xs text-white/75 sm:text-sm">{MOBILE_HERO.subheadline}</p>
     </div>
   </Link>
 );

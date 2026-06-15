@@ -9,8 +9,7 @@ const categorySeed = [
     navLabel: 'Nature',
     sortOrder: 1,
     description: 'Landscapes, wildlife, and atmospheric shots.',
-    coverImage:
-      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=720&auto=format&fit=crop&q=80',
+    coverImage: 'https://cdn.akhdmedia.com/NatureImage.avif',
     heroBadge: 'Nature Vault',
     heroHeadline: 'Nature Footage in True 4K',
     heroSubheadline: 'Golden hour, wildlife, and landscapes graded for documentary work.',
@@ -32,8 +31,7 @@ const categorySeed = [
     navLabel: 'Urban',
     sortOrder: 2,
     description: 'Timelapse skylines and street-level motion.',
-    coverImage:
-      'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1920&h=720&auto=format&fit=crop&q=80',
+    coverImage: 'https://cdn.akhdmedia.com/Urban%20image.avif',
     heroBadge: 'Urban Collection',
     heroHeadline: 'City Motion & Timelapse',
     heroSubheadline: 'Skylines, streets, and architecture graded for commercial edits.',
@@ -55,8 +53,7 @@ const categorySeed = [
     navLabel: 'Drone',
     sortOrder: 3,
     description: 'Cinematic aerial perspectives at 4K 60fps.',
-    coverImage:
-      'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=1920&h=720&auto=format&fit=crop&q=80',
+    coverImage: 'https://cdn.akhdmedia.com/Drone%20image.avif',
     heroBadge: 'Aerial Footage',
     heroHeadline: 'Drone Shots That Elevate Every Edit',
     heroSubheadline: 'Sweeping aerials at 60fps — mountains, coastlines, and cityscapes.',
@@ -77,8 +74,7 @@ const categorySeed = [
     navLabel: 'Business',
     sortOrder: 4,
     description: 'Corporate B-roll, teams, and modern workplaces.',
-    coverImage:
-      'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&h=1200&auto=format&fit=crop&q=80',
+    coverImage: 'https://cdn.akhdmedia.com/Buisness.avif',
     subCategories: [
       { slug: 'corporate', name: 'Corporate B-Roll' },
       { slug: 'office', name: 'Team & Office' },
@@ -91,8 +87,7 @@ const categorySeed = [
     navLabel: 'Cinematic',
     sortOrder: 5,
     description: 'Film-grade color, anamorphic, and slow-mo.',
-    coverImage:
-      'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=1920&h=720&auto=format&fit=crop&q=80',
+    coverImage: 'https://cdn.akhdmedia.com/Cinematic%20image.avif',
     heroBadge: '4K Collection',
     heroHeadline: 'Cinema-Grade Stock Footage',
     heroSubheadline: 'Broadcast-ready clips shot on RED & ARRI. License once, use forever.',
@@ -488,11 +483,25 @@ const mapSeedProduct = (product) => ({
   isActive: true,
 })
 
+const syncCategoryCoverImages = async () => {
+  await Promise.all(
+    categorySeed.map((category) =>
+      Category.updateOne(
+        { slug: category.slug },
+        { $set: { coverImage: category.coverImage } },
+      ),
+    ),
+  )
+}
+
 const seedCatalogIfEmpty = async () => {
   const categoryCount = await Category.countDocuments()
   if (categoryCount === 0) {
     await Category.insertMany(categorySeed)
     console.log('Seeded default categories')
+  } else {
+    await syncCategoryCoverImages()
+    console.log('Synced category cover images')
   }
 
   const productCount = await Product.countDocuments()

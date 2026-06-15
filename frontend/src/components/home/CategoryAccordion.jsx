@@ -116,9 +116,6 @@ const CategoryAccordion = () => {
                   <h3 className="text-[11px] font-bold uppercase tracking-wide text-white">
                     {category.label}
                   </h3>
-                  <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-gray-200">
-                    {category.desc}
-                  </p>
                 </div>
               </Link>
             ))}
@@ -164,9 +161,6 @@ const CategoryAccordion = () => {
                 <h3 className="text-lg font-bold uppercase tracking-widest text-white lg:text-2xl">
                   {category.label}
                 </h3>
-                <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-500 group-hover:max-h-20 group-hover:opacity-100">
-                  <p className="mb-2 text-sm font-medium text-gray-200">{category.desc}</p>
-                </div>
               </div>
             </Link>
           ))}
