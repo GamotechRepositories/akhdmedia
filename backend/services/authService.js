@@ -1,22 +1,10 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import Admin from '../models/Admin.js'
+import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 
-const SALT_ROUNDS = 10
 const TOKEN_EXPIRY = '7d'
 const COOKIE_NAME = 'fv_admin_token'
-
-/** Legacy typo from old .env — maps to the synced admin email */
-const ADMIN_EMAIL_ALIASES = {
-  'admin@akhmidea.com': 'admin@akhdmedia.com',
-  'admin@akhdmidea.com': 'admin@akhdmedia.com',
-}
-
-const resolveAdminEmail = (email = '') => {
-  const normalized = email.trim().toLowerCase()
-  return ADMIN_EMAIL_ALIASES[normalized] || normalized
-}
 
 export const getAdminCookieName = () => COOKIE_NAME
 
@@ -35,12 +23,13 @@ const getJwtSecret = () => {
   return secret
 }
 
-export const signAdminToken = (admin) =>
+export const signAdminToken = (user) =>
   jwt.sign(
     {
-      id: admin._id.toString(),
-      email: admin.email,
-      name: admin.name,
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
     },
     getJwtSecret(),
     { expiresIn: TOKEN_EXPIRY },
@@ -48,78 +37,54 @@ export const signAdminToken = (admin) =>
 
 export const verifyAdminToken = (token) => {
   try {
-    return jwt.verify(token, getJwtSecret())
-  } catch {
+    const payload = jwt.verify(token, getJwtSecret())
+    if (payload.role !== 'admin') {
+      throw new AppError('Admin access required', 403)
+    }
+    return payload
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error
+    }
     throw new AppError('Invalid or expired session', 401)
   }
 }
 
 export const authenticateAdmin = async (email, password) => {
-  const normalizedEmail = resolveAdminEmail(email)
+  const normalizedEmail = email?.trim().toLowerCase()
 
   if (!normalizedEmail || !password) {
     throw new AppError('Email and password are required', 400)
   }
 
-  const admin = await Admin.findOne({ email: normalizedEmail }).select('+password')
+  const user = await User.findOne({ email: normalizedEmail }).select('+password')
 
-  if (!admin) {
+  if (!user || user.role !== 'admin') {
     throw new AppError('Invalid email or password', 401)
   }
 
-  const isMatch = await bcrypt.compare(password, admin.password)
+  const isMatch = await bcrypt.compare(password, user.password)
 
   if (!isMatch) {
     throw new AppError('Invalid email or password', 401)
   }
 
-  return admin
+  return user
 }
 
-export const formatAdminResponse = (admin) => ({
-  id: admin._id.toString(),
-  email: admin.email,
-  name: admin.name,
+export const formatAdminResponse = (user) => ({
+  id: user._id.toString(),
+  email: user.email,
+  name: user.name,
+  role: user.role,
 })
 
 export const getAdminById = async (adminId) => {
-  const admin = await Admin.findById(adminId)
+  const user = await User.findById(adminId)
 
-  if (!admin) {
+  if (!user || user.role !== 'admin') {
     throw new AppError('Admin account not found', 401)
   }
 
-  return admin
-}
-
-export const syncAdminFromEnv = async () => {
-  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()
-  const password = process.env.ADMIN_PASSWORD
-
-  if (!email || !password) {
-    const count = await Admin.countDocuments()
-    if (count === 0) {
-      console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are missing — no admin account in database')
-    }
-    return
-  }
-
-  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
-
-  await Admin.findOneAndUpdate(
-    { email },
-    {
-      email,
-      password: hashedPassword,
-      name: 'AKHDMEDIA',
-    },
-    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-  )
-
-  // Remove old default admin if credentials were changed in .env
-  await Admin.deleteMany({
-    email: { $ne: email },
-  })
-
-  console.log(`Admin account synced (bcrypt hashed password in DB): ${email}`)
+  return user
 }

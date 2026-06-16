@@ -6,6 +6,7 @@ import {
   IconLogo,
   IconOrders,
   IconProducts,
+  IconRevenue,
   IconSupport,
   IconTransactions,
   IconUsers,
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
   { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
   { to: '/transactions', label: 'Transactions', icon: IconTransactions, description: 'Payments & Razorpay' },
+  { to: '/revenue', label: 'Revenue', icon: IconRevenue, description: 'Monthly records' },
   { to: '/users', label: 'Users', icon: IconUsers, description: 'Registered customers' },
   { to: '/support', label: 'Support', icon: IconSupport, description: 'Customer help requests' },
 ]
@@ -31,6 +33,7 @@ const pageTitles = {
   '/products/new': 'Add Product',
   '/orders': 'Orders',
   '/transactions': 'Transactions',
+  '/revenue': 'Revenue',
   '/users': 'Users',
   '/support': 'Support',
 }

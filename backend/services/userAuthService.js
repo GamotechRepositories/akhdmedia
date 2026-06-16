@@ -32,6 +32,7 @@ export const signUserToken = (user) =>
       id: user._id.toString(),
       email: user.email,
       name: user.name,
+      role: user.role,
     },
     getJwtSecret(),
     { expiresIn: TOKEN_EXPIRY },
@@ -50,6 +51,7 @@ export const formatUserResponse = (user) => ({
   name: user.name,
   email: user.email,
   phone: user.phone,
+  role: user.role,
 })
 
 export const getUserById = async (userId) => {

@@ -22,6 +22,13 @@ export const IconTransactions = ({ className = 'h-5 w-5' }) => (
   </svg>
 )
 
+export const IconRevenue = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 19h16M7 15l3-3 3 2 4-5" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h0.01" />
+  </svg>
+)
+
 export const IconOrders = ({ className = 'h-5 w-5' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />

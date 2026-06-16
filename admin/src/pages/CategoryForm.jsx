@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import {
   inputClass,
   primaryBtnClass,
@@ -118,20 +117,15 @@ const CategoryForm = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Categories"
-        title={isEdit ? 'Edit Category' : 'Add Category'}
-        description="Configure navbar labels, slugs, and subcategories for the storefront."
-        action={
-          <Link to="/categories" className={secondaryBtnClass}>
-            Back to categories
-          </Link>
-        }
-      />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Link to="/categories" className={secondaryBtnClass}>
+          Back to categories
+        </Link>
+      </div>
 
-      <form onSubmit={handleSubmit} className={`${sectionClass} space-y-6`}>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <form onSubmit={handleSubmit} className={`${sectionClass} space-y-4`}>
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="font-medium text-slate-700">Nav Label</span>
             <input

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import { fetchOrder } from '../api/client'
-import PageHeader from '../components/PageHeader'
 import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
@@ -95,13 +94,8 @@ const OrderDetail = () => {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader
-          eyebrow="Sales"
-          title={`Order #${order.orderNumber?.slice(-8).toUpperCase()}`}
-          description={`Placed on ${formatDate(order.createdAt)}`}
-        />
+    <div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-3">
         <Link to="/orders" state={backState} className={secondaryBtnClass}>
           Back to Orders
         </Link>

@@ -3,6 +3,8 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import { fetchUsers } from '../api/client'
 import { tableWrapClass } from '../components/ui/adminUi'
 
+const PAGE_SIZE = 50
+
 const formatDate = (value) => {
   if (!value) return '—'
   return new Date(value).toLocaleString('en-IN', {
@@ -19,6 +21,7 @@ const Users = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -46,6 +49,20 @@ const Users = () => {
       ),
     )
   }, [search, users])
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredUsers.slice(start, start + PAGE_SIZE)
+  }, [filteredUsers, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
 
   return (
     <section className="space-y-5">
@@ -107,7 +124,7 @@ const Users = () => {
 
               {!loading &&
                 !error &&
-                filteredUsers.map((user) => (
+                paginatedUsers.map((user) => (
                   <tr key={user.id}>
                     <td className="px-4 py-3 font-semibold text-slate-900">{user.name || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{user.email || '—'}</td>
@@ -119,6 +136,36 @@ const Users = () => {
           </table>
         </div>
       </div>
+
+      {!loading && !error && filteredUsers.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-600">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of{' '}
+            {filteredUsers.length} entries
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <AdminAlertModal
         open={Boolean(error)}

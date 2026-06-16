@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
+
+const PAGE_SIZE = 50
 
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
@@ -121,6 +122,7 @@ const Transactions = () => {
   const [highlightedId, setHighlightedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -148,6 +150,20 @@ const Transactions = () => {
       return matchesSearch(txn, searchQuery)
     })
   }, [transactions, filter, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE))
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredTransactions.slice(start, start + PAGE_SIZE)
+  }, [filteredTransactions, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filter, searchQuery])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
 
   useEffect(() => {
     const restore = location.state?.restore
@@ -180,42 +196,36 @@ const Transactions = () => {
   }, [loading, location.state, navigate])
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Sales"
-        title="Transactions"
-        description="All payment transactions. Click View for full details."
-      />
-
+    <div className="space-y-4">
       {summary && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <div className={`${cardClass} p-5`}>
-            <p className="text-sm text-slate-500">Total transactions</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{summary.total}</p>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className={`${cardClass} p-3`}>
+            <p className="text-xs text-slate-500">Total transactions</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{summary.total}</p>
           </div>
-          <div className={`${cardClass} p-5`}>
-            <p className="text-sm text-slate-500">Successful</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-600">{summary.successful}</p>
+          <div className={`${cardClass} p-3`}>
+            <p className="text-xs text-slate-500">Successful</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">{summary.successful}</p>
             <p className="mt-1 text-xs text-slate-400">Paid online only</p>
           </div>
-          <div className={`${cardClass} p-5`}>
-            <p className="text-sm text-slate-500">Failed</p>
-            <p className="mt-2 text-3xl font-bold text-red-600">{summary.failed}</p>
+          <div className={`${cardClass} p-3`}>
+            <p className="text-xs text-slate-500">Failed</p>
+            <p className="mt-1 text-2xl font-bold text-red-600">{summary.failed}</p>
           </div>
-          <div className={`${cardClass} p-5`}>
-            <p className="text-sm text-slate-500">Pending</p>
-            <p className="mt-2 text-3xl font-bold text-amber-600">{summary.pending}</p>
+          <div className={`${cardClass} p-3`}>
+            <p className="text-xs text-slate-500">Pending</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">{summary.pending}</p>
           </div>
-          <div className={`${cardClass} p-5`}>
-            <p className="text-sm text-slate-500">Successful amount</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
+          <div className={`${cardClass} p-3`}>
+            <p className="text-xs text-slate-500">Successful amount</p>
+            <p className="mt-1 text-xl font-bold text-slate-900">
               {formatCurrency(summary.successfulAmount)}
             </p>
             <p className="mt-1 text-xs text-slate-400">Razorpay paid</p>
           </div>
-          <div className={`${cardClass} p-5`}>
-            <p className="text-sm text-slate-500">Revenue</p>
-            <p className="mt-2 text-2xl font-bold text-violet-600">
+          <div className={`${cardClass} p-3`}>
+            <p className="text-xs text-slate-500">Revenue</p>
+            <p className="mt-1 text-xl font-bold text-violet-600">
               {formatCurrency(summary.revenue ?? 0)}
             </p>
             <p className="mt-1 text-xs text-slate-400">Paid online</p>
@@ -223,7 +233,7 @@ const Transactions = () => {
         </div>
       )}
 
-      <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+      <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="block flex-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -272,6 +282,36 @@ const Transactions = () => {
         )}
       </div>
 
+      {!loading && filteredTransactions.length > 0 && (
+        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-2 p-2`}>
+          <p className="text-xs text-slate-600">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
+            {Math.min(currentPage * PAGE_SIZE, filteredTransactions.length)} of {filteredTransactions.length} entries
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       <div
         ref={tableContainerRef}
         className={`${cardClass} max-h-[min(60vh,640px)] min-h-[240px] overflow-y-auto`}
@@ -303,7 +343,7 @@ const Transactions = () => {
                 </td>
               </tr>
             ) : (
-              filteredTransactions.map((txn) => (
+              paginatedTransactions.map((txn) => (
                 <tr
                   key={txn.id}
                   id={`txn-row-${txn.id}`}

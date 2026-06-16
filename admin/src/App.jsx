@@ -10,6 +10,7 @@ import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
 import Transactions from './pages/Transactions'
 import TransactionDetail from './pages/TransactionDetail'
+import Revenue from './pages/Revenue'
 import Users from './pages/Users'
 import Support from './pages/Support'
 import SupportDetail from './pages/SupportDetail'
@@ -31,6 +32,7 @@ const App = () => (
         <Route path="orders/:id" element={<OrderDetail />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="transactions/:id" element={<TransactionDetail />} />
+        <Route path="revenue" element={<Revenue />} />
         <Route path="users" element={<Users />} />
         <Route path="support" element={<Support />} />
         <Route path="support/:id" element={<SupportDetail />} />

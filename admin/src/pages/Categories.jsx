@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteCategory, fetchCategories } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import { primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
+
+const PAGE_SIZE = 50
 
 const Categories = () => {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   const loadCategories = async () => {
     setLoading(true)
@@ -39,18 +41,23 @@ const Categories = () => {
     }
   }
 
+  const totalPages = Math.max(1, Math.ceil(categories.length / PAGE_SIZE))
+  const paginatedCategories = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return categories.slice(start, start + PAGE_SIZE)
+  }, [categories, currentPage])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
+
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Catalog"
-        title="Categories"
-        description="Navbar links and subcategories are managed here."
-        action={
-          <Link to="/categories/new" className={primaryBtnClass}>
-            Add Category
-          </Link>
-        }
-      />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Link to="/categories/new" className={primaryBtnClass}>
+          Add Category
+        </Link>
+      </div>
 
       <div className={tableWrapClass}>
         <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -77,7 +84,7 @@ const Categories = () => {
                 </td>
               </tr>
             ) : (
-              categories.map((category) => (
+              paginatedCategories.map((category) => (
                 <tr key={category._id}>
                   <td className="px-4 py-3 font-medium text-slate-900">{category.navLabel}</td>
                   <td className="px-4 py-3 text-slate-600">{category.slug}</td>
@@ -108,6 +115,36 @@ const Categories = () => {
           </tbody>
         </table>
       </div>
+
+      {!loading && categories.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-600">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, categories.length)} of{' '}
+            {categories.length} entries
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <AdminAlertModal
         open={Boolean(error)}

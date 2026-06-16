@@ -1,9 +1,11 @@
 import './config/loadEnv.js'
 import connectDB from '../config/db.js'
 import { reseedCatalog } from './seedCatalog.js'
+import seedAdmin from './seedAdmin.js'
 
 const run = async () => {
   await connectDB()
+  await seedAdmin()
   await reseedCatalog()
   console.log('Demo categories and products seeded successfully')
   process.exit(0)

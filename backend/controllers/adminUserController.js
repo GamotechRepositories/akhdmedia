@@ -6,13 +6,14 @@ const formatUser = (user) => ({
   name: user.name,
   email: user.email,
   phone: user.phone,
+  role: user.role,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 })
 
 export const listUsers = asyncHandler(async (req, res) => {
   const users = await User.find()
-    .select('name email phone createdAt updatedAt')
+    .select('name email phone role createdAt updatedAt')
     .sort({ createdAt: -1 })
     .lean()
 

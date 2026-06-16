@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchOrders } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass } from '../components/ui/adminUi'
+
+const PAGE_SIZE = 50
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
   digital: 'Digital media',
@@ -153,6 +154,7 @@ const Orders = () => {
   const [dateFrom, setDateFrom] = useState(restore?.dateFrom || '')
   const [dateTo, setDateTo] = useState(restore?.dateTo || '')
   const [highlightedId, setHighlightedId] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   useEffect(() => {
     const loadOrders = async () => {
       setLoading(true)
@@ -232,6 +234,20 @@ const Orders = () => {
     dateFrom ||
     dateTo
 
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredOrders.slice(start, start + PAGE_SIZE)
+  }, [filteredOrders, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, customerEmailFilter, paymentFilter, statusFilter, dateFrom, dateTo])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
+
   const clearFilters = () => {
     setSearchQuery('')
     setCustomerEmailFilter('')
@@ -242,24 +258,14 @@ const Orders = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Sales"
-        title="Orders"
-        description={
-          customerEmailFilter
-            ? `Showing orders placed by ${customerEmailFilter}`
-            : 'Search and filter orders by customer, payment, license, or product details.'
-        }
-      />
-
+    <div className="space-y-4">
       {customerEmailFilter && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
           Filtered by customer email: <span className="font-semibold">{customerEmailFilter}</span>
         </div>
       )}
 
-      <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+      <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="block flex-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -384,7 +390,7 @@ const Orders = () => {
                 </td>
               </tr>
             ) : (
-              filteredOrders.map((order) => (
+              paginatedOrders.map((order) => (
                 <tr
                   key={order.id}
                   id={`order-row-${order.id}`}
@@ -446,6 +452,36 @@ const Orders = () => {
           </tbody>
         </table>
       </div>
+
+      {!loading && filteredOrders.length > 0 && (
+        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
+          <p className="text-sm text-slate-600">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredOrders.length)} of{' '}
+            {filteredOrders.length} entries
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <AdminAlertModal
         open={Boolean(error)}

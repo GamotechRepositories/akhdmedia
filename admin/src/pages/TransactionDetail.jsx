@@ -3,7 +3,6 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchTransaction } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import FormStep from '../components/FormStep'
-import PageHeader from '../components/PageHeader'
 import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
@@ -109,13 +108,8 @@ const TransactionDetail = () => {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader
-          eyebrow="Sales"
-          title="Transaction Details"
-          description="Read-only transaction record"
-        />
+    <div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-3">
         <Link to="/transactions" state={backState} className={secondaryBtnClass}>
           Back to Transactions
         </Link>
@@ -128,7 +122,7 @@ const TransactionDetail = () => {
           hint="Payment result and amount"
           tone="emerald"
         >
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-700">Status</label>
               <div
@@ -146,7 +140,7 @@ const TransactionDetail = () => {
         </FormStep>
 
         <FormStep step="2" title="Customer" hint="Billing contact details" tone="sky">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyField label="Name" value={transaction.customerName} />
             <ReadOnlyField label="Email" value={transaction.customerEmail} />
             <ReadOnlyField label="Phone" value={transaction.customerPhone} />
@@ -158,7 +152,7 @@ const TransactionDetail = () => {
         </FormStep>
 
         <FormStep step="3" title="Payment" hint="Method and payment state" tone="violet">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyField
               label="Payment method"
               value="Online"
@@ -170,7 +164,7 @@ const TransactionDetail = () => {
         </FormStep>
 
         <FormStep step="4" title="Reference IDs" hint="Order and payment references" tone="amber">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyField label="Order ID" value={transaction.orderId} />
             <ReadOnlyField
               label="Transaction ID"

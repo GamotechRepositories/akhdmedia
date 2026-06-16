@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { deleteProduct, fetchProducts } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import { cardClass, inputClass, primaryBtnClass } from '../components/ui/adminUi'
+
+const PAGE_SIZE = 50
 
 const TYPE_FILTERS = [
   { id: 'all', label: 'All types' },
@@ -69,6 +70,7 @@ const Products = () => {
   const [categoryFilter, setCategoryFilter] = useState(restore?.categoryFilter || 'all')
   const [statusFilter, setStatusFilter] = useState(restore?.statusFilter || 'all')
   const [highlightedId, setHighlightedId] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   const loadProducts = async () => {
     setLoading(true)
@@ -147,6 +149,20 @@ const Products = () => {
     categoryFilter !== 'all' ||
     statusFilter !== 'all'
 
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredProducts.slice(start, start + PAGE_SIZE)
+  }, [filteredProducts, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, typeFilter, categoryFilter, statusFilter])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
+
   const clearFilters = () => {
     setSearchQuery('')
     setTypeFilter('all')
@@ -166,19 +182,14 @@ const Products = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Catalog"
-        title="Products"
-        description="Manage video clips and stock images shown on the storefront."
-        action={
-          <Link to="/products/new" className={primaryBtnClass}>
-            Add Product
-          </Link>
-        }
-      />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Link to="/products/new" className={primaryBtnClass}>
+          Add Product
+        </Link>
+      </div>
 
-      <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+      <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="block flex-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -295,7 +306,7 @@ const Products = () => {
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((product) => (
+              paginatedProducts.map((product) => (
                 <tr
                   key={product.id}
                   id={`product-row-${product.id}`}
@@ -350,6 +361,36 @@ const Products = () => {
           </tbody>
         </table>
       </div>
+
+      {!loading && filteredProducts.length > 0 && (
+        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
+          <p className="text-sm text-slate-600">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
+            {Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of {filteredProducts.length} entries
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <AdminAlertModal
         open={Boolean(error)}

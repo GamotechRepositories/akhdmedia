@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { fetchOrders, fetchSupportRequest, updateSupportRequest } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const SUBJECT_LABELS = {
@@ -162,14 +161,8 @@ const SupportDetail = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader
-          eyebrow="Customer care"
-          title={`Ticket ${request.ticketNumber}`}
-          description="Full support request details"
-        />
-        <div className="flex flex-wrap gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-2">
           <Link to="/support" state={backState} className={secondaryBtnClass}>
             Back to Support
           </Link>
@@ -187,7 +180,6 @@ const SupportDetail = () => {
           <button type="button" onClick={handleOpenMatchedOrder} className={primaryBtnClass}>
             Open matched order
           </button>
-        </div>
       </div>
 
       <div className={`${cardClass} p-5`}>

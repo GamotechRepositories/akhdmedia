@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchSupportRequests } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass } from '../components/ui/adminUi'
+
+const PAGE_SIZE = 50
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -33,6 +34,7 @@ const Support = () => {
   const [search, setSearch] = useState(restore?.searchQuery || '')
   const [statusFilter, setStatusFilter] = useState(restore?.statusFilter || 'all')
   const [highlightedId, setHighlightedId] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const load = async () => {
@@ -99,16 +101,24 @@ const Support = () => {
     })
   }, [requests, search, statusFilter])
 
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE))
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredRequests.slice(start, start + PAGE_SIZE)
+  }, [filteredRequests, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter])
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [currentPage, totalPages])
+
   const openCount = requests.filter((request) => request.status === 'open').length
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Customer care"
-        title="Support Requests"
-        description={`${requests.length} total · ${openCount} open`}
-      />
-
+    <div className="space-y-4">
       <div className={`${cardClass} p-4`}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <input
@@ -158,7 +168,7 @@ const Support = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((request) => (
+                paginatedRequests.map((request) => (
                   <tr
                     key={request.id}
                     id={`support-row-${request.id}`}
@@ -195,6 +205,36 @@ const Support = () => {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && !error && filteredRequests.length > 0 && (
+        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
+          <p className="text-sm text-slate-600">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredRequests.length)} of{' '}
+            {filteredRequests.length} entries
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 
