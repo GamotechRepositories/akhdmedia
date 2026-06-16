@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
@@ -30,9 +30,6 @@ const PAYMENT_OPTIONS = [
   { id: 'card', label: 'Card', hint: 'Visa, Mastercard, RuPay' },
   { id: 'netbanking', label: 'Net Banking', hint: 'HDFC, SBI, ICICI' },
 ];
-
-const LICENSE_TERMS_TEXT =
-  'You may not use these videos commercially or associate them with any brand. This is illegal. If you keep them personally or a media agency uses them digitally, and they do not involve any commercial use, you may use them freely, but do not associate them with that brand.';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
@@ -103,7 +100,6 @@ const Checkout = () => {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -419,17 +415,13 @@ const Checkout = () => {
                 />
                 <span className="text-sm text-gray-700">
                   I have read{' '}
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setShowTermsModal(true);
-                    }}
+                  <Link
+                    to="/terms-and-conditions"
+                    onClick={(event) => event.stopPropagation()}
                     className="font-semibold underline underline-offset-2"
                   >
                     Terms &amp; Conditions
-                  </button>{' '}
+                  </Link>{' '}
                   and agree
                 </span>
               </label>
@@ -548,28 +540,6 @@ const Checkout = () => {
               className="mt-5 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white"
             >
               OK
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showTermsModal && (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setShowTermsModal(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 className="text-lg font-bold text-gray-900">Terms &amp; Conditions</h2>
-            <p className="mt-3 text-sm leading-relaxed text-gray-600">{LICENSE_TERMS_TEXT}</p>
-            <button
-              type="button"
-              onClick={() => setShowTermsModal(false)}
-              className="mt-5 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white"
-            >
-              Close
             </button>
           </div>
         </div>

@@ -1,42 +1,30 @@
 import { Link } from 'react-router-dom';
 import { BRAND } from '../config/brand';
-import { useCatalog } from '../context/CatalogContext';
 import Logo from './brand/Logo';
 
 const Footer = () => {
-  const { navLinks } = useCatalog();
-
   return (
   <footer className="bg-gray-950 pb-28 text-gray-300 sm:pb-24 md:pb-12">
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <Logo theme="dark" className="mb-4" />
           <p className="mb-4 text-sm leading-relaxed text-gray-400">
             {BRAND.tagline}. License broadcast-ready clips with transparent pricing and instant delivery.
           </p>
+          <Link to="/about-us" className="text-sm text-white transition hover:text-gray-200">
+            About Us
+          </Link>
         </div>
 
         <div>
-          <h3 className="mb-4 text-lg font-semibold text-white">Footage Types</h3>
+          <h3 className="mb-4 text-lg font-semibold text-white">Policies</h3>
           <ul className="space-y-2 text-sm">
-            {navLinks.map((link) => (
-              <li key={link.id}>
-                <Link to={link.path} className="transition hover:text-white">
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h3 className="mb-4 text-lg font-semibold text-white">Licensing</h3>
-          <ul className="space-y-2 text-sm">
-            <li><Link to="/" className="transition hover:text-white">Standard License</Link></li>
-            <li><Link to="/" className="transition hover:text-white">Extended License</Link></li>
-            <li><Link to="/" className="transition hover:text-white">Enterprise</Link></li>
-            <li><Link to="/" className="transition hover:text-white">Refund Policy</Link></li>
+            <li><Link to="/refund-policy" className="transition hover:text-white">Refund Policy</Link></li>
+            <li><Link to="/privacy-policy" className="transition hover:text-white">Privacy Policy</Link></li>
+            <li><Link to="/editorial-policy" className="transition hover:text-white">Editorial Policy</Link></li>
+            <li><Link to="/license-information-policy" className="transition hover:text-white">License Information Policy</Link></li>
+            <li><Link to="/terms-and-conditions" className="transition hover:text-white">Terms and Conditions</Link></li>
           </ul>
         </div>
 
@@ -48,9 +36,8 @@ const Footer = () => {
                 Contact Support
               </Link>
             </li>
-            <li>{BRAND.supportEmail}</li>
-            <li>{BRAND.supportPhone}</li>
-            <li>Mon–Sat · 9AM – 6PM IST</li>
+            <li>Email: {BRAND.supportEmail}</li>
+            <li>Only WhatsApp: {BRAND.supportPhone}</li>
           </ul>
         </div>
       </div>
