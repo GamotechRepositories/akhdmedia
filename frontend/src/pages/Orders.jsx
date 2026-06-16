@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import AlertModal from '../components/AlertModal';
 import { getUserOrders } from '../services/authApi';
 import { formatCurrency } from '../utils/formatters';
 
@@ -87,12 +88,6 @@ const Orders = () => {
         {loading && (
           <div className="mt-10 flex justify-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900" />
-          </div>
-        )}
-
-        {error && !loading && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
           </div>
         )}
 
@@ -184,6 +179,13 @@ const Orders = () => {
           </div>
         )}
       </div>
+
+      <AlertModal
+        open={Boolean(error) && !loading}
+        title="Could not load orders"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import AlertModal from '../components/AlertModal';
 import { useAuth } from '../context/AuthContext';
 
 const inputClass =
@@ -90,12 +91,6 @@ const Profile = () => {
               {getInitials(displayName)}
             </div>
           </div>
-
-          {error && (
-            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
 
           {success && !editingField && (
             <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -237,6 +232,13 @@ const Profile = () => {
           )}
         </div>
       </div>
+
+      <AlertModal
+        open={Boolean(error)}
+        title="Could not update profile"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchTransactions } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
@@ -186,12 +187,6 @@ const Transactions = () => {
         description="All payment transactions. Click View for full details."
       />
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <div className={`${cardClass} p-5`}>
@@ -364,6 +359,13 @@ const Transactions = () => {
           </tbody>
         </table>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not load transactions"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

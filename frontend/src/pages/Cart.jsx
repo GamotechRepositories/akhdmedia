@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { handleImageError } from '../utils/imageFallback';
-import { PROTECTED_MEDIA_CLASS, getProtectedImageProps, preventMediaContextMenu } from '../utils/mediaProtection';
+import ProductThumbnail from '../components/ui/ProductThumbnail';
+import { preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
-import { getCartItemImage, getCartItemPrice } from '../utils/cartHelpers';
+import { getCartItemPrice } from '../utils/cartHelpers';
 
 const IconTrash = (props) => (
   <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -124,7 +124,6 @@ const Cart = () => {
                 {cart.map((item) => {
                   const product = item.product || item;
                   const itemId = item.id;
-                  const productImage = getCartItemImage(item);
                   const productPrice = getCartItemPrice(item);
 
                   return (
@@ -135,12 +134,12 @@ const Cart = () => {
                             className="protected-media-shell relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden border border-gray-200"
                             onContextMenu={preventMediaContextMenu}
                           >
-                            <img
-                              src={productImage}
+                            <ProductThumbnail
+                              product={product}
                               alt={product.name || 'Product'}
-                              className={`w-full h-full object-cover ${PROTECTED_MEDIA_CLASS}`}
-                              onError={(e) => handleImageError(e, 200, 200)}
-                              {...getProtectedImageProps()}
+                              width={200}
+                              height={200}
+                              className="h-full w-full object-cover"
                             />
                           </div>
                           <div className="flex flex-col justify-center min-w-0 flex-1">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteCategory, fetchCategories } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import { primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
@@ -50,12 +51,6 @@ const Categories = () => {
           </Link>
         }
       />
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       <div className={tableWrapClass}>
         <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -113,6 +108,13 @@ const Categories = () => {
           </tbody>
         </table>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not load categories"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

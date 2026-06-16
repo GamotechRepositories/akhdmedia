@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
+import VideoThumbnail from '../ui/VideoThumbnail';
 import { handleImageError } from '../../utils/imageFallback';
 import {
   PROTECTED_MEDIA_CLASS,
@@ -194,12 +195,20 @@ const ProductMediaGallery = ({ product }) => {
             >
               {item.type === 'video' ? (
                 <>
-                  <img
-                    src={item.poster}
-                    alt="Video preview"
-                    className={`h-full w-full object-cover ${PROTECTED_MEDIA_CLASS}`}
-                    {...getProtectedImageProps()}
-                  />
+                  {item.poster ? (
+                    <img
+                      src={item.poster}
+                      alt="Video preview"
+                      className={`h-full w-full object-cover ${PROTECTED_MEDIA_CLASS}`}
+                      {...getProtectedImageProps()}
+                    />
+                  ) : (
+                    <VideoThumbnail
+                      src={item.src}
+                      alt="Video preview"
+                      className="h-full w-full object-cover"
+                    />
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                     <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />

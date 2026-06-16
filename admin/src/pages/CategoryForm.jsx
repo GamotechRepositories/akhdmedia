@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import AdminAlertModal from '../components/AdminAlertModal'
 import PageHeader from '../components/PageHeader'
 import {
   inputClass,
@@ -129,12 +130,6 @@ const CategoryForm = () => {
         }
       />
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className={`${sectionClass} space-y-6`}>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
@@ -255,6 +250,13 @@ const CategoryForm = () => {
           </Link>
         </div>
       </form>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not save category"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

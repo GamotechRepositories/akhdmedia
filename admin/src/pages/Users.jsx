@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import AdminAlertModal from '../components/AdminAlertModal'
 import { fetchUsers } from '../api/client'
 import { tableWrapClass } from '../components/ui/adminUi'
 
@@ -96,14 +97,6 @@ const Users = () => {
                 </tr>
               )}
 
-              {!loading && error && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-rose-600">
-                    {error}
-                  </td>
-                </tr>
-              )}
-
               {!loading && !error && filteredUsers.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
@@ -126,6 +119,13 @@ const Users = () => {
           </table>
         </div>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not load users"
+        message={error}
+        onClose={() => setError('')}
+      />
     </section>
   )
 }

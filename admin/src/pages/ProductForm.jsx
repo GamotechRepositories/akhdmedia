@@ -5,7 +5,9 @@ import {
   fetchCategories,
   fetchProduct,
   updateProduct,
+  uploadMedia,
 } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import FormStep from '../components/FormStep'
 import MediaTypeSelector from '../components/MediaTypeSelector'
 import PricingModeSelector from '../components/PricingModeSelector'
@@ -19,6 +21,7 @@ import {
   secondaryBtnClass,
 } from '../components/ui/adminUi'
 import { MEDIA_TYPES } from '../constants/mediaTypes'
+import { captureVideoPosterFromUrl } from '../utils/captureVideoPoster'
 import { PRICING_MODES } from '../constants/pricingModes'
 import {
   RESOLUTION_ORDER,
@@ -240,6 +243,38 @@ const ProductForm = () => {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  const saveVideoPoster = async (blob) => {
+    const posterFile = new File([blob], 'video-thumbnail.jpg', { type: 'image/jpeg' })
+    const response = await uploadMedia(posterFile, 'video-poster')
+    return response.data?.url || ''
+  }
+
+  const handlePosterCaptured = async (blob) => {
+    if (!blob || form.images.some(Boolean) || form.videoPoster?.trim()) return
+
+    try {
+      const posterUrl = await saveVideoPoster(blob)
+      if (posterUrl) {
+        updateField('videoPoster', posterUrl)
+      }
+    } catch {
+      // Storefront can still show a frame from the demo video.
+    }
+  }
+
+  const handleDemoVideoChange = async (url, meta = {}) => {
+    updateField('demoVideo', url)
+    if (!url || form.images.some(Boolean) || form.videoPoster?.trim()) return
+    if (meta.posterCapturePromise) return
+
+    try {
+      const blob = await captureVideoPosterFromUrl(url)
+      await handlePosterCaptured(blob)
+    } catch {
+      // Storefront can still show a frame from the demo video.
+    }
+  }
+
   const updatePricingMode = (pricingMode) => {
     setForm((current) => ({
       ...current,
@@ -348,7 +383,6 @@ const ProductForm = () => {
   }
 
   const validateClient = () => {
-    const imageCount = form.images.filter(Boolean).length
     if (!form.name.trim()) return 'Product name is required'
     if (!form.categorySlug) return 'Category is required'
     if (!form.masterVideoTier) {
@@ -357,7 +391,6 @@ const ProductForm = () => {
     if (!form.masterVideoKey.trim()) {
       return `Upload the master ${isVideo ? 'video' : 'image'} in Step 3`
     }
-    if (!imageCount) return 'At least one preview image is required'
     if (isVideo && !form.demoVideo.trim()) return 'Demo video URL is required for video products'
     if (!derivedAvailableTiers.length) {
       return 'Select at least one quality for customers in Step 5'
@@ -430,7 +463,7 @@ const ProductForm = () => {
         }),
       ),
       videoPoster: isVideo
-        ? form.images.find(Boolean) || ''
+        ? form.images.find(Boolean) || form.videoPoster?.trim() || ''
         : form.images.find(Boolean) || '',
       masterVideoKey: form.masterVideoKey?.trim() || '',
       masterVideoFilename: form.masterVideoFilename?.trim() || '',
@@ -478,11 +511,12 @@ const ProductForm = () => {
         </Link>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not continue"
+        message={error}
+        onClose={() => setError('')}
+      />
 
       {showCreateSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -531,19 +565,6 @@ const ProductForm = () => {
             <label className="block text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Product Name</span>
               <input required value={form.name} onChange={(e) => updateField('name', e.target.value)} className={inputClass} />
-            </label>
-
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-slate-700">Clip ID</span>
-              <input
-                value={form.clipId}
-                onChange={(e) => updateField('clipId', e.target.value.toUpperCase())}
-                placeholder="AKHD-12345 (auto-generated if empty)"
-                className={inputClass}
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Unique stock clip identifier shown to customers. Leave empty to auto-generate.
-              </p>
             </label>
 
             <label className="block text-sm">
@@ -673,7 +694,9 @@ const ProductForm = () => {
                 accept="video/mp4,video/webm,video/quicktime"
                 uploadType="preview-video"
                 value={form.demoVideo}
-                onChange={(url) => updateField('demoVideo', url)}
+                onChange={handleDemoVideoChange}
+                autoCapturePoster
+                onPosterCaptured={handlePosterCaptured}
                 valueKind="url"
                 placeholder="https://..."
               />
@@ -710,7 +733,7 @@ const ProductForm = () => {
                     min="0"
                     value={form.price}
                     onChange={(e) => updateField('price', e.target.value)}
-                    className={`${inputClass} mt-1`}
+                    className={`${inputClass} no-number-spinner mt-1`}
                   />
                 </label>
               )}

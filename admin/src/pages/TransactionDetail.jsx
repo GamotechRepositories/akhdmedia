@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchTransaction } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import FormStep from '../components/FormStep'
 import PageHeader from '../components/PageHeader'
 import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
@@ -59,6 +60,7 @@ const TransactionDetail = () => {
   const [transaction, setTransaction] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [errorDismissed, setErrorDismissed] = useState(false)
 
   useEffect(() => {
     const loadTransaction = async () => {
@@ -77,14 +79,24 @@ const TransactionDetail = () => {
     loadTransaction()
   }, [id])
 
+  useEffect(() => {
+    setErrorDismissed(false)
+  }, [id])
+
   if (loading) {
     return <p className="text-sm text-slate-500">Loading transaction...</p>
   }
 
   if (error || !transaction) {
+    const failureMessage = error || 'Transaction not found'
     return (
       <div className="space-y-4">
-        <p className="text-sm text-red-600">{error || 'Transaction not found'}</p>
+        <AdminAlertModal
+          open={!errorDismissed}
+          title="Could not load transaction"
+          message={failureMessage}
+          onClose={() => setErrorDismissed(true)}
+        />
         <Link to="/transactions" state={backState} className={secondaryBtnClass}>
           Back to Transactions
         </Link>

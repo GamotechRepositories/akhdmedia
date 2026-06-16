@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchSupportRequests } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass } from '../components/ui/adminUi'
 
@@ -137,7 +138,6 @@ const Support = () => {
       </div>
 
       {loading && <p className="text-sm text-slate-500">Loading support requests...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!loading && !error && (
         <div ref={tableContainerRef} className={`${cardClass} max-h-[70vh] overflow-x-auto overflow-y-auto`}>
@@ -197,6 +197,13 @@ const Support = () => {
           </table>
         </div>
       )}
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not load support requests"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

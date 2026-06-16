@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import AlertModal from '../components/AlertModal'
 import { useAuth } from '../context/AuthContext'
 
 const inputClass =
@@ -52,12 +53,6 @@ const Login = () => {
           onSubmit={handleSubmit}
           className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
         >
-          {error && (
-            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -112,6 +107,13 @@ const Login = () => {
           </p>
         </form>
       </div>
+
+      <AlertModal
+        open={Boolean(error)}
+        title="Login failed"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

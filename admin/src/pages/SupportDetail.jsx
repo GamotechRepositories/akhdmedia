@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { fetchOrders, fetchSupportRequest, updateSupportRequest } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import PageHeader from '../components/PageHeader'
 import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
 
@@ -50,6 +51,7 @@ const SupportDetail = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [errorDismissed, setErrorDismissed] = useState(false)
   const [notice, setNotice] = useState('')
   const [matchedOrder, setMatchedOrder] = useState(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
@@ -102,6 +104,10 @@ const SupportDetail = () => {
     load()
   }, [id])
 
+  useEffect(() => {
+    setErrorDismissed(false)
+  }, [id])
+
   const handleOpenMatchedOrder = () => {
     const orderNumber = request.orderNumber?.trim()
 
@@ -142,7 +148,12 @@ const SupportDetail = () => {
   if (error && !request) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-red-600">{error}</p>
+        <AdminAlertModal
+          open={!errorDismissed}
+          title="Could not load support request"
+          message={error}
+          onClose={() => setErrorDismissed(true)}
+        />
         <Link to="/support" state={backState} className={secondaryBtnClass}>
           Back to Support
         </Link>
@@ -273,7 +284,6 @@ const SupportDetail = () => {
             </div>
 
             {notice && <p className="text-sm text-emerald-700">{notice}</p>}
-            {error && request && <p className="text-sm text-red-600">{error}</p>}
 
             <button type="button" onClick={handleSave} disabled={saving} className={primaryBtnClass}>
               {saving ? 'Saving...' : 'Save changes'}
@@ -307,6 +317,13 @@ const SupportDetail = () => {
           </div>
         </div>
       )}
+
+      <AdminAlertModal
+        open={Boolean(error) && Boolean(request)}
+        title="Could not save changes"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

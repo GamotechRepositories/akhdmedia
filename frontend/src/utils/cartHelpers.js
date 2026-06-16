@@ -1,3 +1,6 @@
+import { getProductPosterUrl, getProductVideoSource } from './productMedia';
+import { isVideoProduct } from '../constants/mediaTypes';
+
 export const getCartItemPrice = (item) => {
   if (item.price != null) return item.price;
   const product = item.product || item;
@@ -9,7 +12,10 @@ export const getCartItemPrice = (item) => {
 
 export const getCartItemImage = (item) => {
   const product = item.product || item;
-  return product.images?.[0] || product.videoPoster || product.thumbnail || '';
+  const poster = getProductPosterUrl(product);
+  if (poster) return poster;
+  if (isVideoProduct(product)) return getProductVideoSource(product);
+  return product.thumbnail || '';
 };
 
 export const buildCartItemKey = (productId, imageSize = '') =>

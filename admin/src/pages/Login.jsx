@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import AdminAlertModal from '../components/AdminAlertModal'
 import { IconLogo } from '../components/icons/AdminIcons'
 import { useAuth } from '../context/AuthContext'
 import { BRAND } from '../config/brand'
@@ -52,12 +53,6 @@ const Login = () => {
           onSubmit={handleSubmit}
           className="rounded-2xl border border-white/10 bg-white p-8 shadow-2xl shadow-black/30"
         >
-          {error && (
-            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -101,6 +96,13 @@ const Login = () => {
           </button>
         </form>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Login failed"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

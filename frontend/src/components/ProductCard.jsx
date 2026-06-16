@@ -6,7 +6,7 @@ import {
 } from '../constants/mediaTypes';
 import { formatQualityBadgeLabel, getHighestQualityLabel } from '../constants/imageSizes';
 import { formatCurrency } from '../utils/formatters';
-import OptimizedImage from './ui/OptimizedImage';
+import ProductThumbnail from './ui/ProductThumbnail';
 import { IconPlay } from './icons/Icons';
 import { preventMediaContextMenu } from '../utils/mediaProtection';
 
@@ -19,7 +19,6 @@ const badgeTextClass =
 const ProductCard = ({ product, compact = false }) => {
   const isVideo = isVideoProduct(product);
   const finalPrice = product.price || 0;
-  const poster = product.images?.[0] || product.videoPoster;
   const qualityLabel = formatQualityBadgeLabel(
     getHighestQualityLabel(product) ??
       product.videoInfo?.quality?.split(' ')[0] ??
@@ -46,8 +45,8 @@ const ProductCard = ({ product, compact = false }) => {
             <span className="truncate">{qualityLabel}</span>
           </span>
 
-          <OptimizedImage
-            src={poster}
+          <ProductThumbnail
+            product={product}
             alt={product.name}
             width={THUMB_WIDTH[compact ? 'compact' : 'default']}
             height={THUMB_HEIGHT[compact ? 'compact' : 'default']}

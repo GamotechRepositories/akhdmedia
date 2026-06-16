@@ -80,7 +80,7 @@ const ResolutionTierEditor = ({
                 value={tierData.price ?? ''}
                 onChange={(e) => onFieldChange(tier, 'price', e.target.value)}
                 disabled={!isSelected}
-                className={tierInputClass}
+                className={`${tierInputClass} no-number-spinner`}
                 placeholder="₹"
               />
             </label>

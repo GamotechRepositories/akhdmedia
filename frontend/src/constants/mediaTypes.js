@@ -32,7 +32,7 @@ export const buildProductMediaItems = (product) => {
     {
       type: 'video',
       src: product.demoVideo,
-      poster: product.videoPoster || product.images?.[0],
+      poster: (product?.images ?? []).find(Boolean) || product?.videoPoster || undefined,
       label: 'Demo Video',
     },
     ...images,

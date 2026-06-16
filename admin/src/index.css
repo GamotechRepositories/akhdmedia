@@ -36,3 +36,14 @@ body {
 .admin-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(148, 163, 184, 0.9), rgba(100, 116, 139, 1));
 }
+
+.no-number-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.no-number-spinner::-webkit-outer-spin-button,
+.no-number-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

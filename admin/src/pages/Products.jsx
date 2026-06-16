@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { deleteProduct, fetchProducts } from '../api/client'
+import AdminAlertModal from '../components/AdminAlertModal'
 import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import { cardClass, inputClass, primaryBtnClass } from '../components/ui/adminUi'
@@ -177,12 +178,6 @@ const Products = () => {
         }
       />
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
       <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="block flex-1">
@@ -355,6 +350,13 @@ const Products = () => {
           </tbody>
         </table>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not load products"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

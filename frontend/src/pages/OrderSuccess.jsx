@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import AlertModal from '../components/AlertModal';
 import { orderAPI, paymentAPI } from '../services/commerceApi';
 import { BRAND } from '../config/brand';
 import { openRazorpayCheckout } from '../utils/razorpay';
@@ -284,11 +285,6 @@ const OrderSuccess = () => {
                 )}
               </div>
             )}
-            {paymentError && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {paymentError}
-              </p>
-            )}
             <button
               type="button"
               onClick={handleResumePayment}
@@ -306,6 +302,13 @@ const OrderSuccess = () => {
             </button>
           </div>
         </div>
+
+        <AlertModal
+          open={Boolean(paymentError)}
+          title="Payment failed"
+          message={paymentError}
+          onClose={() => setPaymentError('')}
+        />
       </div>
     );
   }

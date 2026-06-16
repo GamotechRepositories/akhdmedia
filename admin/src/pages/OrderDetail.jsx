@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import AdminAlertModal from '../components/AdminAlertModal'
 import { fetchOrder } from '../api/client'
 import PageHeader from '../components/PageHeader'
 import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
@@ -45,6 +46,7 @@ const OrderDetail = () => {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [errorDismissed, setErrorDismissed] = useState(false)
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -63,14 +65,24 @@ const OrderDetail = () => {
     loadOrder()
   }, [id])
 
+  useEffect(() => {
+    setErrorDismissed(false)
+  }, [id])
+
   if (loading) {
     return <p className="text-sm text-slate-500">Loading order...</p>
   }
 
   if (error || !order) {
+    const failureMessage = error || 'Order not found'
     return (
       <div className="space-y-4">
-        <p className="text-sm text-red-600">{error || 'Order not found'}</p>
+        <AdminAlertModal
+          open={!errorDismissed}
+          title="Could not load order"
+          message={failureMessage}
+          onClose={() => setErrorDismissed(true)}
+        />
         <Link to="/orders" state={backState} className={secondaryBtnClass}>
           Back to Orders
         </Link>

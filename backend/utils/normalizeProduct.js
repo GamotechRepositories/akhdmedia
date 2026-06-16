@@ -201,8 +201,6 @@ export const validateProductPayload = (payload) => {
     errors.push('Valid price is required')
   }
 
-  if (!payload.images.length) errors.push('At least one preview image is required')
-
   if (payload.mediaType === MEDIA_TYPES.VIDEO) {
     if (!payload.demoVideo) errors.push('Demo video URL is required for video products')
   }

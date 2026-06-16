@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import AlertModal from '../components/AlertModal';
 import { supportAPI, checkoutAPI } from '../services/commerceApi';
 
 const SUBJECT_OPTIONS = [
@@ -214,8 +215,6 @@ const Support = () => {
             </div>
           </div>
 
-          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
           <button
             type="submit"
             disabled={submitting}
@@ -224,6 +223,13 @@ const Support = () => {
             {submitting ? 'Submitting...' : 'Submit Support Request'}
           </button>
       </form>
+
+      <AlertModal
+        open={Boolean(error)}
+        title="Could not submit request"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   );
 };

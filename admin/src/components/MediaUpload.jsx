@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { uploadMedia } from '../api/client'
+import { captureVideoPosterFromFile } from '../utils/captureVideoPoster'
 import { inputClass } from './ui/adminUi'
 
 const MediaUpload = ({
@@ -14,6 +15,8 @@ const MediaUpload = ({
   placeholder = 'Or paste URL',
   disabled = false,
   showAccessUrl = false,
+  autoCapturePoster = false,
+  onPosterCaptured,
 }) => {
   const inputRef = useRef(null)
   const progressRef = useRef(0)
@@ -37,6 +40,9 @@ const MediaUpload = ({
     setError('')
 
     try {
+      const posterCapturePromise = autoCapturePoster
+        ? captureVideoPosterFromFile(file).catch(() => null)
+        : null
       const response = await uploadMedia(file, uploadType, reportProgress)
       progressRef.current = 100
       setUploadProgress(100)
@@ -46,7 +52,14 @@ const MediaUpload = ({
         filename: uploadedFilename,
         size: response.data.size || file.size,
         url: response.data.url || '',
+        posterCapturePromise,
       })
+      if (autoCapturePoster && onPosterCaptured && posterCapturePromise) {
+        const posterBlob = await posterCapturePromise
+        if (posterBlob) {
+          await onPosterCaptured(posterBlob)
+        }
+      }
     } catch (err) {
       setError(err.message)
     } finally {
