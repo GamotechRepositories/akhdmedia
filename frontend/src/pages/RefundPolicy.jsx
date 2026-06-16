@@ -9,7 +9,7 @@ const RefundPolicy = () => {
           <p className="mt-2 text-sm text-gray-600">Last Updated: [16/06/2026]</p>
 
           <p className="mt-6 text-sm leading-relaxed text-gray-800">
-            Thank you for purchasing digital content from [AKHD MEDIA & CO / www.Akhd.in ].
+            Thank you for purchasing digital content from [AKHD MEDIA & CO / www.akhdmedia.com ].
           </p>
 
           <section className="mt-6">

@@ -100,6 +100,7 @@ const Checkout = () => {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedLicensePolicy, setAcceptedLicensePolicy] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -182,6 +183,9 @@ const Checkout = () => {
     }
     if (!acceptedTerms) {
       return 'Please accept the terms and conditions to continue';
+    }
+    if (!acceptedLicensePolicy) {
+      return 'Please accept the License Information Policy to continue';
     }
     return '';
   };
@@ -407,30 +411,52 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <label className="mt-5 flex cursor-pointer items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                />
-                <span className="text-sm text-gray-700">
-                  I have read{' '}
-                  <Link
-                    to="/terms-and-conditions"
-                    onClick={(event) => event.stopPropagation()}
-                    className="font-semibold underline underline-offset-2"
-                  >
-                    Terms &amp; Conditions
-                  </Link>{' '}
-                  and agree
-                </span>
-              </label>
+              <div className="mt-5 space-y-2.5">
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  />
+                  <span className="text-sm text-gray-700">
+                    I have read{' '}
+                    <Link
+                      to="/terms-and-conditions"
+                      onClick={(event) => event.stopPropagation()}
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      Terms &amp; Conditions
+                    </Link>{' '}
+                    and agree
+                  </span>
+                </label>
+
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={acceptedLicensePolicy}
+                    onChange={(e) => setAcceptedLicensePolicy(e.target.checked)}
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  />
+                  <span className="text-sm text-gray-700">
+                    I have read{' '}
+                    <Link
+                      to="/license-information-policy"
+                      onClick={(event) => event.stopPropagation()}
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      License Information Policy
+                    </Link>{' '}
+                    and agree
+                  </span>
+                </label>
+              </div>
 
               <button
                 type="button"
                 onClick={handleContinueToSummary}
-                disabled={!acceptedTerms}
+                disabled={!acceptedTerms || !acceptedLicensePolicy}
                 className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 Continue to Payment
