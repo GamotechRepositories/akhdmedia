@@ -6,6 +6,7 @@ import {
   getAllOrders,
   getCheckoutProfile,
   getOrderById,
+  getUserOrderById,
   saveCheckoutProfile,
 } from '../services/orderService.js'
 import {
@@ -25,6 +26,22 @@ import {
   isLicenseResendWindowOpen,
 } from '../config/email.js'
 import AppError from '../utils/AppError.js'
+import { getUserById } from '../services/userAuthService.js'
+
+const resolveOrderForRequest = async (req, orderId) => {
+  if (req.user?.id) {
+    const user = await getUserById(req.user.id)
+    const order = await getUserOrderById(user._id, user.email, orderId)
+    return { order, userEmail: user.email }
+  }
+
+  if (!req.sessionId) {
+    throw new AppError('Order not found', 404)
+  }
+
+  const order = await getOrderById(req.sessionId, orderId)
+  return { order, userEmail: null }
+}
 export const getProfile = asyncHandler(async (req, res) => {
   const profile = await getCheckoutProfile(req.sessionId)
 
@@ -53,7 +70,10 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new AppError('COD payment is not available', 400)
   }
 
-  const order = await createPendingOnlineOrderFromCart(req.sessionId, { billingAddress })
+  const order = await createPendingOnlineOrderFromCart(req.sessionId, {
+    billingAddress,
+    userId: req.user?.id || null,
+  })
   const razorpayOrder = await createRazorpayOrder({
     amount: order.totalAmount,
     receipt: order.orderNumber,
@@ -82,7 +102,7 @@ export const createOrder = asyncHandler(async (req, res) => {
 })
 
 export const getOrder = asyncHandler(async (req, res) => {
-  const order = await getOrderById(req.sessionId, req.params.id)
+  const { order } = await resolveOrderForRequest(req, req.params.id)
 
   res.json({
     success: true,
@@ -93,8 +113,8 @@ export const getOrder = asyncHandler(async (req, res) => {
 })
 
 export const getOrderDownloads = asyncHandler(async (req, res) => {
-  const order = await getOrderById(req.sessionId, req.params.id)
-  verifyOrderAccess(order, req.sessionId)
+  const { order, userEmail } = await resolveOrderForRequest(req, req.params.id)
+  verifyOrderAccess(order, req.sessionId, req.user?.id, userEmail)
 
   if (!canAccessOrderDownloads(order)) {
     throw new AppError('Payment is required before downloads are available', 402)
@@ -109,8 +129,8 @@ export const getOrderDownloads = asyncHandler(async (req, res) => {
 })
 
 export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {
-  const order = await getOrderById(req.sessionId, req.params.id)
-  verifyOrderAccess(order, req.sessionId)
+  const { order, userEmail } = await resolveOrderForRequest(req, req.params.id)
+  verifyOrderAccess(order, req.sessionId, req.user?.id, userEmail)
 
   if (!canAccessOrderDownloads(order)) {
     throw new AppError('Payment is required before license email can be sent', 402)

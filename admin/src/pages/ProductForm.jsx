@@ -31,6 +31,12 @@ import {
   CUSTOMER_TIER_ORDER,
 } from '../constants/resolutionTiers'
 
+const ORIENTATION_NOTE_OPTIONS = [
+  'This video is vertical',
+  'This video is horizontal',
+  'This video is square',
+]
+
 const buildEmptyDeliveryFiles = () =>
   Object.fromEntries(
     RESOLUTION_ORDER.map((tier) => [
@@ -131,6 +137,7 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
     size: mediaType === MEDIA_TYPES.VIDEO ? '200 MB' : '18 MB',
     duration: mediaType === MEDIA_TYPES.VIDEO ? '0:15' : '',
     format: mediaType === MEDIA_TYPES.VIDEO ? 'MP4 / H.264' : 'JPEG / PNG',
+    orientationNote: mediaType === MEDIA_TYPES.VIDEO ? 'This video is vertical' : '',
   },
 })
 
@@ -198,6 +205,7 @@ const ProductForm = () => {
               size: product.videoInfo?.size || '',
               duration: product.videoInfo?.duration || '',
               format: product.videoInfo?.format || '',
+              orientationNote: product.videoInfo?.orientationNote || '',
             },
           })
         }
@@ -769,6 +777,23 @@ const ProductForm = () => {
               <span className="font-medium text-slate-700">Format</span>
               <input value={form.videoInfo.format} onChange={(e) => updateVideoInfo('format', e.target.value)} className={inputClass} />
             </label>
+            {isVideo && (
+              <label className="block text-sm sm:col-span-2">
+                <span className="font-medium text-slate-700">Orientation note</span>
+                <select
+                  value={form.videoInfo.orientationNote}
+                  onChange={(e) => updateVideoInfo('orientationNote', e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select orientation note</option>
+                  {ORIENTATION_NOTE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
         </FormStep>
 

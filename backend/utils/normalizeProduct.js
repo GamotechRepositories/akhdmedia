@@ -134,6 +134,7 @@ export const normalizeProductPayload = (body = {}) => {
       size: body.videoInfo?.size?.trim() || '',
       duration: body.videoInfo?.duration?.trim() || '',
       format: body.videoInfo?.format?.trim() || '',
+      orientationNote: body.videoInfo?.orientationNote?.trim() || '',
     }
 
     if (payload.masterVideoKey) {
@@ -155,6 +156,7 @@ export const normalizeProductPayload = (body = {}) => {
       size: body.videoInfo?.size?.trim() || '',
       duration: '',
       format: body.videoInfo?.format?.trim() || 'JPEG / PNG',
+      orientationNote: body.videoInfo?.orientationNote?.trim() || '',
     }
   }
 

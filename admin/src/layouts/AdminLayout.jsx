@@ -8,6 +8,7 @@ import {
   IconProducts,
   IconSupport,
   IconTransactions,
+  IconUsers,
 } from '../components/icons/AdminIcons'
 import { useAuth } from '../context/AuthContext'
 import { BRAND } from '../config/brand'
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
   { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
   { to: '/transactions', label: 'Transactions', icon: IconTransactions, description: 'Payments & Razorpay' },
+  { to: '/users', label: 'Users', icon: IconUsers, description: 'Registered customers' },
   { to: '/support', label: 'Support', icon: IconSupport, description: 'Customer help requests' },
 ]
 
@@ -29,6 +31,7 @@ const pageTitles = {
   '/products/new': 'Add Product',
   '/orders': 'Orders',
   '/transactions': 'Transactions',
+  '/users': 'Users',
   '/support': 'Support',
 }
 
@@ -106,7 +109,7 @@ const AdminLayout = () => {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-6">
+        <nav className="admin-scrollbar flex-1 space-y-2 overflow-y-auto px-4 py-6">
           <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
             Manage
           </p>
@@ -193,10 +196,6 @@ const AdminLayout = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-xs font-medium text-slate-600 sm:flex">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                API Connected
-              </div>
               <button
                 type="button"
                 onClick={handleLogout}

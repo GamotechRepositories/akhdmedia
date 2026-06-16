@@ -30,6 +30,7 @@ const billingAddressSchema = new mongoose.Schema(
 const orderSchema = new mongoose.Schema(
   {
     sessionId: { type: String, required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true, default: null },
     orderNumber: { type: String, required: true, unique: true, index: true },
     items: { type: [orderItemSchema], default: [] },
     billingAddress: { type: billingAddressSchema, required: true },

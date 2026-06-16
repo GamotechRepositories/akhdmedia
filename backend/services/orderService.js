@@ -37,6 +37,9 @@ export const validateBillingAddress = (billingAddress = {}) => {
   if (!purchaseReasons.length) {
     throw new AppError('Please select where you will use the video', 400)
   }
+  if (purchaseReasons.length > 1) {
+    throw new AppError('Please select only one usage option', 400)
+  }
 
   const purchaseReasonOther = String(billingAddress.purchaseReasonOther || '').trim()
 
@@ -124,7 +127,7 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
   return { normalizedAddress, orderItems, total }
 }
 
-export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress }) => {
+export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress, userId = null }) => {
   const { normalizedAddress, orderItems, total } = await buildOrderPayloadFromCart(
     sessionId,
     billingAddress,
@@ -132,6 +135,7 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
 
   const order = await Order.create({
     sessionId,
+    userId: userId || null,
     orderNumber: buildOrderNumber(),
     items: orderItems,
     billingAddress: normalizedAddress,
@@ -196,6 +200,41 @@ export const getAllOrders = async () => Order.find().sort({ createdAt: -1 })
 
 export const getAdminOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
+
+  if (!order) {
+    throw new AppError('Order not found', 404)
+  }
+
+  return order
+}
+
+const buildUserOrderFilter = (userId, email) => ({
+  $or: [
+    { userId },
+    {
+      $and: [
+        { $or: [{ userId: null }, { userId: { $exists: false } }] },
+        { 'billingAddress.email': email },
+      ],
+    },
+  ],
+})
+
+export const getOrdersForUser = async (userId, email) => {
+  const normalizedEmail = email?.trim().toLowerCase()
+  if (!normalizedEmail) {
+    throw new AppError('User email is required', 400)
+  }
+
+  return Order.find(buildUserOrderFilter(userId, normalizedEmail)).sort({ createdAt: -1 })
+}
+
+export const getUserOrderById = async (userId, email, orderId) => {
+  const normalizedEmail = email?.trim().toLowerCase()
+  const order = await Order.findOne({
+    _id: orderId,
+    ...buildUserOrderFilter(userId, normalizedEmail),
+  })
 
   if (!order) {
     throw new AppError('Order not found', 404)

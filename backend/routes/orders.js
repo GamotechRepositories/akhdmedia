@@ -8,6 +8,8 @@ import {
   updateProfile,
 } from '../controllers/orderController.js'
 import cartSession from '../middleware/cartSession.js'
+import { optionalUser } from '../middleware/optionalUser.js'
+import { requireUser } from '../middleware/requireUser.js'
 
 const router = Router()
 
@@ -15,9 +17,9 @@ router.use(cartSession)
 
 router.get('/profile', getProfile)
 router.put('/profile', updateProfile)
-router.post('/', createOrder)
-router.get('/:id/downloads', getOrderDownloads)
-router.post('/:id/resend-email', resendOrderLicenseEmail)
-router.get('/:id', getOrder)
+router.post('/', requireUser, createOrder)
+router.get('/:id/downloads', optionalUser, getOrderDownloads)
+router.post('/:id/resend-email', optionalUser, resendOrderLicenseEmail)
+router.get('/:id', optionalUser, getOrder)
 
 export default router

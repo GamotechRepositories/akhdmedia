@@ -119,7 +119,20 @@ export const getOrderItemDownloads = async (order) => {
   return downloads
 }
 
-export const verifyOrderAccess = (order, sessionId) => {
+export const verifyOrderAccess = (order, sessionId, userId = null, userEmail = null) => {
   if (!order) throw new AppError('Order not found', 404)
-  if (order.sessionId !== sessionId) throw new AppError('Order not found', 404)
+
+  if (userId && order.userId?.toString() === userId) {
+    return
+  }
+
+  if (userEmail && order.billingAddress?.email?.trim().toLowerCase() === userEmail.trim().toLowerCase()) {
+    return
+  }
+
+  if (order.sessionId === sessionId) {
+    return
+  }
+
+  throw new AppError('Order not found', 404)
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { handleImageError } from '../utils/imageFallback';
 import { PROTECTED_MEDIA_CLASS, getProtectedImageProps, preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
@@ -34,6 +35,7 @@ const IconArrowLeft = (props) => (
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, getCartTotal, loading } = useCart();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [removingId, setRemovingId] = useState(null);
 
@@ -253,7 +255,13 @@ const Cart = () => {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <button
                   type="button"
-                  onClick={() => navigate('/checkout')}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      navigate('/login', { state: { from: '/cart' } });
+                      return;
+                    }
+                    navigate('/checkout');
+                  }}
                   className="w-full flex items-center justify-center px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm"
                 >
                   Proceed to Checkout

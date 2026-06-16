@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { formatCurrency } from '../utils/formatters';
@@ -31,7 +32,7 @@ const PAYMENT_OPTIONS = [
 ];
 
 const LICENSE_TERMS_TEXT =
-  'You may not use these videos commercially or associate them with any brand. This is illegal. If you keep them personally or a media agency uses them digitally, and they do not involve any commercial use, you may use them freely, but do not associate them with that brand. If you agree then click on the checkbox.';
+  'You may not use these videos commercially or associate them with any brand. This is illegal. If you keep them personally or a media agency uses them digitally, and they do not involve any commercial use, you may use them freely, but do not associate them with that brand.';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
@@ -91,6 +92,7 @@ const StepIndicator = ({ step }) => (
 
 const Checkout = () => {
   const { cart, getCartTotal, clearCart, loading: cartLoading } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState('billing');
   const [loading, setLoading] = useState(false);
@@ -101,19 +103,34 @@ const Checkout = () => {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
+        if (user) {
+          setBillingDetails((prev) => ({
+            ...prev,
+            name: user.name || prev.name,
+            email: user.email || prev.email,
+            phone: user.phone || prev.phone,
+          }))
+          return
+        }
+
         const response = await checkoutAPI.getProfile();
         if (response.success && response.data.billingAddress) {
           const saved = response.data.billingAddress;
+          const savedReasons = Array.isArray(saved.purchaseReasons)
+            ? saved.purchaseReasons
+            : [];
+
           setBillingDetails({
             ...emptyBilling,
             name: saved.name || '',
             email: saved.email || '',
             phone: saved.phone || '',
-            purchaseReasons: saved.purchaseReasons || [],
+            purchaseReasons: savedReasons.length ? [savedReasons[0]] : [],
             purchaseReasonOther: saved.purchaseReasonOther || '',
           });
         }
@@ -123,7 +140,7 @@ const Checkout = () => {
     };
 
     loadProfile();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!cartLoading && cart.length === 0 && !isPlacingOrder) {
@@ -138,10 +155,8 @@ const Checkout = () => {
 
   const togglePurchaseReason = (reasonId) => {
     setBillingDetails((prev) => {
-      const isRemoving = prev.purchaseReasons.includes(reasonId);
-      const purchaseReasons = isRemoving
-        ? prev.purchaseReasons.filter((id) => id !== reasonId)
-        : [...prev.purchaseReasons, reasonId];
+      const isRemoving = prev.purchaseReasons[0] === reasonId;
+      const purchaseReasons = isRemoving ? [] : [reasonId];
 
       return {
         ...prev,
@@ -360,7 +375,7 @@ const Checkout = () => {
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {PURCHASE_REASONS.map((reason) => {
-                      const selected = billingDetails.purchaseReasons.includes(reason.id);
+                      const selected = billingDetails.purchaseReasons[0] === reason.id;
                       return (
                         <button
                           key={reason.id}
@@ -395,18 +410,27 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <label className="mt-5 flex cursor-pointer gap-2.5 rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <label className="mt-5 flex cursor-pointer items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
                 <input
                   type="checkbox"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                 />
-                <span className="text-[10px] leading-snug text-gray-500 sm:text-[11px]">
-                  <span className="mb-1 block text-[11px] font-semibold text-gray-800 sm:text-xs">
+                <span className="text-sm text-gray-700">
+                  I have read{' '}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setShowTermsModal(true);
+                    }}
+                    className="font-semibold underline underline-offset-2"
+                  >
                     Terms &amp; Conditions
-                  </span>
-                  {LICENSE_TERMS_TEXT}
+                  </button>{' '}
+                  and agree
                 </span>
               </label>
 
@@ -524,6 +548,28 @@ const Checkout = () => {
               className="mt-5 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white"
             >
               OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showTermsModal && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowTermsModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold text-gray-900">Terms &amp; Conditions</h2>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600">{LICENSE_TERMS_TEXT}</p>
+            <button
+              type="button"
+              onClick={() => setShowTermsModal(false)}
+              className="mt-5 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white"
+            >
+              Close
             </button>
           </div>
         </div>

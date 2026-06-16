@@ -2,11 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCatalog } from '../context/CatalogContext';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import Logo from './brand/Logo';
 
 const Navbar = () => {
   const { navLinks } = useCatalog();
   const { getCartItemsCount } = useCart();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = getCartItemsCount();
@@ -28,6 +30,8 @@ const Navbar = () => {
 
     if (location.pathname === '/') setActiveCategory('home');
     else if (location.pathname === '/support') setActiveCategory('support');
+    else if (location.pathname === '/profile') setActiveCategory('profile');
+    else if (location.pathname === '/orders') setActiveCategory('orders');
     else if (location.pathname === '/videos') setActiveCategory('videos');
     else if (routeCategory) setActiveCategory(routeCategory);
     else setActiveCategory('');
@@ -81,6 +85,19 @@ const Navbar = () => {
     setIsSearchOpen(false);
   }, [navigate, searchQuery]);
 
+  const ProfileIcon = ({ className = 'h-5 w-5 sm:h-[22px] sm:w-[22px]' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  );
+
+  const OrdersIcon = ({ className = 'h-5 w-5 sm:h-[22px] sm:w-[22px]' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3h6a2 2 0 012 2v1h1a2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h1V5a2 2 0 012-2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 6h6M8 11h8M8 15h8" />
+    </svg>
+  );
+
   const navLinkClass = (isActive) =>
     `whitespace-nowrap text-sm font-semibold uppercase tracking-[0.12em] transition-colors relative xl:text-[15px] 2xl:text-base ${
       isActive ? 'text-black' : 'text-gray-500 hover:text-black'
@@ -88,6 +105,9 @@ const Navbar = () => {
 
   const iconBtnClass =
     'inline-flex shrink-0 items-center justify-center rounded-full p-2 text-gray-800 transition hover:bg-gray-100 sm:p-2.5';
+
+  const desktopIconBtnClass =
+    'hidden shrink-0 items-center justify-center rounded-full p-2 text-gray-800 transition hover:bg-gray-100 sm:p-2.5 xl:inline-flex';
 
   const underlineClass = (isActive, color = 'bg-black') =>
     `absolute -bottom-2 left-1/2 h-0.5 -translate-x-1/2 transition-all duration-300 ${
@@ -161,13 +181,41 @@ const Navbar = () => {
 
               <Link
                 to="/support"
-                className={`${iconBtnClass} hidden sm:inline-flex ${location.pathname === '/support' ? 'bg-gray-100' : ''}`}
+                className={`${desktopIconBtnClass} ${location.pathname === '/support' ? 'bg-gray-100' : ''}`}
                 aria-label="Support"
               >
                 <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </Link>
+
+              {isAuthenticated && (
+                <Link
+                  to="/orders"
+                  className={`${desktopIconBtnClass} ${location.pathname === '/orders' ? 'bg-gray-100' : ''}`}
+                  aria-label="My orders"
+                >
+                  <OrdersIcon />
+                </Link>
+              )}
+
+              {isAuthenticated ? (
+                <Link
+                  to="/profile"
+                  className={`${desktopIconBtnClass} ${location.pathname === '/profile' ? 'bg-gray-100' : ''}`}
+                  aria-label="My profile"
+                >
+                  <ProfileIcon />
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className={`${desktopIconBtnClass} ${location.pathname === '/login' ? 'bg-gray-100' : ''}`}
+                  aria-label="Sign in"
+                >
+                  <ProfileIcon />
+                </Link>
+              )}
 
               <Link to="/cart" className={`${iconBtnClass} relative`} aria-label="Cart">
                 <svg className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,11 +289,6 @@ const Navbar = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
           </Link>
-          <Link to="/videos" className={`rounded-xl p-3 transition ${activeCategory === 'videos' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`} aria-label="Videos">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </Link>
           <Link
             to="/support"
             className={`rounded-xl p-3 transition ${activeCategory === 'support' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
@@ -255,6 +298,37 @@ const Navbar = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </Link>
+          <Link to="/videos" className={`rounded-xl p-3 transition ${activeCategory === 'videos' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`} aria-label="Videos">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </Link>
+          {isAuthenticated && (
+            <Link
+              to="/orders"
+              className={`rounded-xl p-3 transition ${activeCategory === 'orders' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+              aria-label="My orders"
+            >
+              <OrdersIcon className="h-5 w-5" />
+            </Link>
+          )}
+          {isAuthenticated ? (
+            <Link
+              to="/profile"
+              className={`rounded-xl p-3 transition ${activeCategory === 'profile' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+              aria-label="Profile"
+            >
+              <ProfileIcon className="h-5 w-5" />
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className={`rounded-xl p-3 transition ${location.pathname === '/login' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+              aria-label="Sign in"
+            >
+              <ProfileIcon className="h-5 w-5" />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -284,6 +358,21 @@ const Navbar = () => {
             <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Home</Link>
             <Link to="/videos" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">All Videos</Link>
             <Link to="/support" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Support</Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">
+                  My Profile
+                </Link>
+                <Link to="/orders" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">
+                  My Orders
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Sign in</Link>
+                <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Create account</Link>
+              </>
+            )}
           </div>
           <div className="h-px w-12 bg-gray-200" />
           <div>

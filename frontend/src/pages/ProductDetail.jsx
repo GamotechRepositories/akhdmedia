@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import ProductMediaGallery from '../components/product/ProductMediaGallery';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ToastContainer';
 import { useCatalog } from '../context/CatalogContext';
 import { BRAND } from '../config/brand';
@@ -27,9 +28,12 @@ const SpecItem = ({ label, value }) => (
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { getProductById, getRelatedProducts, loading: catalogLoading } = useCatalog();
   const { addToCart, buyNow } = useCart();
+  const { isAuthenticated } = useAuth();
   const { success, error: showError } = useToast();
+  const processedAuthIntentRef = useRef(false);
 
   const [product, setProduct] = useState(null);
   const [selectedImageSize, setSelectedImageSize] = useState('');
@@ -40,6 +44,54 @@ const ProductDetail = () => {
     setProduct(found);
     setSelectedImageSize(found ? getDefaultImageSize(found.imageSizes) : '');
   }, [id, getProductById, catalogLoading]);
+
+  useEffect(() => {
+    const intent = location.state?.afterLoginAction;
+
+    if (!intent || !isAuthenticated || !product || processedAuthIntentRef.current) {
+      return;
+    }
+
+    if (intent.productId !== product.id) {
+      return;
+    }
+
+    processedAuthIntentRef.current = true;
+
+    const runIntent = async () => {
+      try {
+        if (intent.type === 'addToCart') {
+          await addToCart(product, 1, intent.imageSize || selectedImageSize);
+          success('Added to cart');
+          navigate(location.pathname, { replace: true, state: null });
+          return;
+        }
+
+        if (intent.type === 'buyNow') {
+          await buyNow(product, 1, intent.imageSize || selectedImageSize);
+          navigate('/checkout');
+          return;
+        }
+      } catch (actionError) {
+        showError(actionError.message || 'Could not continue after login');
+      }
+
+      navigate(location.pathname, { replace: true, state: null });
+    };
+
+    runIntent();
+  }, [
+    addToCart,
+    buyNow,
+    isAuthenticated,
+    location.pathname,
+    location.state,
+    navigate,
+    product,
+    selectedImageSize,
+    showError,
+    success,
+  ]);
 
   if (!product) {
     return (
@@ -59,10 +111,34 @@ const ProductDetail = () => {
   const resolutionEntries = sortImageSizeEntries(product.imageSizes);
   const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
   const listingPrice = lowestTierInfo?.price ?? product.price;
+  const selectedTierInfo = product.imageSizes?.[selectedImageSize] || lowestTierInfo || null;
+  const deliverableLabel = isVideo ? 'video deliverable' : 'image deliverable';
+  const licenseIncludedLabel =
+    product.videoInfo?.orientationNote?.trim() ||
+    (isVideo ? 'Commercial video license included' : 'Commercial image license included');
 
   const openUnavailableModal = () => setShowUnavailableModal(true);
 
+  const redirectToLogin = (actionType) => {
+    showError('Please sign in to continue');
+    navigate('/login', {
+      state: {
+        from: `/product/${id}`,
+        afterLoginAction: {
+          type: actionType,
+          productId: id,
+          imageSize: selectedImageSize,
+        },
+      },
+    });
+  };
+
   const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      redirectToLogin('addToCart');
+      return;
+    }
+
     if (!isPurchasable) {
       openUnavailableModal();
       return;
@@ -77,6 +153,11 @@ const ProductDetail = () => {
   };
 
   const handleBuyNow = async () => {
+    if (!isAuthenticated) {
+      redirectToLogin('buyNow');
+      return;
+    }
+
     if (!isPurchasable) {
       openUnavailableModal();
       return;
@@ -170,8 +251,8 @@ const ProductDetail = () => {
                 </div>
                 {lowestTierInfo && (
                   <div className="text-right text-xs text-white/70">
-                    <p>{lowestTierInfo.size} deliverable</p>
-                    <p className="mt-0.5 text-white/50">Commercial use included</p>
+                    <p>{selectedTierInfo?.size || '—'} {deliverableLabel}</p>
+                    <p className="mt-0.5 text-white/50">{licenseIncludedLabel}</p>
                   </div>
                 )}
               </div>
@@ -228,6 +309,11 @@ const ProductDetail = () => {
                   </svg>
                 </button>
               </div>
+              {!isAuthenticated && isPurchasable && (
+                <p className="text-center text-xs text-gray-500">
+                  To continue, please login or create account.
+                </p>
+              )}
             </div>
 
             <div className="border-t border-gray-100 bg-gray-50/60 px-5 py-4 sm:px-6">

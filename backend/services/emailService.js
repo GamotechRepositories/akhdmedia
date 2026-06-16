@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
+import { BRAND_NAME, getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
 import { SIGNED_URL_EXPIRY_SECONDS } from '../config/storage.js'
 
 let resendClient = null
@@ -32,7 +32,7 @@ const LICENSE_EMAIL_TEMPLATE = `<!DOCTYPE html>
   <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;padding:30px;">
 
     <h1 style="text-align:center;color:#111827;">
-      Akhd Media
+      ${BRAND_NAME}
     </h1>
 
     <h2>Thank You For Your Purchase!</h2>
@@ -65,7 +65,7 @@ const LICENSE_EMAIL_TEMPLATE = `<!DOCTYPE html>
     <hr>
 
     <p style="font-size:12px;color:#666;text-align:center;">
-      © {{current_year}} Akhd Media. All rights reserved.
+      © {{current_year}} ${BRAND_NAME}. All rights reserved.
     </p>
 
   </div>

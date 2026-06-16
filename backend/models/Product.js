@@ -29,6 +29,7 @@ const videoInfoSchema = new mongoose.Schema(
     size: { type: String, default: '' },
     duration: { type: String, default: '' },
     format: { type: String, default: '' },
+    orientationNote: { type: String, default: '' },
   },
   { _id: false },
 )

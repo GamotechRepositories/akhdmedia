@@ -34,6 +34,12 @@ export const IconSupport = ({ className = 'h-5 w-5' }) => (
   </svg>
 )
 
+export const IconUsers = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 7a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM21 20v-1a4 4 0 00-3-3.87M16.5 3.13a2.5 2.5 0 010 4.74" />
+  </svg>
+)
+
 export const IconExternal = ({ className = 'h-4 w-4' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

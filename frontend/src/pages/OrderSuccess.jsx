@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { orderAPI } from '../services/commerceApi';
 import { BRAND } from '../config/brand';
 import {
@@ -13,6 +13,16 @@ import { downloadLicenseCertificatePdf } from '../utils/licenseCertificatePdf';
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const handleContinue = () => {
+    if (location.state?.fromOrders && location.state?.orderId) {
+      navigate('/orders', { state: { focusOrderId: location.state.orderId } });
+      return;
+    }
+
+    navigate('/');
+  };
+
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(true);
@@ -272,10 +282,10 @@ const OrderSuccess = () => {
         <div className="border-t border-gray-200 bg-white px-6 py-5">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={handleContinue}
             className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
           >
-            Continue Shopping
+            {location.state?.fromOrders ? 'Back to My Orders' : 'Continue Shopping'}
           </button>
         </div>
       </div>
