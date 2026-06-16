@@ -12,7 +12,6 @@ import PricingModeSelector from '../components/PricingModeSelector'
 import ResolutionTierEditor from '../components/ResolutionTierEditor'
 import MediaUpload from '../components/MediaUpload'
 import MasterQualitySelector from '../components/MasterQualitySelector'
-import VideoPreview from '../components/VideoPreview'
 import {
   compactFormClass,
   inputClass,
@@ -319,7 +318,6 @@ const ProductForm = () => {
       images: current.images,
       isActive: current.isActive,
       demoVideo: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideo : '',
-      videoPoster: mediaType === MEDIA_TYPES.VIDEO ? current.videoPoster : current.images[0] || '',
       deliveryFiles: current.deliveryFiles,
     }))
   }
@@ -346,10 +344,6 @@ const ProductForm = () => {
       images: current.images.map((image, imageIndex) =>
         imageIndex === index ? value : image
       ),
-      videoPoster:
-        current.mediaType === MEDIA_TYPES.VIDEO && index === 0 && !current.videoPoster
-          ? value
-          : current.videoPoster,
     }))
   }
 
@@ -436,7 +430,7 @@ const ProductForm = () => {
         }),
       ),
       videoPoster: isVideo
-        ? form.videoPoster || form.images.find(Boolean) || ''
+        ? form.images.find(Boolean) || ''
         : form.images.find(Boolean) || '',
       masterVideoKey: form.masterVideoKey?.trim() || '',
       masterVideoFilename: form.masterVideoFilename?.trim() || '',
@@ -673,7 +667,7 @@ const ProductForm = () => {
           </div>
 
           {isVideo && (
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <div className="mt-3">
               <MediaUpload
                 label="Demo Video *"
                 accept="video/mp4,video/webm,video/quicktime"
@@ -683,19 +677,6 @@ const ProductForm = () => {
                 valueKind="url"
                 placeholder="https://..."
               />
-              <MediaUpload
-                label="Video Poster"
-                accept="image/jpeg,image/png,image/webp"
-                uploadType="video-poster"
-                value={form.videoPoster}
-                onChange={(url) => updateField('videoPoster', url)}
-                valueKind="url"
-                placeholder="Defaults to image 1"
-              />
-              <div className="lg:col-span-2">
-                <p className="mb-1 text-xs font-medium text-slate-600">Preview</p>
-                <VideoPreview src={form.demoVideo} poster={form.videoPoster || form.images[0]} />
-              </div>
             </div>
           )}
         </FormStep>

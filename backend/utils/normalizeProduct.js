@@ -205,7 +205,6 @@ export const validateProductPayload = (payload) => {
 
   if (payload.mediaType === MEDIA_TYPES.VIDEO) {
     if (!payload.demoVideo) errors.push('Demo video URL is required for video products')
-    if (!payload.videoPoster) errors.push('Video poster is required for video products')
   }
 
   const hasMaster = Boolean(payload.masterVideoKey)

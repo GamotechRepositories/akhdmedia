@@ -151,11 +151,19 @@ const MediaUpload = ({
       )}
 
       {previewUrl && isImage && (
-        <img src={previewUrl} alt="" className="mt-2 h-20 w-full rounded-md object-cover" />
+        <img
+          src={previewUrl}
+          alt=""
+          className="mt-2 max-h-[28rem] w-full rounded-md bg-slate-100 object-contain"
+        />
       )}
 
       {previewUrl && !isImage && isVideoUpload && (
-        <video src={previewUrl} controls className="mt-2 max-h-40 w-full rounded-md bg-black" />
+        <video
+          src={previewUrl}
+          controls
+          className="mt-2 max-h-[28rem] w-full rounded-md bg-black object-contain"
+        />
       )}
 
       {error && <p className="mt-1 text-[11px] text-red-600">{error}</p>}
