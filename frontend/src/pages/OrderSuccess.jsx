@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { orderAPI } from '../services/commerceApi';
+import { orderAPI, paymentAPI } from '../services/commerceApi';
 import { BRAND } from '../config/brand';
+import { openRazorpayCheckout } from '../utils/razorpay';
 import {
   LICENSE_EMAIL_RESEND_LIMIT_MESSAGE,
   LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE,
@@ -30,6 +31,8 @@ const OrderSuccess = () => {
   const [emailNotice, setEmailNotice] = useState('');
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [resendWindowRemainingMs, setResendWindowRemainingMs] = useState(0);
+  const [resumingPayment, setResumingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
 
   const orderId = searchParams.get('orderId') || '';
   const orderNumber = order?.orderNumber?.slice(-8).toUpperCase() || '--------';
@@ -46,6 +49,10 @@ const OrderSuccess = () => {
     order?.paymentMethod === 'online' &&
     order?.paymentStatus === 'pending' &&
     order?.status === 'pending';
+
+  const canResumePayment = order?.canResumePayment !== false;
+  const unavailableItems = order?.unavailableItems || [];
+  const paymentBlockReason = order?.paymentBlockReason || '';
 
   const isPaid = order?.paymentStatus === 'paid';
 
@@ -67,6 +74,65 @@ const OrderSuccess = () => {
   };
 
   const openSupportModal = () => setShowSupportModal(true);
+
+  const handleResumePayment = async () => {
+    if (!orderId || resumingPayment || !canResumePayment) return;
+
+    setResumingPayment(true);
+    setPaymentError('');
+
+    try {
+      const response = await orderAPI.resumeOrderPayment(orderId);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Could not start payment');
+      }
+
+      const { order: pendingOrder, razorpay } = response.data;
+
+      if (!razorpay?.orderId || !razorpay?.keyId) {
+        throw new Error('Payment gateway is not available right now');
+      }
+
+      await openRazorpayCheckout({
+        key: razorpay.keyId,
+        amount: razorpay.amount,
+        currency: razorpay.currency,
+        orderId: razorpay.orderId,
+        name: BRAND.name,
+        description: `Order ${pendingOrder.orderNumber}`,
+        prefill: {
+          name: pendingOrder.billingAddress?.name || '',
+          email: pendingOrder.billingAddress?.email || '',
+          contact: pendingOrder.billingAddress?.phone || '',
+        },
+        onSuccess: async (paymentResponse) => {
+          const verifyResponse = await paymentAPI.verifyRazorpayPayment({
+            orderId: pendingOrder.id,
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_signature: paymentResponse.razorpay_signature,
+            clearCart: false,
+          });
+
+          if (!verifyResponse.success) {
+            throw new Error(verifyResponse.message || 'Payment verification failed');
+          }
+
+          setOrder(verifyResponse.data.order);
+        },
+        onDismiss: () => {
+          setResumingPayment(false);
+        },
+      });
+    } catch (error) {
+      if (error.message !== 'Payment cancelled') {
+        setPaymentError(error.message || 'Could not complete payment');
+      }
+    } finally {
+      setResumingPayment(false);
+    }
+  };
 
   const handleResendEmail = async () => {
     if (!orderId || resendingEmail) return;
@@ -156,19 +222,89 @@ const OrderSuccess = () => {
 
   if (paymentPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-lg">
-          <h1 className="text-xl font-bold text-gray-900">Payment Not Completed</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Please return to checkout and complete your payment.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/checkout')}
-            className="mt-5 w-full rounded-lg bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
-          >
-            Back to Checkout
-          </button>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-lg">
+          <div className="border-b border-amber-100 bg-amber-50 px-6 py-5 text-center">
+            <h1 className="text-xl font-bold text-gray-900">Payment Pending</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Complete payment for Order #{orderNumber} to receive your license.
+            </p>
+          </div>
+
+          {orderItems.length > 0 && (
+            <div className="border-b border-gray-100 px-6 py-4">
+              <div className="space-y-3">
+                {orderItems.map((item, index) => (
+                  <div key={`${item.productId}-${index}`} className="flex items-center gap-3">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="h-14 w-20 rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex h-14 w-20 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
+                        No image
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">{item.name}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {item.imageSize || 'Standard'} · Qty {item.quantity}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(item.lineTotal)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 border-b border-gray-100 px-6 py-4 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Total due</span>
+              <span className="font-bold text-gray-900">{formatCurrency(orderTotal)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Date</span>
+              <span className="font-medium text-gray-900">{orderDateLabel}</span>
+            </div>
+          </div>
+
+          <div className="space-y-3 px-6 py-5">
+            {!canResumePayment && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                <p className="font-semibold">Payment unavailable</p>
+                <p className="mt-1 leading-relaxed">
+                  {paymentBlockReason ||
+                    'One or more items in this order are no longer available or delivery files are missing.'}
+                </p>
+                {unavailableItems.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
+                    {unavailableItems.map((item) => (
+                      <li key={item.productId}>{item.reason}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {paymentError && (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {paymentError}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleResumePayment}
+              disabled={resumingPayment || !canResumePayment}
+              className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+            >
+              {resumingPayment ? 'Opening payment...' : `Pay ${formatCurrency(orderTotal)}`}
+            </button>
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50"
+            >
+              {location.state?.fromOrders ? 'Back to My Orders' : 'Back to Home'}
+            </button>
+          </div>
         </div>
       </div>
     );

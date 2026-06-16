@@ -4,13 +4,13 @@ import CheckoutProfile from '../models/CheckoutProfile.js'
 import AppError from '../utils/AppError.js'
 import { generateClipId, generateLicenseNumber } from '../utils/licenseIds.js'
 import formatProduct from '../utils/formatProduct.js'
-import { getCategoryMap } from '../utils/formatCart.js'
+import { formatOrderResponse, getCategoryMap } from '../utils/formatCart.js'
 import {
   clearCartItems,
   fetchPopulatedCart,
   getCartTotals,
 } from './cartService.js'
-import { assertProductPurchasable } from '../utils/productDelivery.js'
+import { assertProductPurchasable, hasDeliverableMasterFile } from '../utils/productDelivery.js'
 
 const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
 
@@ -151,11 +151,13 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
 }
 
 export const confirmOnlineOrderPayment = async (
-  sessionId,
-  orderId,
+  order,
   { razorpayPaymentId, razorpaySignature, razorpayOrderId },
+  { clearCart = true } = {},
 ) => {
-  const order = await getOrderById(sessionId, orderId)
+  if (!order) {
+    throw new AppError('Order not found', 404)
+  }
 
   if (order.paymentMethod !== 'online') {
     throw new AppError('This order does not require online payment', 400)
@@ -181,7 +183,10 @@ export const confirmOnlineOrderPayment = async (
   order.markModified('items')
 
   await order.save()
-  await clearCartItems(sessionId)
+
+  if (clearCart) {
+    await clearCartItems(order.sessionId)
+  }
 
   return order
 }
@@ -241,4 +246,83 @@ export const getUserOrderById = async (userId, email, orderId) => {
   }
 
   return order
+}
+
+export const resolveAccessibleOrder = async ({ sessionId, userId, userEmail, orderId }) => {
+  if (userId && userEmail) {
+    return getUserOrderById(userId, userEmail, orderId)
+  }
+
+  if (sessionId) {
+    return getOrderById(sessionId, orderId)
+  }
+
+  throw new AppError('Order not found', 404)
+}
+
+const getUnavailableItemReason = (product) => {
+  if (!product) {
+    return 'This product has been removed and is no longer available.'
+  }
+
+  if (!product.isActive) {
+    return 'This product is no longer available for purchase.'
+  }
+
+  if (!hasDeliverableMasterFile(product)) {
+    return 'The delivery file for this product is not available right now.'
+  }
+
+  return ''
+}
+
+export const validatePendingOrderItemsPurchasable = async (order) => {
+  const unavailableItems = []
+
+  for (const item of order.items || []) {
+    const product = await Product.findById(item.productId)
+    const reason = getUnavailableItemReason(product)
+
+    if (reason) {
+      unavailableItems.push({
+        productId: item.productId,
+        name: item.name,
+        reason,
+      })
+    }
+  }
+
+  const canPay = unavailableItems.length === 0
+  const paymentBlockReason = canPay
+    ? ''
+    : unavailableItems
+        .map((item) => `${item.name}: ${item.reason}`)
+        .join(' ')
+
+  return {
+    canPay,
+    canResumePayment: canPay,
+    unavailableItems,
+    paymentBlockReason,
+  }
+}
+
+export const enrichOrderWithPaymentResumeStatus = async (order) => {
+  const formatted = formatOrderResponse(order)
+
+  if (order.paymentStatus !== 'pending' || order.status !== 'pending') {
+    return {
+      ...formatted,
+      canResumePayment: false,
+      unavailableItems: [],
+      paymentBlockReason: '',
+    }
+  }
+
+  const validation = await validatePendingOrderItemsPurchasable(order)
+
+  return {
+    ...formatted,
+    ...validation,
+  }
 }

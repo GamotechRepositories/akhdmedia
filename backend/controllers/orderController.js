@@ -5,9 +5,10 @@ import {
   getAdminOrderById,
   getAllOrders,
   getCheckoutProfile,
-  getOrderById,
-  getUserOrderById,
+  resolveAccessibleOrder,
   saveCheckoutProfile,
+  validatePendingOrderItemsPurchasable,
+  enrichOrderWithPaymentResumeStatus,
 } from '../services/orderService.js'
 import {
   getOrderItemDownloads,
@@ -31,7 +32,12 @@ import { getUserById } from '../services/userAuthService.js'
 const resolveOrderForRequest = async (req, orderId) => {
   if (req.user?.id) {
     const user = await getUserById(req.user.id)
-    const order = await getUserOrderById(user._id, user.email, orderId)
+    const order = await resolveAccessibleOrder({
+      sessionId: req.sessionId,
+      userId: user._id,
+      userEmail: user.email,
+      orderId,
+    })
     return { order, userEmail: user.email }
   }
 
@@ -39,7 +45,10 @@ const resolveOrderForRequest = async (req, orderId) => {
     throw new AppError('Order not found', 404)
   }
 
-  const order = await getOrderById(req.sessionId, orderId)
+  const order = await resolveAccessibleOrder({
+    sessionId: req.sessionId,
+    orderId,
+  })
   return { order, userEmail: null }
 }
 export const getProfile = asyncHandler(async (req, res) => {
@@ -107,7 +116,58 @@ export const getOrder = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      order: formatOrderResponse(order),
+      order: await enrichOrderWithPaymentResumeStatus(order),
+    },
+  })
+})
+
+export const resumeOrderPayment = asyncHandler(async (req, res) => {
+  const { order } = await resolveOrderForRequest(req, req.params.id)
+
+  if (order.paymentMethod !== 'online') {
+    throw new AppError('This order does not require online payment', 400)
+  }
+
+  if (order.paymentStatus === 'paid') {
+    throw new AppError('This order is already paid', 400)
+  }
+
+  if (order.status !== 'pending' || order.paymentStatus !== 'pending') {
+    throw new AppError('This order cannot be paid', 400)
+  }
+
+  const validation = await validatePendingOrderItemsPurchasable(order)
+  if (!validation.canPay) {
+    throw new AppError(
+      validation.paymentBlockReason ||
+        'One or more items in this order are no longer available for payment.',
+      400,
+    )
+  }
+
+  const razorpayOrder = await createRazorpayOrder({
+    amount: order.totalAmount,
+    receipt: order.orderNumber,
+    notes: {
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+    },
+  })
+
+  order.razorpayOrderId = razorpayOrder.id
+  await order.save()
+
+  res.json({
+    success: true,
+    message: 'Proceed to payment',
+    data: {
+      order: await enrichOrderWithPaymentResumeStatus(order),
+      razorpay: {
+        keyId: getRazorpayKeyId(),
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+      },
     },
   })
 })
