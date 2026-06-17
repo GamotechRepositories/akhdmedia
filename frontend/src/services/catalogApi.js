@@ -13,7 +13,10 @@ const DEFAULT_SITE_CONTENT = {
     eyebrow: 'Shot for post-production',
     title: 'Browse by Footage Type',
   },
+  heroSlides: [],
 };
+
+export { DEFAULT_SITE_CONTENT };
 
 export const fetchCatalog = async () => {
   const [categoriesRes, productsRes, siteContentRes] = await Promise.all([

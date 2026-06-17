@@ -58,6 +58,18 @@ export const resolveUploadTarget = ({
     }
   }
 
+  if (type === 'hero-slide') {
+    const ext = getExtension(filename, '.jpg')
+    const objectName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`
+    const s3Key = `${AWS_S3_PUBLIC_PREFIX}/site/hero/${objectName}`
+    return {
+      scope: 'public',
+      s3Key,
+      key: s3Key,
+      filename: originalFilename,
+    }
+  }
+
   const id = assertClipIdForUpload(clipId)
 
   switch (type) {
@@ -147,4 +159,5 @@ export const isPublicUploadType = (type) =>
   type === 'preview-image' ||
   type === 'preview-video' ||
   type === 'video-poster' ||
-  type === 'category-cover'
+  type === 'category-cover' ||
+  type === 'hero-slide'

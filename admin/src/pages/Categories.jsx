@@ -64,6 +64,7 @@ const Categories = () => {
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Home browse</th>
               <th className="px-4 py-3">Slug</th>
               <th className="px-4 py-3">Subcategories</th>
               <th className="px-4 py-3">Status</th>
@@ -73,13 +74,13 @@ const Categories = () => {
           <tbody className="divide-y divide-slate-100">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                   Loading categories...
                 </td>
               </tr>
             ) : categories.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                   No categories found.
                 </td>
               </tr>
@@ -87,6 +88,9 @@ const Categories = () => {
               paginatedCategories.map((category) => (
                 <tr key={category._id}>
                   <td className="px-4 py-3 font-medium text-slate-900">{category.navLabel}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {category.showInBrowseSection ? 'Yes' : 'No'}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{category.slug}</td>
                   <td className="px-4 py-3 text-slate-600">
                     {category.subCategories?.length || 0}

@@ -106,6 +106,22 @@ const MediaUpload = ({
   const previewUrl = valueKind === 'url' ? value : accessUrl || null
   const isVideoUpload = uploadType.includes('video') || accept?.includes('video')
   const displaySize = uploadedSize > 0 ? formatFileSize(uploadedSize) : ''
+  const isCategoryUpload = uploadType === 'category-cover'
+  const isHeroUpload = uploadType === 'hero-slide'
+  const uploadReady = isHeroUpload
+    ? true
+    : isCategoryUpload
+      ? Boolean(categorySlug)
+      : Boolean(clipId)
+  const uploadButtonLabel = uploading
+    ? `Uploading ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
+    : !uploadReady
+      ? isCategoryUpload
+        ? 'Enter slug first'
+        : 'Preparing Clip ID...'
+      : disabled
+        ? 'Select quality first'
+        : 'Upload File'
 
   const handleCopyUrl = async () => {
     if (!accessUrl) return
@@ -124,16 +140,10 @@ const MediaUpload = ({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={uploading || disabled || !clipId}
+          disabled={uploading || disabled || !uploadReady}
           className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
         >
-          {uploading
-            ? `Uploading ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
-            : !clipId
-              ? 'Preparing Clip ID...'
-              : disabled
-              ? 'Select quality first'
-              : 'Upload File'}
+          {uploadButtonLabel}
         </button>
         {value && !uploading && (
           <span className="text-[11px] font-medium text-emerald-600">

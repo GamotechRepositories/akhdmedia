@@ -1,24 +1,38 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { fetchSiteContent, updateSiteContent } from '../api/client'
+import { fetchCategories, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
+import MediaUpload from '../components/MediaUpload'
 import {
   inputClass,
   primaryBtnClass,
-  secondaryBtnClass,
   sectionClass,
 } from '../components/ui/adminUi'
 
 const emptyTickerItem = () => ''
 
+const emptyHeroSlide = () => ({
+  badge: '',
+  headline: '',
+  cta: '',
+  link: '',
+  image: '',
+  isActive: true,
+})
+
+const categorySlugFromLink = (link = '') => {
+  const match = String(link).match(/^\/videos\/([^/]+)/)
+  return match ? match[1] : ''
+}
+
+const categoryLinkFromSlug = (slug = '') => (slug ? `/videos/${slug}` : '')
+
 const HomeContent = () => {
   const [tickerItems, setTickerItems] = useState([emptyTickerItem()])
-  const [browseSection, setBrowseSection] = useState({
-    eyebrow: '',
-    title: '',
-  })
+  const [heroSlides, setHeroSlides] = useState([emptyHeroSlide()])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [savingSlideIndex, setSavingSlideIndex] = useState(null)
+  const [savingTicker, setSavingTicker] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -27,11 +41,18 @@ const HomeContent = () => {
       setLoading(true)
       setError('')
       try {
-        const response = await fetchSiteContent()
+        const [contentResponse, categoriesResponse] = await Promise.all([
+          fetchSiteContent(),
+          fetchCategories(),
+        ])
+        const response = contentResponse
+        setCategories(categoriesResponse.data || [])
         setTickerItems(
           response.data.tickerItems?.length ? response.data.tickerItems : [emptyTickerItem()],
         )
-        setBrowseSection(response.data.browseSection || { eyebrow: '', title: '' })
+        setHeroSlides(
+          response.data.heroSlides?.length ? response.data.heroSlides : [emptyHeroSlide()],
+        )
       } catch (err) {
         setError(err.message)
       } finally {
@@ -58,22 +79,102 @@ const HomeContent = () => {
     )
   }
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    setSaving(true)
+  const updateHeroSlide = (index, field, value) => {
+    setHeroSlides((current) =>
+      current.map((slide, slideIndex) => {
+        if (slideIndex !== index) return slide
+
+        if (field === 'cta' && !String(value).trim()) {
+          return { ...slide, cta: '', link: '' }
+        }
+
+        return { ...slide, [field]: value }
+      }),
+    )
+  }
+
+  const updateHeroCategory = (index, slug) => {
+    setHeroSlides((current) =>
+      current.map((slide, slideIndex) =>
+        slideIndex === index
+          ? {
+              ...slide,
+              link: categoryLinkFromSlug(slug),
+              cta: slide.cta.trim() || 'Browse',
+            }
+          : slide,
+      ),
+    )
+  }
+
+  const addHeroSlide = () => {
+    setHeroSlides((current) => [...current, emptyHeroSlide()])
+  }
+
+  const removeHeroSlide = (index) => {
+    setHeroSlides((current) =>
+      current.length === 1 ? current : current.filter((_, slideIndex) => slideIndex !== index),
+    )
+  }
+
+  const handleSaveSlide = async (index) => {
+    const slide = heroSlides[index]
+    if (!slide) return
+
+    setSavingSlideIndex(index)
     setError('')
     setSuccess('')
 
+    if (!slide.headline.trim()) {
+      setError(`Slide ${index + 1} needs a headline.`)
+      setSavingSlideIndex(null)
+      return
+    }
+
+    if (!slide.image.trim()) {
+      setError(`Slide ${index + 1} needs a banner image.`)
+      setSavingSlideIndex(null)
+      return
+    }
+
+    if (slide.cta.trim() && !categorySlugFromLink(slide.link)) {
+      setError(`Slide ${index + 1} needs a category when button text is set.`)
+      setSavingSlideIndex(null)
+      return
+    }
+
     try {
-      await updateSiteContent({
-        tickerItems,
-        browseSection,
-      })
-      setSuccess('Homepage content updated successfully.')
+      await updateSiteContent({ heroSlides })
+      setSuccess(`Slide ${index + 1} saved successfully.`)
     } catch (err) {
       setError(err.message)
     } finally {
-      setSaving(false)
+      setSavingSlideIndex(null)
+    }
+  }
+
+  const handleSaveTicker = async (event) => {
+    event.preventDefault()
+    setSavingTicker(true)
+    setError('')
+    setSuccess('')
+
+    const cleanedTickerItems = tickerItems.map((item) => item.trim()).filter(Boolean)
+
+    if (!cleanedTickerItems.length) {
+      setError('Add at least one ticker message.')
+      setSavingTicker(false)
+      return
+    }
+
+    try {
+      await updateSiteContent({ tickerItems: cleanedTickerItems })
+      setTickerItems(cleanedTickerItems)
+      setSuccess('News ticker saved successfully.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingTicker(false)
     }
   }
 
@@ -83,8 +184,127 @@ const HomeContent = () => {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <section className={`${sectionClass} space-y-4`}>
+      <section className={`${sectionClass} space-y-4`}>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Home banner</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Large hero carousel at the top of the storefront homepage. Add one or more slides.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {heroSlides.map((slide, index) => (
+            <div
+              key={index}
+              className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+            >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-900">Slide {index + 1}</p>
+                  <button
+                    type="button"
+                    onClick={() => removeHeroSlide(index)}
+                    className="text-sm font-semibold text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="font-medium text-slate-700">Badge text</span>
+                    <input
+                      value={slide.badge}
+                      onChange={(e) => updateHeroSlide(index, 'badge', e.target.value)}
+                      className={inputClass}
+                      placeholder="Nature Vault"
+                    />
+                  </label>
+
+                  <label className="block text-sm">
+                    <span className="font-medium text-slate-700">Button text</span>
+                    <input
+                      value={slide.cta}
+                      onChange={(e) => updateHeroSlide(index, 'cta', e.target.value)}
+                      className={inputClass}
+                      placeholder="Browse"
+                    />
+                    <span className="mt-1 block text-[11px] text-slate-500">
+                      Leave empty to hide the button on the storefront.
+                    </span>
+                  </label>
+
+                  <label className="block text-sm sm:col-span-2">
+                    <span className="font-medium text-slate-700">Headline</span>
+                    <input
+                      required
+                      value={slide.headline}
+                      onChange={(e) => updateHeroSlide(index, 'headline', e.target.value)}
+                      className={inputClass}
+                      placeholder="Nature Footage in True 4K"
+                    />
+                  </label>
+
+                  {slide.cta.trim() ? (
+                    <label className="block text-sm sm:col-span-2">
+                      <span className="font-medium text-slate-700">Category</span>
+                      <select
+                        required
+                        value={categorySlugFromLink(slide.link)}
+                        onChange={(e) => updateHeroCategory(index, e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Select category</option>
+                        {categories.map((category) => (
+                          <option key={category._id} value={category.slug}>
+                            {category.navLabel}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={slide.isActive !== false}
+                      onChange={(e) => updateHeroSlide(index, 'isActive', e.target.checked)}
+                    />
+                    Show this slide on homepage
+                  </label>
+                </div>
+
+                <MediaUpload
+                  label="Banner image"
+                  accept="image/*"
+                  uploadType="hero-slide"
+                  value={slide.image}
+                  onChange={(url) => updateHeroSlide(index, 'image', url)}
+                  placeholder="Upload or paste image URL"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveSlide(index)}
+                  disabled={savingSlideIndex === index}
+                  className={`${primaryBtnClass} disabled:opacity-60`}
+                >
+                  {savingSlideIndex === index ? 'Saving...' : `Save slide ${index + 1}`}
+                </button>
+              </div>
+            ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={addHeroSlide}
+          className="text-sm font-semibold text-slate-900 hover:underline"
+        >
+          Add hero slide
+        </button>
+      </section>
+
+      <section className={`${sectionClass} space-y-4`}>
+        <form onSubmit={handleSaveTicker} className="space-y-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">News ticker</h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -113,65 +333,25 @@ const HomeContent = () => {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={addTickerItem}
-            className="text-sm font-semibold text-slate-900 hover:underline"
-          >
-            Add ticker message
-          </button>
-        </section>
+          <div className="flex flex-col items-start gap-3 border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={addTickerItem}
+              className="text-sm font-semibold text-slate-900 hover:underline"
+            >
+              Add ticker message
+            </button>
 
-        <section className={`${sectionClass} space-y-4`}>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Browse by Footage Type</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Section heading text on the homepage. Category names and photos are managed in{' '}
-              <Link to="/categories" className="font-semibold text-slate-900 hover:underline">
-                Categories
-              </Link>
-              .
-            </p>
+            <button
+              type="submit"
+              disabled={savingTicker}
+              className={`${primaryBtnClass} disabled:opacity-60`}
+            >
+              {savingTicker ? 'Saving...' : 'Save news ticker'}
+            </button>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm">
-              <span className="font-medium text-slate-700">Eyebrow text</span>
-              <input
-                required
-                value={browseSection.eyebrow}
-                onChange={(e) =>
-                  setBrowseSection((current) => ({ ...current, eyebrow: e.target.value }))
-                }
-                className={inputClass}
-                placeholder="Shot for post-production"
-              />
-            </label>
-
-            <label className="block text-sm">
-              <span className="font-medium text-slate-700">Section title</span>
-              <input
-                required
-                value={browseSection.title}
-                onChange={(e) =>
-                  setBrowseSection((current) => ({ ...current, title: e.target.value }))
-                }
-                className={inputClass}
-                placeholder="Browse by Footage Type"
-              />
-            </label>
-          </div>
-        </section>
-
-        <div className="flex gap-3">
-          <button type="submit" disabled={saving} className={`${primaryBtnClass} disabled:opacity-60`}>
-            {saving ? 'Saving...' : 'Save homepage content'}
-          </button>
-          <Link to="/categories" className={secondaryBtnClass}>
-            Manage category photos
-          </Link>
-        </div>
-      </form>
+        </form>
+      </section>
 
       {success ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">

@@ -23,6 +23,7 @@ const categorySchema = new mongoose.Schema(
     subCategories: { type: [subCategorySchema], default: [] },
     description: { type: String, default: '' },
     coverImage: { type: String, default: '' },
+    showInBrowseSection: { type: Boolean, default: false },
     heroBadge: { type: String, default: '' },
     heroHeadline: { type: String, default: '' },
     heroSubheadline: { type: String, default: '' },

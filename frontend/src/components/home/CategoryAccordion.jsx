@@ -9,7 +9,7 @@ const AUTO_SCROLL_MS = 4000;
 const MOBILE_CARD_CLASS = 'aspect-[4/5] w-[44vw] max-w-[155px]';
 
 const CategoryAccordion = () => {
-  const { categories, loading, siteContent } = useCatalog();
+  const { categories, loading } = useCatalog();
   const panels = mapCategoryPanels(categories);
   const scrollRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -75,18 +75,15 @@ const CategoryAccordion = () => {
   if (loading) return <CategoryAccordionSkeleton />;
   if (panels.length === 0) return null;
 
-  const browseEyebrow = siteContent?.browseSection?.eyebrow || 'Shot for post-production';
-  const browseTitle = siteContent?.browseSection?.title || 'Browse by Footage Type';
-
   return (
     <section className="scroll-section bg-white pt-5 pb-0 sm:pt-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-4 text-center sm:mb-8">
           <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-600 sm:text-xs">
-            {browseEyebrow}
+            Shot for post-production
           </span>
           <h2 className="mt-1.5 text-xl font-bold text-gray-600 sm:mt-2 sm:text-3xl">
-            {browseTitle}
+            Browse by Footage Type
           </h2>
         </div>
 

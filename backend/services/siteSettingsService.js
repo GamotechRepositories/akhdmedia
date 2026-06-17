@@ -14,6 +14,7 @@ export const DEFAULT_SITE_SETTINGS = {
     eyebrow: 'Shot for post-production',
     title: 'Browse by Footage Type',
   },
+  heroSlides: [],
 }
 
 const sanitizeTickerItems = (items = []) =>
@@ -21,6 +22,21 @@ const sanitizeTickerItems = (items = []) =>
     .map((item) => String(item || '').trim())
     .filter(Boolean)
     .slice(0, 12)
+
+const sanitizeHeroSlides = (slides = []) =>
+  slides
+    .map((slide) => ({
+      badge: String(slide?.badge || '').trim(),
+      headline: String(slide?.headline || '').trim(),
+      cta: String(slide?.cta || '').trim(),
+      link: String(slide?.link || '').trim(),
+      image: String(slide?.image || '').trim(),
+      accent:
+        String(slide?.accent || 'from-gray-900/80 via-black/50 to-transparent').trim() ||
+        'from-gray-900/80 via-black/50 to-transparent',
+      isActive: slide?.isActive !== false,
+    }))
+    .slice(0, 8)
 
 export const getSiteSettings = async () => {
   let settings = await SiteSettings.findOne({ key: 'homepage' })
@@ -45,13 +61,21 @@ export const updateSiteSettings = async (payload = {}) => {
 
   if (payload.browseSection !== undefined) {
     const eyebrow = String(payload.browseSection.eyebrow || '').trim()
-    const title = String(payload.browseSection.title || '').trim()
 
-    if (!eyebrow || !title) {
-      throw new AppError('Browse section eyebrow and title are required', 400)
+    if (!eyebrow) {
+      throw new AppError('Browse section eyebrow text is required', 400)
     }
 
-    updates.browseSection = { eyebrow, title }
+    const current = await getSiteSettings()
+    updates.browseSection = {
+      eyebrow,
+      title: current.browseSection?.title || DEFAULT_SITE_SETTINGS.browseSection.title,
+    }
+  }
+
+  if (payload.heroSlides !== undefined) {
+    const heroSlides = sanitizeHeroSlides(payload.heroSlides)
+    updates.heroSlides = heroSlides
   }
 
   if (!Object.keys(updates).length) {
@@ -70,4 +94,7 @@ export const updateSiteSettings = async (payload = {}) => {
 export const formatSiteSettings = (settings) => ({
   tickerItems: settings.tickerItems,
   browseSection: settings.browseSection,
+  heroSlides: settings.heroSlides?.length
+    ? settings.heroSlides
+    : DEFAULT_SITE_SETTINGS.heroSlides,
 })

@@ -8,6 +8,23 @@ const browseSectionSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const heroSlideSchema = new mongoose.Schema(
+  {
+    badge: { type: String, default: '', trim: true },
+    headline: { type: String, default: '', trim: true },
+    cta: { type: String, default: '', trim: true },
+    link: { type: String, default: '', trim: true },
+    image: { type: String, default: '', trim: true },
+    accent: {
+      type: String,
+      default: 'from-gray-900/80 via-black/50 to-transparent',
+      trim: true,
+    },
+    isActive: { type: Boolean, default: true },
+  },
+  { _id: false },
+)
+
 const siteSettingsSchema = new mongoose.Schema(
   {
     key: { type: String, required: true, unique: true, default: 'homepage' },
@@ -18,6 +35,10 @@ const siteSettingsSchema = new mongoose.Schema(
     browseSection: {
       type: browseSectionSchema,
       default: () => ({}),
+    },
+    heroSlides: {
+      type: [heroSlideSchema],
+      default: [],
     },
   },
   { timestamps: true },

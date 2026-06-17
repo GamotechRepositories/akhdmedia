@@ -36,11 +36,11 @@ export const mapStoryCollections = (categories = [], products = []) =>
 
 export const mapCategoryPanels = (categories = []) =>
   categories
-    .filter((category) => category.coverImage)
+    .filter((category) => category.showInBrowseSection && category.coverImage)
     .map((category) => ({
       id: category.slug,
-      label: category.breadcrumb,
-      desc: category.description || category.label,
+      label: category.navLabel || category.breadcrumb,
+      desc: category.label,
       image: category.coverImage,
     }));
 
