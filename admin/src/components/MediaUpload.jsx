@@ -24,6 +24,7 @@ const MediaUpload = ({
   autoCapturePoster = false,
   onPosterCaptured,
   clipId = '',
+  categorySlug = '',
   previewIndex = 0,
   tier = '',
 }) => {
@@ -66,6 +67,7 @@ const MediaUpload = ({
         : null
       const response = await uploadMedia(file, uploadType, reportProgress, {
         clipId,
+        categorySlug,
         previewIndex,
         tier,
       })

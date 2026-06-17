@@ -14,6 +14,8 @@ import userOrderRoutes from './userOrders.js'
 import supportRoutes from './support.js'
 import adminSupportRoutes from './adminSupport.js'
 import adminUserRoutes from './adminUsers.js'
+import siteContentRoutes from './siteContent.js'
+import adminSiteContentRoutes from './adminSiteContent.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
 
 const router = Router()
@@ -39,6 +41,8 @@ router.use('/admin/users', requireAdmin, adminUserRoutes)
 router.use('/payments', paymentRoutes)
 router.use('/support', supportRoutes)
 router.use('/admin/support', requireAdmin, adminSupportRoutes)
+router.use('/site-content', siteContentRoutes)
+router.use('/admin/site-content', requireAdmin, adminSiteContentRoutes)
 router.use('/upload', requireAdmin, uploadRoutes)
 router.use('/files', fileRoutes)
 

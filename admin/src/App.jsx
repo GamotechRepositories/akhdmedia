@@ -14,6 +14,7 @@ import Revenue from './pages/Revenue'
 import Users from './pages/Users'
 import Support from './pages/Support'
 import SupportDetail from './pages/SupportDetail'
+import HomeContent from './pages/HomeContent'
 import Login from './pages/Login'
 
 const App = () => (
@@ -22,6 +23,7 @@ const App = () => (
     <Route element={<ProtectedRoute />}>
       <Route element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
+        <Route path="home-content" element={<HomeContent />} />
         <Route path="categories" element={<Categories />} />
         <Route path="categories/new" element={<CategoryForm />} />
         <Route path="categories/:id/edit" element={<CategoryForm />} />

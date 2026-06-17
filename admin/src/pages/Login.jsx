@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { IconLogo } from '../components/icons/AdminIcons'
 import { useAuth } from '../context/AuthContext'
-import { BRAND } from '../config/brand'
 
 const Login = () => {
   const { admin, loading, login } = useAuth()
@@ -39,13 +37,7 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-[#0f172a] px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white">
-            <IconLogo />
-          </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">
-            {BRAND.name}
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-white">Admin Login</h1>
+          <h1 className="text-2xl font-bold text-white">Admin Login</h1>
           <p className="mt-2 text-sm text-slate-400">Sign in to manage your marketplace</p>
         </div>
 

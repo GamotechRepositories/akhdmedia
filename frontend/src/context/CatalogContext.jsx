@@ -20,6 +20,7 @@ const emptyCatalog = {
   navLinks: [],
   catalogCategories: {},
   subCategoriesMap: {},
+  siteContent: null,
   source: 'api',
 };
 

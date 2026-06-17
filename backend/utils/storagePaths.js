@@ -29,15 +29,36 @@ export const assertClipIdForUpload = (clipId = '') => {
  *   public/products/{clipId}/demo.mp4
  *   private/products/{clipId}/master/original.ext
  */
+const sanitizeCategorySlug = (value = '') =>
+  value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+
 export const resolveUploadTarget = ({
   type,
   clipId,
+  categorySlug = '',
   filename = '',
   previewIndex = 1,
   tier = '',
 }) => {
-  const id = assertClipIdForUpload(clipId)
   const originalFilename = sanitizeFilename(filename)
+
+  if (type === 'category-cover') {
+    const slug = sanitizeCategorySlug(categorySlug)
+    if (!slug) {
+      throw new AppError('Category slug is required before uploading cover image', 400)
+    }
+    const ext = getExtension(filename, '.jpg')
+    const objectName = `cover${ext}`
+    const s3Key = `${AWS_S3_PUBLIC_PREFIX}/categories/${slug}/${objectName}`
+    return {
+      scope: 'public',
+      s3Key,
+      key: s3Key,
+      filename: originalFilename,
+    }
+  }
+
+  const id = assertClipIdForUpload(clipId)
 
   switch (type) {
     case 'master-video':
@@ -123,4 +144,7 @@ export const isPrivateUploadType = (type) =>
   type === 'master-image'
 
 export const isPublicUploadType = (type) =>
-  type === 'preview-image' || type === 'preview-video' || type === 'video-poster'
+  type === 'preview-image' ||
+  type === 'preview-video' ||
+  type === 'video-poster' ||
+  type === 'category-cover'

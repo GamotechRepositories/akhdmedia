@@ -110,6 +110,7 @@ const uploadMediaViaProxy = (file, type, onProgress, options = {}) => {
   formData.append('file', file)
   formData.append('type', type)
   if (options.clipId) formData.append('clipId', options.clipId)
+  if (options.categorySlug) formData.append('categorySlug', options.categorySlug)
   if (options.previewIndex) formData.append('previewIndex', String(options.previewIndex))
   if (options.tier) formData.append('tier', options.tier)
   return api.post('/upload', formData, {
@@ -195,6 +196,7 @@ const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
     contentType: file.type || 'application/octet-stream',
     size: file.size,
     clipId: options.clipId,
+    categorySlug: options.categorySlug,
     previewIndex: options.previewIndex,
     tier: options.tier,
   })
@@ -248,5 +250,9 @@ export const fetchSupportRequest = (id) => api.get(`/admin/support/${id}`)
 export const updateSupportRequest = (id, payload) => api.patch(`/admin/support/${id}`, payload)
 
 export const fetchUsers = () => api.get('/admin/users')
+
+export const fetchSiteContent = () => api.get('/admin/site-content')
+
+export const updateSiteContent = (payload) => api.put('/admin/site-content', payload)
 
 export default api

@@ -41,18 +41,31 @@ const Login = () => {
     }
   }
 
+  const handleClose = () => {
+    navigate(location.state?.from || '/', { replace: true })
+  }
+
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-[#f4f5f7] px-4 py-12">
+    <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/35 px-4 py-6 backdrop-blur-md sm:py-12">
+      <div className="flex min-h-full items-start justify-center sm:items-center">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="mt-2 text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="mt-2 text-sm text-gray-500">Sign in with your email and password</p>
+          <h1 className="text-2xl font-bold text-white">Sign In</h1>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
+          className="relative rounded-2xl border border-white/40 bg-white/95 p-8 shadow-2xl"
         >
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label="Close login"
+            className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+          >
+            <span className="text-lg leading-none">&times;</span>
+          </button>
+
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -99,6 +112,7 @@ const Login = () => {
             Don&apos;t have an account?{' '}
             <Link
               to="/register"
+              replace
               state={location.state || null}
               className="font-semibold text-gray-900 hover:underline"
             >
@@ -114,6 +128,7 @@ const Login = () => {
         message={error}
         onClose={() => setError('')}
       />
+      </div>
     </div>
   )
 }

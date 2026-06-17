@@ -4,7 +4,7 @@ import AlertModal from '../components/AlertModal'
 import { useAuth } from '../context/AuthContext'
 
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10'
+  'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10'
 
 const Register = () => {
   const { user, loading, register } = useAuth()
@@ -49,21 +49,34 @@ const Register = () => {
     }
   }
 
+  const handleClose = () => {
+    navigate(location.state?.from || '/', { replace: true })
+  }
+
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-[#f4f5f7] px-4 py-12">
+    <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/35 px-4 py-6 backdrop-blur-md sm:py-12">
+      <div className="flex min-h-full items-start justify-center sm:items-center">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="mt-2 text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="mt-2 text-sm text-gray-500">Enter your name, email, phone, and password</p>
+        <div className="mb-4 text-center">
+          <h1 className="text-2xl font-bold text-white">Create Account</h1>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
+          className="relative rounded-2xl border border-white/40 bg-white/95 p-5 shadow-2xl"
         >
-          <div className="space-y-5">
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label="Close registration"
+            className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+          >
+            <span className="text-lg leading-none">&times;</span>
+          </button>
+
+          <div className="space-y-3">
             <div>
-              <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label htmlFor="name" className="mb-1 block text-xs font-medium text-gray-700">
                 Full Name
               </label>
               <input
@@ -79,7 +92,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="mb-1 block text-xs font-medium text-gray-700">
                 Email
               </label>
               <input
@@ -95,7 +108,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="phone" className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label htmlFor="phone" className="mb-1 block text-xs font-medium text-gray-700">
                 Phone Number
               </label>
               <input
@@ -111,7 +124,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="mb-1 block text-xs font-medium text-gray-700">
                 Password
               </label>
               <input
@@ -128,7 +141,7 @@ const Register = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="mb-1 block text-xs font-medium text-gray-700">
                 Confirm Password
               </label>
               <input
@@ -148,14 +161,19 @@ const Register = () => {
           <button
             type="submit"
             disabled={submitting || loading}
-            className="mt-6 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-3.5 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Creating account...' : 'Create Account'}
           </button>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-3 text-center text-sm text-gray-500">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-gray-900 hover:underline">
+            <Link
+              to="/login"
+              replace
+              state={location.state || null}
+              className="font-semibold text-gray-900 hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -168,6 +186,7 @@ const Register = () => {
         message={error}
         onClose={() => setError('')}
       />
+      </div>
     </div>
   )
 }

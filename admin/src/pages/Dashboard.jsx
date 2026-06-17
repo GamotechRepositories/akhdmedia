@@ -182,9 +182,9 @@ const Dashboard = () => {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sales analytics</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">Orders by month</h2>
+            <h2 className="mt-1 text-2xl font-bold text-slate-900">Orders & revenue by month</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Monthly order volume for {chartYear} (Jan–Dec)
+              Monthly orders (dark) and revenue (green) for {chartYear}. Upcoming months are shown in light gray.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

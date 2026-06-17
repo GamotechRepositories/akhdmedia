@@ -15,6 +15,7 @@ import {
 const readUploadContext = (req) => ({
   type: req.body?.type || req.query?.type || '',
   clipId: req.body?.clipId || req.query?.clipId || '',
+  categorySlug: req.body?.categorySlug || req.query?.categorySlug || '',
   filename: req.body?.filename?.trim() || req.file?.originalname || '',
   contentType: req.body?.contentType || req.file?.mimetype || 'application/octet-stream',
   size: Number(req.body?.size) || Number(req.file?.size) || 0,

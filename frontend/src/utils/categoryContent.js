@@ -37,7 +37,6 @@ export const mapStoryCollections = (categories = [], products = []) =>
 export const mapCategoryPanels = (categories = []) =>
   categories
     .filter((category) => category.coverImage)
-    .slice(0, 4)
     .map((category) => ({
       id: category.slug,
       label: category.breadcrumb,

@@ -23,6 +23,33 @@ const Navbar = () => {
 
   const lastScrollY = useRef(0);
   const searchInputRef = useRef(null);
+  const categoryScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [categoryOverflow, setCategoryOverflow] = useState(false);
+
+  const updateCategoryScroll = useCallback(() => {
+    const el = categoryScrollRef.current;
+    if (!el) return;
+
+    const overflow = el.scrollWidth > el.clientWidth + 1;
+    setCategoryOverflow(overflow);
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  const scrollCategories = useCallback((direction) => {
+    const el = categoryScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * 220, behavior: 'smooth' });
+  }, []);
+
+  const authLinkState =
+    location.pathname === '/login' || location.pathname === '/register'
+      ? location.state?.from
+        ? { from: location.state.from }
+        : null
+      : { from: location.pathname + location.search };
 
   useEffect(() => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -77,6 +104,21 @@ const Navbar = () => {
     return undefined;
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    updateCategoryScroll();
+    const el = categoryScrollRef.current;
+    if (!el) return undefined;
+
+    el.addEventListener('scroll', updateCategoryScroll, { passive: true });
+    const resizeObserver = new ResizeObserver(updateCategoryScroll);
+    resizeObserver.observe(el);
+
+    return () => {
+      el.removeEventListener('scroll', updateCategoryScroll);
+      resizeObserver.disconnect();
+    };
+  }, [navLinks, updateCategoryScroll]);
+
   const handleSearch = useCallback((e) => {
     e.preventDefault();
     const trimmed = searchQuery.trim();
@@ -84,6 +126,44 @@ const Navbar = () => {
     navigate(`/videos?search=${encodeURIComponent(trimmed)}`);
     setIsSearchOpen(false);
   }, [navigate, searchQuery]);
+
+  const searchBoxClass =
+    'flex w-full items-center gap-2 rounded-full border border-gray-200 bg-gray-50/80 px-3 py-1 shadow-sm transition focus-within:border-gray-300 focus-within:bg-white focus-within:shadow';
+
+  const renderSearchForm = (formClassName, { onEscape, inputRef } = {}) => (
+    <form onSubmit={handleSearch} className={formClassName}>
+      <div className={searchBoxClass}>
+        <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          ref={inputRef}
+          type="text"
+          role="searchbox"
+          enterKeyHint="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onEscape?.(e);
+          }}
+          placeholder="Search clips, categories..."
+          className="min-w-0 flex-1 border-none bg-transparent py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+        />
+        {searchQuery ? (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="rounded-full p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Clear search"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
+    </form>
+  );
 
   const ProfileIcon = ({ className = 'h-5 w-5 sm:h-[22px] sm:w-[22px]' }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,63 +194,39 @@ const Navbar = () => {
       isActive ? `w-full ${color}` : `w-0 group-hover:w-full ${color}`
     }`;
 
+  const scrollBtnClass =
+    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30';
+
   return (
     <>
-      <nav
-        className={`sticky top-0 z-50 border-b py-1 transition-all duration-300 ${
+      <header
+        className={`sticky top-0 z-50 transition-all duration-300 ${
           isNavHidden ? '-translate-y-full' : 'translate-y-0'
-        } ${isScrolled ? 'border-gray-300 bg-white shadow-sm' : 'border-gray-200 bg-white'}`}
+        }`}
+      >
+      <nav
+        className={`border-b py-1 transition-all duration-300 ${
+          isScrolled ? 'border-gray-300 bg-white shadow-sm' : 'border-gray-200 bg-white'
+        }`}
       >
         <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8">
-          <div className="flex h-11 min-w-0 items-center gap-2 sm:h-12 sm:gap-3 xl:h-14">
-            <div className="min-w-0 max-w-[62vw] shrink sm:max-w-[68vw] md:max-w-[50vw] xl:max-w-none">
+          <div className="flex h-11 min-w-0 items-center gap-2 sm:h-12 sm:gap-3 xl:grid xl:grid-cols-[1fr_minmax(0,28rem)_1fr] xl:items-center xl:gap-6 2xl:grid-cols-[1fr_minmax(0,32rem)_1fr]">
+            <div className="min-w-0 max-w-[62vw] shrink sm:max-w-[68vw] md:max-w-[50vw] xl:max-w-xs 2xl:max-w-sm">
               <Logo className="w-full" />
             </div>
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 xl:flex xl:gap-6 2xl:gap-8">
-              <Link to="/" className={`group ${navLinkClass(activeCategory === 'home')}`}>
-                Home
-                <span className={underlineClass(activeCategory === 'home')} />
-              </Link>
+            {renderSearchForm('hidden w-full xl:block', {
+              onEscape: (e) => {
+                setSearchQuery('');
+                e.currentTarget.blur();
+              },
+            })}
 
-              {navLinks.map((link) => (
-                <div key={link.id} className="group relative flex h-12 items-center xl:h-14">
-                  <Link to={link.path} className={navLinkClass(activeCategory === link.id)}>
-                    {link.label}
-                    <span className={underlineClass(activeCategory === link.id)} />
-                  </Link>
-
-                  <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-4 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100 group-hover:-translate-y-1">
-                    <div className="relative grid gap-1 rounded-none border border-gray-100 bg-white p-6 shadow-xl">
-                      <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-gray-100 bg-white" />
-                      <h3 className="mb-2 border-b pb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
-                        {link.label} Footage
-                      </h3>
-                      {link.subItems.map((sub) => (
-                        <Link
-                          key={sub.name}
-                          to={sub.path}
-                          className="block px-3 py-2 text-sm text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:pl-5 hover:text-black md:text-[15px]"
-                        >
-                          {sub.name}
-                        </Link>
-                      ))}
-                      <div className="mt-2 border-t border-gray-50 pt-2">
-                        <Link to={link.path} className="block px-3 text-xs font-bold text-black underline decoration-gray-300 underline-offset-4 hover:decoration-black">
-                          View All {link.label}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2">
+            <div className="ml-auto flex shrink-0 items-center justify-end gap-0.5 sm:gap-1 md:gap-2 xl:ml-0">
               <button
                 type="button"
                 onClick={() => setIsSearchOpen((v) => !v)}
-                className={`${iconBtnClass} ${isSearchOpen ? 'bg-gray-100' : ''}`}
+                className={`${iconBtnClass} xl:hidden ${isSearchOpen ? 'bg-gray-100' : ''}`}
                 aria-label="Toggle search"
                 aria-expanded={isSearchOpen}
               >
@@ -210,6 +266,7 @@ const Navbar = () => {
               ) : (
                 <Link
                   to="/login"
+                  state={authLinkState}
                   className={`${desktopIconBtnClass} ${location.pathname === '/login' ? 'bg-gray-100' : ''}`}
                   aria-label="Sign in"
                 >
@@ -242,45 +299,103 @@ const Navbar = () => {
           </div>
 
           <div
-            className={`overflow-hidden transition-all duration-300 ease-out ${
+            className={`overflow-hidden transition-all duration-300 ease-out xl:hidden ${
               isSearchOpen ? 'max-h-14 pb-2 opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <form onSubmit={handleSearch} className="flex justify-stretch sm:justify-end">
-              <div className="flex w-full items-center gap-2 rounded-full border border-gray-200 bg-gray-50/80 px-3 py-1 shadow-sm transition focus-within:border-gray-300 focus-within:bg-white focus-within:shadow sm:max-w-md md:max-w-xs lg:max-w-sm">
-                <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  role="searchbox"
-                  enterKeyHint="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') setIsSearchOpen(false);
-                  }}
-                  placeholder="Search clips, categories..."
-                  className="min-w-0 flex-1 border-none bg-transparent py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                />
-                {searchQuery ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="rounded-full p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                    aria-label="Clear search"
-                  >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                ) : null}
-              </div>
-            </form>
+            {renderSearchForm('flex justify-stretch', {
+              onEscape: () => setIsSearchOpen(false),
+              inputRef: searchInputRef,
+            })}
           </div>
         </div>
       </nav>
+
+      <nav
+        className={`hidden border-b bg-white transition-all duration-300 xl:block ${
+          isScrolled ? 'border-gray-300 shadow-sm' : 'border-gray-200'
+        }`}
+        aria-label="Footage categories"
+      >
+        <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8">
+          <div className="relative flex h-10 items-center gap-2">
+            {categoryOverflow ? (
+              <button
+                type="button"
+                onClick={() => scrollCategories(-1)}
+                disabled={!canScrollLeft}
+                className={scrollBtnClass}
+                aria-label="Scroll categories left"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            ) : null}
+
+            <div
+              ref={categoryScrollRef}
+              className="min-w-0 flex-1 overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              <div className="mx-auto flex w-max min-w-full items-center justify-center gap-5 px-1 xl:gap-6 2xl:gap-8">
+                <div className="group relative flex h-10 shrink-0 items-center">
+                  <Link to="/" className={navLinkClass(activeCategory === 'home')}>
+                    Home
+                    <span className={underlineClass(activeCategory === 'home')} />
+                  </Link>
+                </div>
+
+                {navLinks.map((link) => (
+                  <div key={link.id} className="group relative flex h-10 shrink-0 items-center">
+                    <Link to={link.path} className={navLinkClass(activeCategory === link.id)}>
+                      {link.label}
+                      <span className={underlineClass(activeCategory === link.id)} />
+                    </Link>
+
+                    <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100 group-hover:-translate-y-1">
+                      <div className="relative grid gap-1 rounded-none border border-gray-100 bg-white p-6 shadow-xl">
+                        <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-gray-100 bg-white" />
+                        <h3 className="mb-2 border-b pb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+                          {link.label} Footage
+                        </h3>
+                        {link.subItems.map((sub) => (
+                          <Link
+                            key={sub.name}
+                            to={sub.path}
+                            className="block px-3 py-2 text-sm text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:pl-5 hover:text-black md:text-[15px]"
+                          >
+                            {sub.name}
+                          </Link>
+                        ))}
+                        <div className="mt-2 border-t border-gray-50 pt-2">
+                          <Link to={link.path} className="block px-3 text-xs font-bold text-black underline decoration-gray-300 underline-offset-4 hover:decoration-black">
+                            View All {link.label}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {categoryOverflow ? (
+              <button
+                type="button"
+                onClick={() => scrollCategories(1)}
+                disabled={!canScrollRight}
+                className={scrollBtnClass}
+                aria-label="Scroll categories right"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </nav>
+      </header>
 
       <div className="safe-bottom fixed bottom-4 left-3 right-3 z-40 md:hidden">
         <div className="flex items-center justify-around rounded-2xl border border-white/20 bg-white/90 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl sm:p-2">
@@ -323,6 +438,7 @@ const Navbar = () => {
           ) : (
             <Link
               to="/login"
+              state={authLinkState}
               className={`rounded-xl p-3 transition ${location.pathname === '/login' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
               aria-label="Sign in"
             >
@@ -369,8 +485,8 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Sign in</Link>
-                <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Create account</Link>
+                <Link to="/login" state={authLinkState} onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Sign in</Link>
+                <Link to="/register" state={authLinkState} onClick={() => setIsMobileMenuOpen(false)} className="block text-2xl font-light tracking-tight text-gray-900">Create account</Link>
               </>
             )}
           </div>

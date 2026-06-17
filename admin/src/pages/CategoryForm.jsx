@@ -12,6 +12,7 @@ import {
   fetchCategory,
   updateCategory,
 } from '../api/client'
+import MediaUpload from '../components/MediaUpload'
 
 const emptySubCategory = () => ({ slug: '', name: '' })
 
@@ -25,6 +26,8 @@ const CategoryForm = () => {
     label: '',
     breadcrumb: '',
     navLabel: '',
+    description: '',
+    coverImage: '',
     sortOrder: 0,
     isActive: true,
     subCategories: [emptySubCategory()],
@@ -45,6 +48,8 @@ const CategoryForm = () => {
           label: category.label,
           breadcrumb: category.breadcrumb,
           navLabel: category.navLabel,
+          description: category.description || '',
+          coverImage: category.coverImage || '',
           sortOrder: category.sortOrder || 0,
           isActive: category.isActive,
           subCategories: category.subCategories?.length
@@ -159,17 +164,6 @@ const CategoryForm = () => {
           </label>
 
           <label className="block text-sm">
-            <span className="font-medium text-slate-700">Breadcrumb</span>
-            <input
-              required
-              value={form.breadcrumb}
-              onChange={(e) => updateField('breadcrumb', e.target.value)}
-              className={inputClass}
-              placeholder="Urban"
-            />
-          </label>
-
-          <label className="block text-sm">
             <span className="font-medium text-slate-700">Sort Order</span>
             <input
               type="number"
@@ -179,7 +173,7 @@ const CategoryForm = () => {
             />
           </label>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
             <input
               type="checkbox"
               checked={form.isActive}
@@ -187,6 +181,53 @@ const CategoryForm = () => {
             />
             Show in storefront navbar
           </label>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <h3 className="font-semibold text-slate-900">Homepage browse section</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Breadcrumb is the card name on the homepage. Cover image is required for the category
+            to appear in &quot;Browse by Footage Type&quot;.
+          </p>
+
+          <div className="mt-4 grid gap-4">
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Homepage card name</span>
+              <input
+                required
+                value={form.breadcrumb}
+                onChange={(e) => updateField('breadcrumb', e.target.value)}
+                className={inputClass}
+                placeholder="Nature"
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Short description</span>
+              <textarea
+                value={form.description}
+                onChange={(e) => updateField('description', e.target.value)}
+                className={`${inputClass} min-h-[88px]`}
+                placeholder="Optional description for category pages"
+              />
+            </label>
+
+            <MediaUpload
+              label="Cover image"
+              accept="image/*"
+              uploadType="category-cover"
+              categorySlug={form.slug || form.navLabel}
+              value={form.coverImage}
+              onChange={(url) => updateField('coverImage', url)}
+              placeholder="Upload or paste image URL"
+              disabled={!form.slug && !form.navLabel}
+            />
+            {!form.slug && !form.navLabel ? (
+              <p className="text-xs text-amber-700">
+                Enter nav label or slug before uploading a cover image.
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div>

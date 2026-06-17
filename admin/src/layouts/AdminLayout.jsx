@@ -16,6 +16,7 @@ import { BRAND } from '../config/brand'
 
 const navItems = [
   { to: '/', label: 'Dashboard', end: true, icon: IconDashboard, description: 'Overview & tools' },
+  { to: '/home-content', label: 'Homepage', icon: IconDashboard, description: 'Ticker & browse section' },
   { to: '/categories', label: 'Categories', icon: IconCategories, description: 'Navbar & subcategories' },
   { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
   { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
@@ -27,6 +28,7 @@ const navItems = [
 
 const pageTitles = {
   '/': 'Dashboard',
+  '/home-content': 'Homepage Content',
   '/categories': 'Categories',
   '/categories/new': 'Add Category',
   '/products': 'Products',
