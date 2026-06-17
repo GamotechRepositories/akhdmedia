@@ -251,6 +251,8 @@ export const updateSupportRequest = (id, payload) => api.patch(`/admin/support/$
 
 export const fetchUsers = () => api.get('/admin/users')
 
+export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
+
 export const fetchSiteContent = () => api.get('/admin/site-content')
 
 export const updateSiteContent = (payload) => api.put('/admin/site-content', payload)

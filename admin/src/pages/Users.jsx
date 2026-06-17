@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { fetchUsers } from '../api/client'
+import { deleteUser, fetchUsers } from '../api/client'
 import { tableWrapClass } from '../components/ui/adminUi'
 
 const PAGE_SIZE = 50
@@ -22,21 +22,41 @@ const Users = () => {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [deletingUserId, setDeletingUserId] = useState('')
+
+  const loadUsers = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const response = await fetchUsers()
+      setUsers(response.data?.data?.users || [])
+    } catch (loadError) {
+      setError(loadError.message || 'Could not load users')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const response = await fetchUsers()
-        setUsers(response.data?.data?.users || [])
-      } catch (loadError) {
-        setError(loadError.message || 'Could not load users')
-      } finally {
-        setLoading(false)
-      }
-    }
-
     loadUsers()
   }, [])
+
+  const handleDelete = async (user) => {
+    if (user.role === 'admin') return
+
+    if (!window.confirm(`Delete user "${user.name}" (${user.email})?`)) return
+
+    setDeletingUserId(user.id)
+    setError('')
+    try {
+      await deleteUser(user.id)
+      setUsers((current) => current.filter((entry) => entry.id !== user.id))
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete user')
+    } finally {
+      setDeletingUserId('')
+    }
+  }
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -103,12 +123,13 @@ const Users = () => {
                 <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Joined</th>
+                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {loading && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                     Loading users...
                   </td>
                 </tr>
@@ -116,7 +137,7 @@ const Users = () => {
 
               {!loading && !error && filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                     No users found.
                   </td>
                 </tr>
@@ -130,6 +151,20 @@ const Users = () => {
                     <td className="px-4 py-3 text-slate-700">{user.email || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{user.phone || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{formatDate(user.createdAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {user.role === 'admin' ? (
+                        <span className="text-xs font-medium text-slate-400">Admin</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(user)}
+                          disabled={deletingUserId === user.id}
+                          className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
             </tbody>
@@ -169,7 +204,7 @@ const Users = () => {
 
       <AdminAlertModal
         open={Boolean(error)}
-        title="Could not load users"
+        title="Users"
         message={error}
         onClose={() => setError('')}
       />
