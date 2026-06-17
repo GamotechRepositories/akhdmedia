@@ -35,3 +35,7 @@ export const LOCAL_PRIVATE_DIR = path.join(LOCAL_UPLOAD_ROOT, 'private')
 export const SIGNED_URL_EXPIRY_SECONDS = Number(
   process.env.AWS_SIGNED_URL_EXPIRY || 259200,
 )
+
+export const PRESIGNED_UPLOAD_EXPIRY_SECONDS = Number(
+  process.env.AWS_PRESIGNED_UPLOAD_EXPIRY || 3600,
+)

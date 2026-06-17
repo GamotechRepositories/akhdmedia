@@ -1,5 +1,36 @@
 import axios from 'axios'
 
+const reportXHRProgress = (event, file, onProgress, tracker) => {
+  if (!onProgress) return
+  const total = event.lengthComputable ? event.total : file.size
+  if (!total) return
+
+  const now = Date.now()
+  const elapsed = (now - tracker.lastTime) / 1000
+  const delta = event.loaded - tracker.lastLoaded
+  let speedBps = tracker.speedBps
+
+  if (elapsed >= 0.25 && delta >= 0) {
+    speedBps = delta / elapsed
+    tracker.lastLoaded = event.loaded
+    tracker.lastTime = now
+    tracker.speedBps = speedBps
+  }
+
+  onProgress({
+    percent: Math.min(99, Math.round((event.loaded * 100) / total)),
+    loaded: event.loaded,
+    total,
+    speedBps,
+  })
+}
+
+const createProgressTracker = () => ({
+  lastLoaded: 0,
+  lastTime: Date.now(),
+  speedBps: 0,
+})
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
@@ -68,21 +99,122 @@ export const fetchProducts = (admin = true) =>
 export const fetchProduct = (id) =>
   api.get(`/products/${id}`, { params: { admin: 'true' } })
 
-export const uploadMedia = (file, type, onProgress) => {
+const uploadMediaViaProxy = (file, type, onProgress) => {
+  const tracker = createProgressTracker()
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
   return api.post('/upload', formData, {
     params: { type },
     onUploadProgress: (event) => {
-      if (!onProgress) return
-      const total = event.total || file.size
-      if (!total) return
-      const percent = Math.round((event.loaded * 100) / total)
-      onProgress(Math.min(99, percent))
+      reportXHRProgress(event, file, onProgress, tracker)
     },
   })
 }
+
+const uploadFileToS3Post = (uploadUrl, fields, file, onProgress) =>
+  new Promise((resolve, reject) => {
+    const tracker = createProgressTracker()
+    const formData = new FormData()
+    Object.entries(fields || {}).forEach(([key, value]) => {
+      formData.append(key, value)
+    })
+    formData.append('file', file)
+
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', uploadUrl)
+
+    xhr.upload.onprogress = (event) => {
+      reportXHRProgress(event, file, onProgress, tracker)
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 204 || (xhr.status >= 200 && xhr.status < 300)) {
+        resolve()
+        return
+      }
+      reject(new Error(`S3 upload failed (${xhr.status})`))
+    }
+
+    xhr.onerror = () => {
+      reject(
+        new Error(
+          `Direct S3 upload failed. Add CORS on your S3 bucket for ${window.location.origin} with POST and PUT allowed.`,
+        ),
+      )
+    }
+
+    xhr.send(formData)
+  })
+
+const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
+  new Promise((resolve, reject) => {
+    const tracker = createProgressTracker()
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', uploadUrl)
+
+    Object.entries(headers || {}).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value)
+    })
+
+    xhr.upload.onprogress = (event) => {
+      reportXHRProgress(event, file, onProgress, tracker)
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+        return
+      }
+      reject(new Error(`S3 upload failed (${xhr.status})`))
+    }
+
+    xhr.onerror = () => {
+      reject(
+        new Error(
+          `Direct S3 upload failed. Add CORS on your S3 bucket for ${window.location.origin} with PUT allowed.`,
+        ),
+      )
+    }
+
+    xhr.send(file)
+  })
+
+const uploadMediaViaS3 = async (file, type, onProgress) => {
+  const { data: presign } = await api.post('/upload/presign', {
+    type,
+    filename: file.name,
+    contentType: file.type || 'application/octet-stream',
+    size: file.size,
+  })
+
+  if (presign.method === 'proxy') {
+    return uploadMediaViaProxy(file, type, onProgress)
+  }
+
+  try {
+    if (presign.uploadFields) {
+      await uploadFileToS3Post(presign.uploadUrl, presign.uploadFields, file, onProgress)
+    } else {
+      await uploadFileToS3(presign.uploadUrl, file, presign.headers, onProgress)
+    }
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('S3 upload failed')
+  }
+
+  return {
+    data: {
+      key: presign.key,
+      filename: presign.filename,
+      size: file.size,
+      type,
+      url: presign.url,
+    },
+  }
+}
+
+export const uploadMedia = (file, type, onProgress) =>
+  uploadMediaViaS3(file, type, onProgress)
 
 export const createProduct = (payload) => api.post('/products', payload)
 

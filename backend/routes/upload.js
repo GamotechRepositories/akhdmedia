@@ -1,9 +1,11 @@
 import { Router } from 'express'
-import { uploadMedia } from '../controllers/uploadController.js'
+import { presignUpload, uploadMedia } from '../controllers/uploadController.js'
 import { uploadSingle } from '../middleware/upload.js'
 import asyncHandler from '../utils/asyncHandler.js'
 
 const router = Router()
+
+router.post('/presign', asyncHandler(presignUpload))
 
 router.post(
   '/',

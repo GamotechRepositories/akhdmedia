@@ -1,5 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import {
+  createPrivatePresignedUpload,
+  createPublicPresignedUpload,
   getPrivateDownloadUrl,
   toAbsolutePrivateUrl,
   uploadPrivateFile,
@@ -25,6 +27,45 @@ const isPrivateUpload = (type) =>
 
 const isPublicUpload = (type) =>
   type === 'preview-image' || type === 'preview-video' || type === 'video-poster'
+
+export const presignUpload = asyncHandler(async (req, res) => {
+  const type = req.body?.type || req.query?.type || ''
+  const filename = req.body?.filename?.trim() || ''
+  const contentType = req.body?.contentType || 'application/octet-stream'
+  const size = Number(req.body?.size) || 0
+
+  if (!filename) {
+    res.status(400).json({ message: 'filename is required' })
+    return
+  }
+
+  if (!isPrivateUpload(type) && !isPublicUpload(type)) {
+    res.status(400).json({ message: 'Direct upload is not supported for this type' })
+    return
+  }
+
+  const folder = folderForType(type)
+  const result = isPublicUpload(type)
+    ? await createPublicPresignedUpload(folder, filename, contentType)
+    : await createPrivatePresignedUpload(folder, filename, contentType)
+
+  if (result.method === 'proxy') {
+    res.json({ method: 'proxy', type })
+    return
+  }
+
+  res.json({
+    method: 'direct',
+    uploadUrl: result.uploadUrl,
+    uploadFields: result.uploadFields,
+    key: result.key,
+    filename: result.filename,
+    headers: result.headers,
+    url: result.url,
+    size,
+    type,
+  })
+})
 
 export const uploadMedia = asyncHandler(async (req, res) => {
   if (!req.file) {

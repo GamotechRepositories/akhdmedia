@@ -1,6 +1,11 @@
 import { useRef, useState } from 'react'
 import { uploadMedia } from '../api/client'
 import { captureVideoPosterFromFile } from '../utils/captureVideoPoster'
+import {
+  formatFileSize,
+  formatUploadEta,
+  formatUploadSpeed,
+} from '../utils/formatFileSize'
 import { inputClass } from './ui/adminUi'
 
 const MediaUpload = ({
@@ -9,6 +14,7 @@ const MediaUpload = ({
   uploadType,
   value,
   filename = '',
+  fileSize = 0,
   accessUrl = '',
   onChange,
   valueKind = 'url',
@@ -22,12 +28,22 @@ const MediaUpload = ({
   const progressRef = useRef(0)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadSpeed, setUploadSpeed] = useState('')
+  const [uploadEta, setUploadEta] = useState('')
+  const [uploadedSize, setUploadedSize] = useState(fileSize || 0)
   const [error, setError] = useState('')
 
-  const reportProgress = (percent) => {
-    const next = Math.min(99, Math.max(progressRef.current, percent))
+  const reportProgress = (progress) => {
+    const payload =
+      typeof progress === 'number'
+        ? { percent: progress, loaded: 0, total: 0, speedBps: 0 }
+        : progress
+
+    const next = Math.min(99, Math.max(progressRef.current, payload.percent || 0))
     progressRef.current = next
     setUploadProgress(next)
+    setUploadSpeed(formatUploadSpeed(payload.speedBps))
+    setUploadEta(formatUploadEta(payload.loaded, payload.total, payload.speedBps))
   }
 
   const handleFile = async (event) => {
@@ -37,6 +53,8 @@ const MediaUpload = ({
     setUploading(true)
     progressRef.current = 0
     setUploadProgress(0)
+    setUploadSpeed('')
+    setUploadEta('')
     setError('')
 
     try {
@@ -44,13 +62,17 @@ const MediaUpload = ({
         ? captureVideoPosterFromFile(file).catch(() => null)
         : null
       const response = await uploadMedia(file, uploadType, reportProgress)
+      const uploadedBytes = response.data.size || file.size
+
       progressRef.current = 100
       setUploadProgress(100)
+      setUploadedSize(uploadedBytes)
+
       const nextValue = valueKind === 'key' ? response.data.key : response.data.url
       const uploadedFilename = response.data.filename || file.name
       onChange(nextValue, {
         filename: uploadedFilename,
-        size: response.data.size || file.size,
+        size: uploadedBytes,
         url: response.data.url || '',
         posterCapturePromise,
       })
@@ -65,6 +87,8 @@ const MediaUpload = ({
     } finally {
       setUploading(false)
       setUploadProgress(0)
+      setUploadSpeed('')
+      setUploadEta('')
       if (inputRef.current) inputRef.current.value = ''
     }
   }
@@ -72,6 +96,7 @@ const MediaUpload = ({
   const isImage = accept?.includes('image')
   const previewUrl = valueKind === 'url' ? value : accessUrl || null
   const isVideoUpload = uploadType.includes('video') || accept?.includes('video')
+  const displaySize = uploadedSize > 0 ? formatFileSize(uploadedSize) : ''
 
   const handleCopyUrl = async () => {
     if (!accessUrl) return
@@ -93,11 +118,16 @@ const MediaUpload = ({
           disabled={uploading || disabled}
           className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
         >
-          {uploading ? `Uploading ${uploadProgress}%` : disabled ? 'Select quality first' : 'Upload File'}
+          {uploading
+            ? `Uploading ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
+            : disabled
+              ? 'Select quality first'
+              : 'Upload File'}
         </button>
         {value && !uploading && (
           <span className="text-[11px] font-medium text-emerald-600">
             {filename ? `Saved: ${filename}` : 'Uploaded'}
+            {displaySize ? ` · ${displaySize}` : ''}
           </span>
         )}
       </div>
@@ -114,6 +144,10 @@ const MediaUpload = ({
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
+          <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+            <span>{uploadSpeed}</span>
+            <span>{uploadEta}</span>
+          </div>
         </div>
       )}
 
@@ -127,7 +161,10 @@ const MediaUpload = ({
 
       <input
         value={value || ''}
-        onChange={(e) => onChange(e.target.value, { filename: '', url: '' })}
+        onChange={(e) => {
+          onChange(e.target.value, { filename: '', url: '', size: 0 })
+          setUploadedSize(0)
+        }}
         disabled={disabled}
         className={`${inputClass} mt-2 disabled:bg-slate-100 disabled:text-slate-400`}
         placeholder={placeholder}

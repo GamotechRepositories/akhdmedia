@@ -7,6 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 import {
   getAwsRegion,
   getAwsS3Bucket,
@@ -16,6 +17,7 @@ import {
   isAwsEnabled,
   LOCAL_PRIVATE_DIR,
   LOCAL_PUBLIC_DIR,
+  PRESIGNED_UPLOAD_EXPIRY_SECONDS,
   SIGNED_URL_EXPIRY_SECONDS,
 } from '../config/storage.js'
 
@@ -29,6 +31,9 @@ const getS3 = () => {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
+      // Avoid checksum headers in presigned PUT URLs — browsers cannot reproduce them.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     })
   }
   return s3Client
@@ -87,6 +92,34 @@ const getApiBase = () =>
 const getLocalPublicUrl = (key) =>
   `${getApiBase()}/uploads/public/${key.replace(/^public\//, '')}`
 
+const MAX_DIRECT_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024
+
+const createS3PresignedPost = async (s3Key, contentType = '') => {
+  const resolvedContentType = contentType || 'application/octet-stream'
+  const fields = {
+    'Content-Type': resolvedContentType,
+  }
+
+  const { url, fields: postFields } = await createPresignedPost(getS3(), {
+    Bucket: getAwsS3Bucket(),
+    Key: s3Key,
+    Conditions: [
+      ['content-length-range', 0, MAX_DIRECT_UPLOAD_BYTES],
+      ['eq', '$Content-Type', resolvedContentType],
+    ],
+    Fields: fields,
+    Expires: PRESIGNED_UPLOAD_EXPIRY_SECONDS,
+  })
+
+  return {
+    uploadUrl: url,
+    uploadFields: postFields,
+    headers: {
+      'Content-Type': resolvedContentType,
+    },
+  }
+}
+
 export const uploadPublicFile = async (file, folder) => {
   const key = buildKey(AWS_S3_PUBLIC_PREFIX, folder, file.originalname)
 
@@ -134,6 +167,60 @@ export const uploadPrivateFile = async (file, folder) => {
   await ensureDir(path.dirname(filePath))
   await fsPromises.writeFile(filePath, file.buffer)
   return { key: `private/${relativeKey}`, filename: originalFilename }
+}
+
+export const createPrivatePresignedUpload = async (folder, filename, contentType = '') => {
+  const originalFilename = sanitizeFilename(filename)
+  const s3Key = buildDeliveryKey(AWS_S3_PRIVATE_PREFIX, folder, filename)
+  const privateKey = `private/${s3Key.replace(`${AWS_S3_PRIVATE_PREFIX}/`, '')}`
+  const resolvedContentType = contentType || 'application/octet-stream'
+
+  if (!isAwsEnabled()) {
+    return { method: 'proxy' }
+  }
+
+  const { uploadUrl, uploadFields, headers } = await createS3PresignedPost(
+    s3Key,
+    resolvedContentType,
+  )
+  const accessUrl = await getPrivateDownloadUrl(privateKey, originalFilename, {
+    inline: true,
+  })
+
+  return {
+    method: 'direct',
+    uploadUrl,
+    uploadFields,
+    key: privateKey,
+    filename: originalFilename,
+    headers,
+    url: toAbsolutePrivateUrl(accessUrl),
+  }
+}
+
+export const createPublicPresignedUpload = async (folder, filename, contentType = '') => {
+  const originalFilename = sanitizeFilename(filename)
+  const s3Key = buildKey(AWS_S3_PUBLIC_PREFIX, folder, filename)
+  const resolvedContentType = contentType || 'application/octet-stream'
+
+  if (!isAwsEnabled()) {
+    return { method: 'proxy' }
+  }
+
+  const { uploadUrl, uploadFields, headers } = await createS3PresignedPost(
+    s3Key,
+    resolvedContentType,
+  )
+
+  return {
+    method: 'direct',
+    uploadUrl,
+    uploadFields,
+    key: s3Key,
+    filename: originalFilename,
+    headers,
+    url: `${getPublicBaseUrl()}/${s3Key}`,
+  }
 }
 
 export const uploadPrivateFileFromPath = async (filePath, folder, filename) => {
