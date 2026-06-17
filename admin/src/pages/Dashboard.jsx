@@ -4,13 +4,12 @@ import OrdersBarChart, {
   buildMonthlyOrderStats,
   getChartYearOptions,
 } from '../components/OrdersBarChart'
-import { cardClass, primaryBtnClass } from '../components/ui/adminUi'
+import { cardClass } from '../components/ui/adminUi'
 import {
   fetchCategories,
   fetchOrders,
   fetchProducts,
   fetchTransactions,
-  reseedCatalog,
 } from '../api/client'
 
 const formatCurrency = (amount = 0) =>
@@ -170,18 +169,6 @@ const Dashboard = () => {
     month: 'long',
     year: 'numeric',
   })
-
-  const handleReseed = async () => {
-    if (!window.confirm('This will reset all categories and products. Continue?')) return
-
-    try {
-      await reseedCatalog()
-      setMessage('Catalog reseeded successfully.')
-      await loadDashboard()
-    } catch (error) {
-      setMessage(error.message)
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -388,20 +375,6 @@ const Dashboard = () => {
                 accent="bg-violet-100 text-violet-800"
               />
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-sm">
-            <h3 className="text-base font-semibold text-amber-950">Developer tools</h3>
-            <p className="mt-2 text-sm leading-relaxed text-amber-900/80">
-              Reseed the database with default categories and products from the original mock data.
-            </p>
-            <button
-              type="button"
-              onClick={handleReseed}
-              className={`${primaryBtnClass} mt-4 bg-amber-950 hover:bg-amber-900`}
-            >
-              Reseed catalog
-            </button>
           </div>
         </div>
       </section>

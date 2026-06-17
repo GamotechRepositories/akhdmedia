@@ -8,7 +8,6 @@ import connectDB from './config/db.js'
 import { isAwsEnabled, LOCAL_PUBLIC_DIR } from './config/storage.js'
 import apiRoutes from './routes/index.js'
 import errorHandler from './middleware/errorHandler.js'
-import seedCatalogIfEmpty from './seed/seedCatalog.js'
 import seedAdmin from './seed/seedAdmin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -54,7 +53,6 @@ app.use(errorHandler)
 const startServer = async () => {
   await connectDB()
   await seedAdmin()
-  await seedCatalogIfEmpty()
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)

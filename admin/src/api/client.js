@@ -249,6 +249,4 @@ export const updateSupportRequest = (id, payload) => api.patch(`/admin/support/$
 
 export const fetchUsers = () => api.get('/admin/users')
 
-export const reseedCatalog = () => api.post('/seed')
-
 export default api

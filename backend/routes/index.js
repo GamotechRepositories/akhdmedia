@@ -14,8 +14,6 @@ import userOrderRoutes from './userOrders.js'
 import supportRoutes from './support.js'
 import adminSupportRoutes from './adminSupport.js'
 import adminUserRoutes from './adminUsers.js'
-import asyncHandler from '../utils/asyncHandler.js'
-import { reseedCatalog } from '../seed/seedCatalog.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
 
 const router = Router()
@@ -30,15 +28,6 @@ router.get('/health', (req, res) => {
 router.use('/auth', authRoutes)
 router.use('/user/auth', userAuthRoutes)
 router.use('/user/orders', userOrderRoutes)
-
-router.post(
-  '/seed',
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    await reseedCatalog()
-    res.json({ message: 'Catalog reseeded successfully' })
-  }),
-)
 
 router.use('/categories', categoryRoutes)
 router.use('/products', productRoutes)
