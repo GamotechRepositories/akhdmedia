@@ -23,6 +23,9 @@ const MediaUpload = ({
   showAccessUrl = false,
   autoCapturePoster = false,
   onPosterCaptured,
+  clipId = '',
+  previewIndex = 0,
+  tier = '',
 }) => {
   const inputRef = useRef(null)
   const progressRef = useRef(0)
@@ -61,7 +64,11 @@ const MediaUpload = ({
       const posterCapturePromise = autoCapturePoster
         ? captureVideoPosterFromFile(file).catch(() => null)
         : null
-      const response = await uploadMedia(file, uploadType, reportProgress)
+      const response = await uploadMedia(file, uploadType, reportProgress, {
+        clipId,
+        previewIndex,
+        tier,
+      })
       const uploadedBytes = response.data.size || file.size
 
       progressRef.current = 100
@@ -115,12 +122,14 @@ const MediaUpload = ({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={uploading || disabled}
+          disabled={uploading || disabled || !clipId}
           className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
         >
           {uploading
             ? `Uploading ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
-            : disabled
+            : !clipId
+              ? 'Preparing Clip ID...'
+              : disabled
               ? 'Select quality first'
               : 'Upload File'}
         </button>

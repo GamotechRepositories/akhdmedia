@@ -1,6 +1,5 @@
 import fsPromises from 'fs/promises'
 import path from 'path'
-import { randomUUID } from 'crypto'
 import {
   GetObjectCommand,
   PutObjectCommand,
@@ -13,7 +12,6 @@ import {
   getAwsS3Bucket,
   getAwsS3PublicUrl,
   AWS_S3_PRIVATE_PREFIX,
-  AWS_S3_PUBLIC_PREFIX,
   isAwsEnabled,
   LOCAL_PRIVATE_DIR,
   LOCAL_PUBLIC_DIR,
@@ -57,17 +55,6 @@ export const resolvePrivateKey = (key = '') => {
 
 const sanitizeFilename = (filename) =>
   path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '_')
-
-const buildKey = (prefix, folder, filename) => {
-  const safeName = sanitizeFilename(filename)
-  return `${prefix}/${folder}/${randomUUID()}-${safeName}`
-}
-
-/** Preserves original filename in storage path for delivery downloads */
-const buildDeliveryKey = (prefix, folder, filename) => {
-  const safeName = sanitizeFilename(filename)
-  return `${prefix}/${folder}/${randomUUID()}/${safeName}`
-}
 
 export const getFilenameFromKey = (key = '') => {
   if (!key || /^https?:\/\//i.test(key)) return ''
@@ -120,37 +107,37 @@ const createS3PresignedPost = async (s3Key, contentType = '') => {
   }
 }
 
-export const uploadPublicFile = async (file, folder) => {
-  const key = buildKey(AWS_S3_PUBLIC_PREFIX, folder, file.originalname)
+export const uploadPublicFileToTarget = async (file, target) => {
+  const { s3Key, key, filename } = target
 
   if (isAwsEnabled()) {
     await getS3().send(
       new PutObjectCommand({
         Bucket: getAwsS3Bucket(),
-        Key: key,
+        Key: s3Key,
         Body: file.buffer,
-        ContentType: file.mimetype,
+        ContentType: file.mimetype || 'application/octet-stream',
       }),
     )
-    return { url: `${getPublicBaseUrl()}/${key}`, key }
+    return { url: `${getPublicBaseUrl()}/${s3Key}`, key: s3Key, filename }
   }
 
-  const relativeKey = key.replace(`${AWS_S3_PUBLIC_PREFIX}/`, '')
+  const relativeKey = s3Key.replace(/^public\//, '')
   const filePath = path.join(LOCAL_PUBLIC_DIR, relativeKey)
   await ensureDir(path.dirname(filePath))
   await fsPromises.writeFile(filePath, file.buffer)
-  return { url: getLocalPublicUrl(relativeKey), key: relativeKey }
+  return { url: getLocalPublicUrl(relativeKey), key: relativeKey, filename }
 }
 
-export const uploadPrivateFile = async (file, folder) => {
-  const originalFilename = sanitizeFilename(file.originalname)
-  const key = buildDeliveryKey(AWS_S3_PRIVATE_PREFIX, folder, file.originalname)
+export const uploadPrivateFileToTarget = async (file, target) => {
+  const { s3Key, key, filename: targetFilename } = target
+  const originalFilename = sanitizeFilename(file.originalname) || targetFilename
 
   if (isAwsEnabled()) {
     await getS3().send(
       new PutObjectCommand({
         Bucket: getAwsS3Bucket(),
-        Key: key,
+        Key: s3Key,
         Body: file.buffer,
         ContentType: file.mimetype || 'application/octet-stream',
         ContentDisposition: `inline; filename="${originalFilename}"`,
@@ -159,48 +146,18 @@ export const uploadPrivateFile = async (file, folder) => {
         },
       }),
     )
-    return { key: `private/${key.replace(`${AWS_S3_PRIVATE_PREFIX}/`, '')}`, filename: originalFilename }
+    return { key, filename: originalFilename }
   }
 
-  const relativeKey = key.replace(`${AWS_S3_PRIVATE_PREFIX}/`, '')
+  const relativeKey = key.replace(/^private\//, '')
   const filePath = path.join(LOCAL_PRIVATE_DIR, relativeKey)
   await ensureDir(path.dirname(filePath))
   await fsPromises.writeFile(filePath, file.buffer)
-  return { key: `private/${relativeKey}`, filename: originalFilename }
+  return { key, filename: originalFilename }
 }
 
-export const createPrivatePresignedUpload = async (folder, filename, contentType = '') => {
-  const originalFilename = sanitizeFilename(filename)
-  const s3Key = buildDeliveryKey(AWS_S3_PRIVATE_PREFIX, folder, filename)
-  const privateKey = `private/${s3Key.replace(`${AWS_S3_PRIVATE_PREFIX}/`, '')}`
-  const resolvedContentType = contentType || 'application/octet-stream'
-
-  if (!isAwsEnabled()) {
-    return { method: 'proxy' }
-  }
-
-  const { uploadUrl, uploadFields, headers } = await createS3PresignedPost(
-    s3Key,
-    resolvedContentType,
-  )
-  const accessUrl = await getPrivateDownloadUrl(privateKey, originalFilename, {
-    inline: true,
-  })
-
-  return {
-    method: 'direct',
-    uploadUrl,
-    uploadFields,
-    key: privateKey,
-    filename: originalFilename,
-    headers,
-    url: toAbsolutePrivateUrl(accessUrl),
-  }
-}
-
-export const createPublicPresignedUpload = async (folder, filename, contentType = '') => {
-  const originalFilename = sanitizeFilename(filename)
-  const s3Key = buildKey(AWS_S3_PUBLIC_PREFIX, folder, filename)
+export const createPresignedUploadForTarget = async (target, contentType = '') => {
+  const { s3Key, key, filename, scope } = target
   const resolvedContentType = contentType || 'application/octet-stream'
 
   if (!isAwsEnabled()) {
@@ -212,18 +169,32 @@ export const createPublicPresignedUpload = async (folder, filename, contentType 
     resolvedContentType,
   )
 
+  if (scope === 'private') {
+    const accessUrl = await getPrivateDownloadUrl(key, filename, { inline: true })
+    return {
+      method: 'direct',
+      uploadUrl,
+      uploadFields,
+      key,
+      filename,
+      headers,
+      url: toAbsolutePrivateUrl(accessUrl),
+    }
+  }
+
   return {
     method: 'direct',
     uploadUrl,
     uploadFields,
-    key: s3Key,
-    filename: originalFilename,
+    key,
+    filename,
     headers,
     url: `${getPublicBaseUrl()}/${s3Key}`,
   }
 }
 
-export const uploadPrivateFileFromPath = async (filePath, folder, filename) => {
+/** @deprecated use uploadPrivateFileToTarget */
+export const uploadPrivateFileFromPath = async (filePath, target, filename) => {
   const buffer = await fsPromises.readFile(filePath)
   const stats = await fsPromises.stat(filePath)
   const file = {
@@ -232,7 +203,7 @@ export const uploadPrivateFileFromPath = async (filePath, folder, filename) => {
     mimetype: 'video/mp4',
     size: stats.size,
   }
-  return uploadPrivateFile(file, folder)
+  return uploadPrivateFileToTarget(file, target)
 }
 
 export const downloadPrivateFileToPath = async (key, destPath) => {

@@ -99,11 +99,19 @@ export const fetchProducts = (admin = true) =>
 export const fetchProduct = (id) =>
   api.get(`/products/${id}`, { params: { admin: 'true' } })
 
-const uploadMediaViaProxy = (file, type, onProgress) => {
+export const reserveClipId = async () => {
+  const { data } = await api.get('/products/reserve-clip-id')
+  return data
+}
+
+const uploadMediaViaProxy = (file, type, onProgress, options = {}) => {
   const tracker = createProgressTracker()
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
+  if (options.clipId) formData.append('clipId', options.clipId)
+  if (options.previewIndex) formData.append('previewIndex', String(options.previewIndex))
+  if (options.tier) formData.append('tier', options.tier)
   return api.post('/upload', formData, {
     params: { type },
     onUploadProgress: (event) => {
@@ -180,16 +188,19 @@ const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
     xhr.send(file)
   })
 
-const uploadMediaViaS3 = async (file, type, onProgress) => {
+const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
   const { data: presign } = await api.post('/upload/presign', {
     type,
     filename: file.name,
     contentType: file.type || 'application/octet-stream',
     size: file.size,
+    clipId: options.clipId,
+    previewIndex: options.previewIndex,
+    tier: options.tier,
   })
 
   if (presign.method === 'proxy') {
-    return uploadMediaViaProxy(file, type, onProgress)
+    return uploadMediaViaProxy(file, type, onProgress, options)
   }
 
   try {
@@ -213,8 +224,8 @@ const uploadMediaViaS3 = async (file, type, onProgress) => {
   }
 }
 
-export const uploadMedia = (file, type, onProgress) =>
-  uploadMediaViaS3(file, type, onProgress)
+export const uploadMedia = (file, type, onProgress, options = {}) =>
+  uploadMediaViaS3(file, type, onProgress, options)
 
 export const createProduct = (payload) => api.post('/products', payload)
 

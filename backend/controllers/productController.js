@@ -17,6 +17,11 @@ const getCategoryMap = async () => {
   return buildCategoryMap(categories)
 }
 
+export const reserveClipId = asyncHandler(async (req, res) => {
+  const clipId = await generateClipId()
+  res.json({ clipId })
+})
+
 export const getProducts = asyncHandler(async (req, res) => {
   const filter = req.query.admin === 'true' ? {} : { isActive: true }
 

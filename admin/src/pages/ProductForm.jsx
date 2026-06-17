@@ -4,6 +4,7 @@ import {
   createProduct,
   fetchCategories,
   fetchProduct,
+  reserveClipId,
   updateProduct,
   uploadMedia,
 } from '../api/client'
@@ -221,6 +222,25 @@ const ProductForm = () => {
     loadData()
   }, [id, isEdit])
 
+  useEffect(() => {
+    if (isEdit) return undefined
+
+    let active = true
+    reserveClipId()
+      .then((data) => {
+        if (active) {
+          setForm((current) => ({ ...current, clipId: data.clipId }))
+        }
+      })
+      .catch((err) => {
+        if (active) setError(err.message)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [isEdit])
+
   const isVideo = form.mediaType === MEDIA_TYPES.VIDEO
   const isUniformPricing = form.pricingMode === PRICING_MODES.UNIFORM
 
@@ -245,7 +265,9 @@ const ProductForm = () => {
 
   const saveVideoPoster = async (blob) => {
     const posterFile = new File([blob], 'video-thumbnail.jpg', { type: 'image/jpeg' })
-    const response = await uploadMedia(posterFile, 'video-poster')
+    const response = await uploadMedia(posterFile, 'video-poster', null, {
+      clipId: form.clipId,
+    })
     return response.data?.url || ''
   }
 
@@ -384,6 +406,7 @@ const ProductForm = () => {
 
   const validateClient = () => {
     if (!form.name.trim()) return 'Product name is required'
+    if (!form.clipId.trim()) return 'Clip ID is required — wait a moment and try again'
     if (!form.categorySlug) return 'Category is required'
     if (!form.masterVideoTier) {
       return `Select the quality of the master ${isVideo ? 'video' : 'image'} in Step 3`
@@ -481,7 +504,8 @@ const ProductForm = () => {
         })
       } else {
         await createProduct(payload)
-        setForm(emptyForm(form.mediaType))
+        const nextClip = await reserveClipId()
+        setForm({ ...emptyForm(form.mediaType), clipId: nextClip.clipId })
         setError('')
         setShowCreateSuccess(true)
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -567,6 +591,18 @@ const ProductForm = () => {
               <input required value={form.name} onChange={(e) => updateField('name', e.target.value)} className={inputClass} />
             </label>
 
+            <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Clip ID</span>
+              <input
+                readOnly
+                value={form.clipId || 'Generating...'}
+                className={`${inputClass} bg-slate-50 font-mono text-xs text-slate-700`}
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                AWS folder: products/{form.clipId || 'AKHD-XXXXX'}/...
+              </p>
+            </label>
+
             <label className="block text-sm">
               <span className="font-medium text-slate-700">Category</span>
               <select
@@ -642,6 +678,7 @@ const ProductForm = () => {
                   : 'image/*,.jpg,.jpeg,.png,.webp,.tiff,.tif,.raw,.dng'
               }
               uploadType={isVideo ? 'master-video' : 'master-image'}
+              clipId={form.clipId}
               value={form.masterVideoKey}
               filename={form.masterVideoFilename}
               accessUrl={form.masterVideoUrl}
@@ -679,6 +716,8 @@ const ProductForm = () => {
                 label={`Preview Image ${index + 1}`}
                 accept="image/jpeg,image/png,image/webp"
                 uploadType="preview-image"
+                clipId={form.clipId}
+                previewIndex={index + 1}
                 value={image}
                 onChange={(url) => updateImage(index, url)}
                 valueKind="url"
@@ -693,6 +732,7 @@ const ProductForm = () => {
                 label="Demo Video *"
                 accept="video/mp4,video/webm,video/quicktime"
                 uploadType="preview-video"
+                clipId={form.clipId}
                 value={form.demoVideo}
                 onChange={handleDemoVideoChange}
                 autoCapturePoster

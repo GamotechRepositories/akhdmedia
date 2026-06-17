@@ -1,6 +1,6 @@
 import MediaUpload from './MediaUpload'
 
-const DeliveryTierEditor = ({ tier, data = {}, isVideo, onChange }) => {
+const DeliveryTierEditor = ({ tier, data = {}, isVideo, onChange, clipId = '' }) => {
   const updateVideo = (videoKey, videoFilename = '') =>
     onChange(tier, { ...data, videoKey, videoFilename })
 
@@ -30,6 +30,8 @@ const DeliveryTierEditor = ({ tier, data = {}, isVideo, onChange }) => {
           label="Original Video"
           accept="video/*,.mp4,.mov,.mkv,.webm,.mxf,.prores"
           uploadType="delivery-video"
+          clipId={clipId}
+          tier={tier}
           value={data.videoKey || ''}
           filename={data.videoFilename || ''}
           onChange={(key, meta) => updateVideo(key, meta?.filename || '')}
@@ -46,6 +48,9 @@ const DeliveryTierEditor = ({ tier, data = {}, isVideo, onChange }) => {
               label={`Original Image ${index + 1}`}
               accept="image/*,.jpg,.jpeg,.png,.webp,.tiff,.tif,.raw,.dng"
               uploadType="delivery-image"
+              clipId={clipId}
+              tier={tier}
+              previewIndex={index + 1}
               value={imageKey}
               filename={data.imageFilenames?.[index] || ''}
               onChange={(key, meta) => updateImage(index, key, meta?.filename || '')}

@@ -1,56 +1,45 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import {
-  createPrivatePresignedUpload,
-  createPublicPresignedUpload,
+  createPresignedUploadForTarget,
   getPrivateDownloadUrl,
   toAbsolutePrivateUrl,
-  uploadPrivateFile,
-  uploadPublicFile,
+  uploadPrivateFileToTarget,
+  uploadPublicFileToTarget,
 } from '../services/storageService.js'
+import {
+  isPrivateUploadType,
+  isPublicUploadType,
+  resolveUploadTarget,
+} from '../utils/storagePaths.js'
 
-const folderForType = (type) => {
-  if (type === 'master-video') return 'delivery/master-videos'
-  if (type === 'master-image') return 'delivery/master-images'
-  if (type === 'preview-image') return 'storefront/preview-images'
-  if (type === 'video-poster') return 'storefront/video-posters'
-  if (type === 'preview-video') return 'storefront/demo-videos'
-  if (type === 'delivery-image') return 'delivery/images'
-  if (type === 'delivery-video') return 'delivery/videos/legacy'
-  return 'misc'
-}
-
-const isPrivateUpload = (type) =>
-  type === 'delivery-image' ||
-  type === 'delivery-video' ||
-  type === 'master-video' ||
-  type === 'master-image'
-
-const isPublicUpload = (type) =>
-  type === 'preview-image' || type === 'preview-video' || type === 'video-poster'
+const readUploadContext = (req) => ({
+  type: req.body?.type || req.query?.type || '',
+  clipId: req.body?.clipId || req.query?.clipId || '',
+  filename: req.body?.filename?.trim() || req.file?.originalname || '',
+  contentType: req.body?.contentType || req.file?.mimetype || 'application/octet-stream',
+  size: Number(req.body?.size) || Number(req.file?.size) || 0,
+  previewIndex: Number(req.body?.previewIndex || req.query?.previewIndex) || 1,
+  tier: req.body?.tier || req.query?.tier || '',
+})
 
 export const presignUpload = asyncHandler(async (req, res) => {
-  const type = req.body?.type || req.query?.type || ''
-  const filename = req.body?.filename?.trim() || ''
-  const contentType = req.body?.contentType || 'application/octet-stream'
-  const size = Number(req.body?.size) || 0
+  const context = readUploadContext(req)
 
-  if (!filename) {
+  if (!context.filename) {
     res.status(400).json({ message: 'filename is required' })
     return
   }
 
-  if (!isPrivateUpload(type) && !isPublicUpload(type)) {
+  if (!isPrivateUploadType(context.type) && !isPublicUploadType(context.type)) {
     res.status(400).json({ message: 'Direct upload is not supported for this type' })
     return
   }
 
-  const folder = folderForType(type)
-  const result = isPublicUpload(type)
-    ? await createPublicPresignedUpload(folder, filename, contentType)
-    : await createPrivatePresignedUpload(folder, filename, contentType)
+  const target = resolveUploadTarget(context)
+  const result = await createPresignedUploadForTarget(target, context.contentType)
 
   if (result.method === 'proxy') {
-    res.json({ method: 'proxy', type })
+    res.json({ method: 'proxy', type: context.type })
     return
   }
 
@@ -62,8 +51,8 @@ export const presignUpload = asyncHandler(async (req, res) => {
     filename: result.filename,
     headers: result.headers,
     url: result.url,
-    size,
-    type,
+    size: context.size,
+    type: context.type,
   })
 })
 
@@ -73,11 +62,11 @@ export const uploadMedia = asyncHandler(async (req, res) => {
     return
   }
 
-  const type = req.body?.type || req.query?.type || ''
-  const folder = folderForType(type)
+  const context = readUploadContext(req)
+  const target = resolveUploadTarget(context)
 
-  if (isPrivateUpload(type)) {
-    const result = await uploadPrivateFile(req.file, folder)
+  if (target.scope === 'private') {
+    const result = await uploadPrivateFileToTarget(req.file, target)
     const accessUrl = await getPrivateDownloadUrl(result.key, result.filename, {
       inline: true,
     })
@@ -85,15 +74,21 @@ export const uploadMedia = asyncHandler(async (req, res) => {
       key: result.key,
       filename: result.filename,
       size: req.file.size,
-      type,
+      type: context.type,
       url: toAbsolutePrivateUrl(accessUrl),
     })
     return
   }
 
-  if (isPublicUpload(type)) {
-    const result = await uploadPublicFile(req.file, folder)
-    res.json({ url: result.url, key: result.key, type })
+  if (target.scope === 'public') {
+    const result = await uploadPublicFileToTarget(req.file, target)
+    res.json({
+      url: result.url,
+      key: result.key,
+      filename: result.filename,
+      size: req.file.size,
+      type: context.type,
+    })
     return
   }
 
