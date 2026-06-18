@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
 import { getUserOrders } from '../services/authApi';
 import { formatCurrency } from '../utils/formatters';
+import { getOrderAmountBreakdown } from '../utils/orderAmounts';
 
 const formatDate = (value) => {
   if (!value) return '—';
@@ -114,6 +115,7 @@ const Orders = () => {
             {orders.map((order) => {
               const itemCount = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
               const firstItem = order.items?.[0];
+              const { subtotal, gst, total } = getOrderAmountBreakdown(order);
 
               return (
                 <article
@@ -163,7 +165,15 @@ const Orders = () => {
                     </div>
 
                     <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:justify-start">
-                      <p className="text-lg font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
+                      <div className="text-right text-sm">
+                        <p className="text-xs text-gray-500">
+                          Subtotal <span className="font-medium text-gray-800">{formatCurrency(subtotal)}</span>
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          GST <span className="font-medium text-gray-800">{formatCurrency(gst)}</span>
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-gray-900">{formatCurrency(total)}</p>
+                      </div>
                       <Link
                         to={`/order-success?orderId=${order.id}`}
                         state={{ fromOrders: true, orderId: order.id }}

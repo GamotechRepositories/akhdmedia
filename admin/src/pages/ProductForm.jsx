@@ -22,6 +22,7 @@ import {
   secondaryBtnClass,
 } from '../components/ui/adminUi'
 import { MEDIA_TYPES } from '../constants/mediaTypes'
+import { BRAND } from '../config/brand'
 import { captureVideoPosterFromUrl } from '../utils/captureVideoPoster'
 import { PRICING_MODES } from '../constants/pricingModes'
 import {
@@ -121,6 +122,7 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   subCategorySlug: '',
   brand: '',
   price: 499,
+  gstPercentage: 18,
   availableTiers: [],
   resolutionPricing: buildDefaultTierConfig(499),
   rating: 4.5,
@@ -134,6 +136,7 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   masterVideoUrl: '',
   masterVideoTier: '',
   isActive: true,
+  showInLatest: false,
   videoInfo: {
     quality: '4K UHD (3840×2160)',
     fps: mediaType === MEDIA_TYPES.VIDEO ? '30 fps' : '',
@@ -185,6 +188,7 @@ const ProductForm = () => {
             subCategorySlug: product.subCategory || '',
             brand: product.brand || '',
             price: product.price,
+            gstPercentage: product.gstPercentage ?? 18,
             availableTiers: mergeAvailableTiers(product),
             resolutionPricing: mergeTierConfig(product),
             rating: product.rating || 0,
@@ -202,6 +206,7 @@ const ProductForm = () => {
             masterVideoUrl: product.masterVideoUrl || '',
             masterVideoTier: product.masterVideoTier || '',
             isActive: product.isActive ?? true,
+            showInLatest: product.showInLatest ?? false,
             videoInfo: {
               quality: product.videoInfo?.quality || '',
               fps: product.videoInfo?.fps || '',
@@ -370,10 +375,12 @@ const ProductForm = () => {
       subCategorySlug: current.subCategorySlug,
       brand: current.brand,
       price: current.price,
+      gstPercentage: current.gstPercentage,
       rating: current.rating,
       description: current.description,
       images: current.images,
       isActive: current.isActive,
+      showInLatest: current.showInLatest,
       demoVideo: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideo : '',
       deliveryFiles: current.deliveryFiles,
     }))
@@ -434,6 +441,10 @@ const ProductForm = () => {
       if (missingPrice) return `Enter a price for ${missingPrice} in Step 5`
     }
 
+    if (!Number.isFinite(Number(form.gstPercentage)) || Number(form.gstPercentage) < 0 || Number(form.gstPercentage) > 100) {
+      return 'GST percentage must be between 0 and 100'
+    }
+
     return ''
   }
 
@@ -468,6 +479,7 @@ const ProductForm = () => {
       pricingMode: form.pricingMode,
       images: form.images.filter(Boolean),
       price: Number(form.price),
+      gstPercentage: Number(form.gstPercentage),
       rating: Number(form.rating),
       availableTiers: derivedAvailableTiers,
       resolutionPricing: Object.fromEntries(
@@ -641,9 +653,31 @@ const ProductForm = () => {
               <input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={(e) => updateField('rating', e.target.value)} className={inputClass} />
             </label>
 
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">GST Percentage</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={form.gstPercentage}
+                onChange={(e) => updateField('gstPercentage', e.target.value)}
+                className={inputClass}
+              />
+            </label>
+
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
               <input type="checkbox" checked={form.isActive} onChange={(e) => updateField('isActive', e.target.checked)} />
-              Visible on storefront
+              Visible on {BRAND.websiteLabel}
+            </label>
+
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={form.showInLatest}
+                onChange={(e) => updateField('showInLatest', e.target.checked)}
+              />
+              Show in homepage Latest Products section
             </label>
 
             <label className="block text-sm sm:col-span-2">
@@ -706,7 +740,7 @@ const ProductForm = () => {
         <FormStep
           step="4"
           title={isVideo ? 'Preview images + demo video' : 'Preview images'}
-          hint={isVideo ? 'Watermarked previews shown to customers on the storefront.' : 'Customer preview images.'}
+          hint={isVideo ? `Watermarked previews shown to customers on the ${BRAND.websiteLabel}.` : 'Customer preview images.'}
           tone="emerald"
         >
           <div className="grid gap-2 sm:grid-cols-3">

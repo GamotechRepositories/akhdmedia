@@ -7,6 +7,7 @@ import {
   primaryBtnClass,
   sectionClass,
 } from '../components/ui/adminUi'
+import { BRAND } from '../config/brand'
 
 const emptyTickerItem = () => ''
 
@@ -17,6 +18,7 @@ const emptyHeroSlide = () => ({
   link: '',
   image: '',
   isActive: true,
+  showShadow: false,
 })
 
 const categorySlugFromLink = (link = '') => {
@@ -125,12 +127,6 @@ const HomeContent = () => {
     setError('')
     setSuccess('')
 
-    if (!slide.headline.trim()) {
-      setError(`Slide ${index + 1} needs a headline.`)
-      setSavingSlideIndex(null)
-      return
-    }
-
     if (!slide.image.trim()) {
       setError(`Slide ${index + 1} needs a banner image.`)
       setSavingSlideIndex(null)
@@ -188,7 +184,7 @@ const HomeContent = () => {
         <div>
           <h2 className="text-lg font-bold text-slate-900">Home banner</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Large hero carousel at the top of the storefront homepage. Add one or more slides.
+            Large hero carousel at the top of the {BRAND.websiteLabel} homepage. Add one or more slides.
           </p>
         </div>
 
@@ -229,14 +225,13 @@ const HomeContent = () => {
                       placeholder="Browse"
                     />
                     <span className="mt-1 block text-[11px] text-slate-500">
-                      Leave empty to hide the button on the storefront.
+                      Leave empty to hide the button on the {BRAND.websiteLabel}.
                     </span>
                   </label>
 
                   <label className="block text-sm sm:col-span-2">
                     <span className="font-medium text-slate-700">Headline</span>
                     <input
-                      required
                       value={slide.headline}
                       onChange={(e) => updateHeroSlide(index, 'headline', e.target.value)}
                       className={inputClass}
@@ -270,6 +265,15 @@ const HomeContent = () => {
                       onChange={(e) => updateHeroSlide(index, 'isActive', e.target.checked)}
                     />
                     Show this slide on homepage
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={slide.showShadow === true}
+                      onChange={(e) => updateHeroSlide(index, 'showShadow', e.target.checked)}
+                    />
+                    Show black shadow on banner image
                   </label>
                 </div>
 
@@ -308,7 +312,7 @@ const HomeContent = () => {
           <div>
             <h2 className="text-lg font-bold text-slate-900">News ticker</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Scrolling messages shown below the hero banner on the storefront homepage.
+              Scrolling messages shown below the hero banner on the {BRAND.websiteLabel} homepage.
             </p>
           </div>
 
@@ -354,9 +358,13 @@ const HomeContent = () => {
       </section>
 
       {success ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {success}
-        </div>
+        <AdminAlertModal
+          open={Boolean(success)}
+          variant="success"
+          title="Saved successfully"
+          message={success}
+          onClose={() => setSuccess('')}
+        />
       ) : null}
 
       <AdminAlertModal

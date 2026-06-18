@@ -10,6 +10,9 @@ const orderItemSchema = new mongoose.Schema(
     imageSize: { type: String, default: '' },
     image: { type: String, default: '' },
     quantity: { type: Number, required: true, min: 1 },
+    basePrice: { type: Number, required: true, min: 0, default: 0 },
+    gstPercentage: { type: Number, required: true, min: 0, default: 0 },
+    gstAmount: { type: Number, required: true, min: 0, default: 0 },
     price: { type: Number, required: true, min: 0 },
     lineTotal: { type: Number, required: true, min: 0 },
   },
@@ -39,6 +42,8 @@ const orderSchema = new mongoose.Schema(
       enum: ['online', 'COD'],
       default: 'online',
     },
+    subtotalAmount: { type: Number, required: true, min: 0, default: 0 },
+    gstAmount: { type: Number, required: true, min: 0, default: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     paymentStatus: {
       type: String,

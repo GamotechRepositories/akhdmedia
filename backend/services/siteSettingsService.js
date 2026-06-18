@@ -35,6 +35,7 @@ const sanitizeHeroSlides = (slides = []) =>
         String(slide?.accent || 'from-gray-900/80 via-black/50 to-transparent').trim() ||
         'from-gray-900/80 via-black/50 to-transparent',
       isActive: slide?.isActive !== false,
+      showShadow: slide?.showShadow === true,
     }))
     .slice(0, 8)
 

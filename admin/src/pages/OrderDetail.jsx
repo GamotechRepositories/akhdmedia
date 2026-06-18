@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import { fetchOrder } from '../api/client'
+import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts'
 import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
@@ -92,6 +93,7 @@ const OrderDetail = () => {
   const reasons = (order.billingAddress?.purchaseReasons || []).map((reason) =>
     formatPurchaseReason(reason, order.billingAddress?.purchaseReasonOther),
   )
+  const { subtotal, gst, total } = getOrderAmountBreakdown(order)
 
   return (
     <div className="space-y-4">
@@ -162,9 +164,17 @@ const OrderDetail = () => {
               <dd className="font-medium capitalize text-slate-900">{order.status}</dd>
             </div>
             <div>
+              <dt className="text-slate-500">Subtotal</dt>
+              <dd className="font-medium text-slate-900">{formatCurrency(subtotal)}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">GST</dt>
+              <dd className="font-medium text-slate-900">{formatCurrency(gst)}</dd>
+            </div>
+            <div>
               <dt className="text-slate-500">Total</dt>
               <dd className="text-lg font-bold text-slate-900">
-                {formatCurrency(order.totalAmount)}
+                {formatCurrency(total)}
               </dd>
             </div>
           </dl>
@@ -183,24 +193,30 @@ const OrderDetail = () => {
               <th className="px-4 py-3">License</th>
               <th className="px-4 py-3">License No</th>
               <th className="px-4 py-3">Qty</th>
-              <th className="px-4 py-3">Price</th>
+              <th className="px-4 py-3">Subtotal</th>
+              <th className="px-4 py-3">GST</th>
               <th className="px-4 py-3">Line total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {order.items?.map((item, index) => (
+            {order.items?.map((item, index) => {
+              const lineAmounts = getOrderLineAmountBreakdown(item, order)
+
+              return (
               <tr key={`${item.productId}-${item.imageSize}-${index}`}>
                 <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
                 <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.clipId || '—'}</td>
                 <td className="px-4 py-3 text-slate-600">{item.imageSize || '—'}</td>
                 <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.licenseNumber || '—'}</td>
                 <td className="px-4 py-3 text-slate-600">{item.quantity}</td>
-                <td className="px-4 py-3 text-slate-600">{formatCurrency(item.price)}</td>
+                <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.subtotal)}</td>
+                <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.gst)}</td>
                 <td className="px-4 py-3 font-medium text-slate-900">
-                  {formatCurrency(item.lineTotal)}
+                  {formatCurrency(lineAmounts.total)}
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>

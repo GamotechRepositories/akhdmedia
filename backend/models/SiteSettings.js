@@ -21,6 +21,7 @@ const heroSlideSchema = new mongoose.Schema(
       trim: true,
     },
     isActive: { type: Boolean, default: true },
+    showShadow: { type: Boolean, default: false },
   },
   { _id: false },
 )

@@ -9,6 +9,7 @@ import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 
 const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) => {
   const hasButton = Boolean(slide.cta?.trim());
+  const hasOverlay = Boolean(slide.badge?.trim() || slide.headline?.trim() || hasButton);
   const slideClassName = `absolute inset-0 transition-opacity duration-700 ease-in-out ${
     isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
   }`;
@@ -27,26 +28,34 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
           isActive && motionEnabled ? 'scale-105 hero-kenburns' : 'scale-100'
         }`}
       />
-      <div className={`absolute inset-0 bg-gradient-to-r ${slide.accent}`} />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+      {slide.showShadow ? (
+        <>
+          <div className={`absolute inset-0 bg-gradient-to-r ${slide.accent}`} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+        </>
+      ) : null}
 
       <div className={`relative z-10 flex h-full items-end sm:items-center ${compact ? 'px-5 pb-8 pt-16' : 'px-5 sm:px-10 lg:px-20'}`}>
-        <div className="max-w-2xl text-white">
-          {slide.badge ? (
-            <span className="mb-2 inline-flex items-center rounded-full border border-white/20 bg-black/40 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] sm:mb-4 sm:px-3 sm:py-1 sm:text-[10px]">
-              {slide.badge}
-            </span>
-          ) : null}
-          <h2 className={`font-black leading-tight tracking-tight ${compact ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl lg:text-5xl'}`}>
-            {slide.headline}
-          </h2>
-          {hasButton ? (
-            <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-900 sm:mt-6 sm:px-5 sm:py-2.5 sm:text-xs">
-              {slide.cta}
-              <IconChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </span>
-          ) : null}
-        </div>
+        {hasOverlay ? (
+          <div className="max-w-2xl text-white">
+            {slide.badge ? (
+              <span className="mb-2 inline-flex items-center rounded-full border border-white/20 bg-black/40 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] sm:mb-4 sm:px-3 sm:py-1 sm:text-[10px]">
+                {slide.badge}
+              </span>
+            ) : null}
+            {slide.headline ? (
+              <h2 className={`font-black leading-tight tracking-tight ${compact ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl lg:text-5xl'}`}>
+                {slide.headline}
+              </h2>
+            ) : null}
+            {hasButton ? (
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-900 sm:mt-6 sm:px-5 sm:py-2.5 sm:text-xs">
+                {slide.cta}
+                <IconChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </>
   );
@@ -114,15 +123,16 @@ const SWIPE_THRESHOLD = 50;
 
 const mapSettingsHeroSlides = (slides = []) =>
   slides
-    .filter((slide) => slide.isActive !== false && slide.image && slide.headline)
+    .filter((slide) => slide.isActive !== false && slide.image?.trim())
     .map((slide, index) => ({
       id: `hero-settings-${index}`,
       link: slide.link || '',
       badge: slide.badge || '',
-      headline: slide.headline,
+      headline: slide.headline || '',
       cta: slide.cta || '',
       image: slide.image,
       accent: slide.accent || 'from-gray-900/80 via-black/50 to-transparent',
+      showShadow: slide.showShadow === true,
     }));
 
 const HeroCarousel = () => {

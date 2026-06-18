@@ -53,6 +53,7 @@ const productSchema = new mongoose.Schema(
       default: PRICING_MODES.UNIFORM,
     },
     price: { type: Number, required: true, min: 0 },
+    gstPercentage: { type: Number, default: 0, min: 0, max: 100 },
     availableTiers: { type: [String], default: () => [...RESOLUTION_ORDER] },
     resolutionPricing: {
       type: Map,
@@ -74,6 +75,7 @@ const productSchema = new mongoose.Schema(
     masterVideoTier: { type: String, default: '' },
     videoInfo: { type: videoInfoSchema, default: () => ({}) },
     isActive: { type: Boolean, default: true },
+    showInLatest: { type: Boolean, default: false },
   },
   { timestamps: true },
 )

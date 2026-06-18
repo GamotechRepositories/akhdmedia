@@ -15,6 +15,8 @@ export const downloadLicenseCertificatePdf = ({
   orderDateLabel,
   customerName,
   customerEmail,
+  subtotalLabel,
+  gstLabel,
   orderTotalLabel,
   orderItems = [],
 }) => {
@@ -53,6 +55,8 @@ export const downloadLicenseCertificatePdf = ({
   writeLines(`Date: ${orderDateLabel}`);
   writeLines(`Licensed to: ${customerName || '—'}`);
   writeLines(`Email: ${customerEmail || '—'}`);
+  writeLines(`Subtotal: ${subtotalLabel}`);
+  writeLines(`GST: ${gstLabel}`);
   writeLines(`Total paid: ${orderTotalLabel}`);
   y += 4;
 

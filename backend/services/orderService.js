@@ -10,6 +10,7 @@ import {
   fetchPopulatedCart,
   getCartTotals,
 } from './cartService.js'
+import { applyPayableLineTotals } from '../utils/orderAmounts.js'
 import { assertProductPurchasable, hasDeliverableMasterFile } from '../utils/productDelivery.js'
 
 const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
@@ -101,7 +102,6 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
       assertProductPurchasable(item.product)
       const clipId = await ensureProductClipId(item.product)
       const product = formatProduct(item.product, categoryMap)
-      const lineTotal = item.price * item.quantity
 
       return {
         productId: product.id,
@@ -112,8 +112,11 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
         imageSize: item.imageSize || '',
         image: product.images?.[0] || product.videoPoster || '',
         quantity: item.quantity,
+        basePrice: item.basePrice ?? item.price,
+        gstPercentage: item.gstPercentage ?? product.gstPercentage ?? 0,
+        gstAmount: item.gstAmount ?? 0,
         price: item.price,
-        lineTotal,
+        lineTotal: item.price * item.quantity,
       }
     }),
   )
@@ -122,13 +125,20 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
     throw new AppError('No valid items found in cart', 400)
   }
 
-  const { total } = getCartTotals(cart.items)
+  const orderTotals = getCartTotals(cart.items)
+  const payableOrderItems = applyPayableLineTotals(orderItems, orderTotals)
 
-  return { normalizedAddress, orderItems, total }
+  return {
+    normalizedAddress,
+    orderItems: payableOrderItems,
+    subtotal: orderTotals.subtotal,
+    gstTotal: orderTotals.gstTotal,
+    total: orderTotals.total,
+  }
 }
 
 export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress, userId = null }) => {
-  const { normalizedAddress, orderItems, total } = await buildOrderPayloadFromCart(
+  const { normalizedAddress, orderItems, subtotal, gstTotal, total } = await buildOrderPayloadFromCart(
     sessionId,
     billingAddress,
   )
@@ -140,6 +150,8 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
     items: orderItems,
     billingAddress: normalizedAddress,
     paymentMethod: 'online',
+    subtotalAmount: subtotal,
+    gstAmount: gstTotal,
     totalAmount: total,
     paymentStatus: 'pending',
     status: 'pending',

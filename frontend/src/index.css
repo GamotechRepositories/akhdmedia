@@ -129,6 +129,22 @@ body {
   white-space: nowrap;
 }
 
+.protected-media-shell:fullscreen,
+.protected-media-shell:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+.protected-media-shell:fullscreen .protected-media-watermark::before,
+.protected-media-shell:-webkit-full-screen .protected-media-watermark::before {
+  font-size: clamp(2rem, 8vw, 4.5rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-kenburns {
     animation: none;

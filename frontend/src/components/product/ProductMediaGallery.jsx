@@ -3,11 +3,23 @@ import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import VideoThumbnail from '../ui/VideoThumbnail';
 import { handleImageError } from '../../utils/imageFallback';
+import { getFullscreenElement, toggleElementFullscreen } from '../../utils/fullscreen';
+import {
+  IconMaximize,
+  IconMinimize,
+  IconVolumeOff,
+  IconVolumeOn,
+} from '../icons/Icons';
 import {
   PROTECTED_MEDIA_CLASS,
   getProtectedImageProps,
   getProtectedVideoProps,
 } from '../../utils/mediaProtection';
+
+const fullscreenButtonClass =
+  'group/fullscreen flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/75 text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:border-white/40 hover:bg-black/90 active:scale-95 sm:h-10 sm:w-10';
+const videoControlButtonClass =
+  'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/75 text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:border-white/40 hover:bg-black/90 active:scale-95';
 
 const getDefaultMediaIndex = (items) => {
   const videoIndex = items.findIndex((item) => item.type === 'video');
@@ -15,12 +27,16 @@ const getDefaultMediaIndex = (items) => {
 };
 
 const ProductMediaGallery = ({ product }) => {
+  const frameRef = useRef(null);
   const videoRef = useRef(null);
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
     getDefaultMediaIndex(buildProductMediaItems(product)),
   );
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
@@ -28,6 +44,8 @@ const ProductMediaGallery = ({ product }) => {
   useEffect(() => {
     setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
     setIsVideoPlaying(false);
+    setIsMuted(true);
+    setIsLightboxOpen(false);
   }, [product?.id]);
 
   useEffect(() => {
@@ -39,7 +57,7 @@ const ProductMediaGallery = ({ product }) => {
 
     const startDemo = async () => {
       try {
-        video.muted = true;
+        video.muted = isMuted;
         await video.play();
       } catch {
         setIsVideoPlaying(false);
@@ -47,9 +65,48 @@ const ProductMediaGallery = ({ product }) => {
     };
 
     startDemo();
-  }, [selectedMediaIndex, isVideoSelected, product?.id]);
+  }, [selectedMediaIndex, isVideoSelected, product?.id, isLightboxOpen, isMuted]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      setIsFullscreen(getFullscreenElement() === frameRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    document.addEventListener('webkitfullscreenchange', syncFullscreen);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreen);
+      document.removeEventListener('webkitfullscreenchange', syncFullscreen);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLightboxOpen) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsLightboxOpen(false);
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isLightboxOpen]);
 
   const selectMedia = (index) => {
+    setIsLightboxOpen(false);
     videoRef.current?.pause();
     setSelectedMediaIndex(index);
     setIsVideoPlaying(false);
@@ -84,17 +141,152 @@ const ProductMediaGallery = ({ product }) => {
     }
   };
 
+  const toggleVideoMute = () => {
+    const video = videoRef.current;
+    const nextMuted = !isMuted;
+    if (video) {
+      video.muted = nextMuted;
+    }
+    setIsMuted(nextMuted);
+  };
+
+  const toggleFullscreen = async () => {
+    const frame = frameRef.current;
+    const video = videoRef.current;
+
+    if (isLightboxOpen) {
+      closeLightbox();
+      return;
+    }
+
+    if (getFullscreenElement() === frame) {
+      try {
+        await toggleElementFullscreen(frame);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
+    try {
+      await toggleElementFullscreen(frame);
+      return;
+    } catch {
+      // fall through to platform-specific or lightbox fallback
+    }
+
+    if (isVideoSelected && video?.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
+      return;
+    }
+
+    setIsLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setIsLightboxOpen(false);
+  };
+
   if (!mediaItems.length) return null;
+
+  const mediaContent = (
+    <>
+      {isVideoSelected ? (
+        <div className="relative flex h-full w-full items-center justify-center">
+          <video
+            ref={videoRef}
+            key={selectedItem.src}
+            src={selectedItem.src}
+            poster={selectedItem.poster}
+            className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
+            loop
+            muted={isMuted}
+            preload="metadata"
+            onPlay={() => setIsVideoPlaying(true)}
+            onPause={() => setIsVideoPlaying(false)}
+            onEnded={() => setIsVideoPlaying(false)}
+            onError={() => setIsVideoPlaying(false)}
+            {...getProtectedVideoProps()}
+          />
+
+          {!isVideoPlaying && (
+            <button
+              type="button"
+              onClick={toggleVideoPlay}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/25 transition-colors hover:bg-black/35"
+              aria-label="Play demo video"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 shadow-xl sm:h-16 sm:w-16">
+                <svg className="ml-1 h-6 w-6 text-gray-900 sm:h-7 sm:w-7" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </button>
+          )}
+
+          {isVideoPlaying && (
+            <div className="absolute bottom-3 left-3 z-20 flex gap-2">
+              <button
+                type="button"
+                onClick={toggleVideoPlay}
+                className={videoControlButtonClass}
+                aria-label="Pause demo video"
+                title="Pause"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={toggleVideoMute}
+                className={videoControlButtonClass}
+                aria-label={isMuted ? 'Unmute demo video' : 'Mute demo video'}
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <IconVolumeOff className="h-4 w-4" /> : <IconVolumeOn className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <img
+            src={selectedItem.src}
+            alt={product.name}
+            className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
+            onError={(e) => handleImageError(e, 800, 800)}
+            {...getProtectedImageProps()}
+          />
+        </div>
+      )}
+    </>
+  );
 
   return (
     <>
       <ProtectedMediaFrame
+        ref={frameRef}
         watermark
         className="aspect-[10/9] w-full min-h-[260px] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[340px] sm:rounded-2xl lg:min-h-[420px] lg:aspect-[4/3]"
       >
         <div className="absolute left-3 top-3 z-10 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
           {isVideoSelected ? 'Demo preview' : 'Preview'}
         </div>
+
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className={`absolute right-3 top-3 z-20 ${fullscreenButtonClass}`}
+          aria-label={isFullscreen || isLightboxOpen ? 'Exit fullscreen' : 'View fullscreen'}
+          title={isFullscreen || isLightboxOpen ? 'Exit fullscreen' : 'Fullscreen'}
+        >
+          {isFullscreen || isLightboxOpen ? (
+            <IconMinimize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+          ) : (
+            <IconMaximize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+          )}
+        </button>
 
         {mediaItems.length > 1 && (
           <div className="absolute bottom-3 right-3 z-20 flex gap-1.5">
@@ -121,64 +313,25 @@ const ProductMediaGallery = ({ product }) => {
           </div>
         )}
 
-        {isVideoSelected ? (
-          <div className="relative flex h-full w-full items-center justify-center">
-            <video
-              ref={videoRef}
-              key={selectedItem.src}
-              src={selectedItem.src}
-              poster={selectedItem.poster}
-              className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
-              loop
-              muted
-              preload="metadata"
-              onPlay={() => setIsVideoPlaying(true)}
-              onPause={() => setIsVideoPlaying(false)}
-              onEnded={() => setIsVideoPlaying(false)}
-              onError={() => setIsVideoPlaying(false)}
-              {...getProtectedVideoProps()}
-            />
-
-            {!isVideoPlaying && (
-              <button
-                type="button"
-                onClick={toggleVideoPlay}
-                className="absolute inset-0 z-10 flex items-center justify-center bg-black/25 transition-colors hover:bg-black/35"
-                aria-label="Play demo video"
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 shadow-xl sm:h-16 sm:w-16">
-                  <svg className="ml-1 h-6 w-6 text-gray-900 sm:h-7 sm:w-7" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-              </button>
-            )}
-
-            {isVideoPlaying && (
-              <button
-                type="button"
-                onClick={toggleVideoPlay}
-                className="absolute bottom-3 left-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
-                aria-label="Pause demo video"
-              >
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <img
-              src={selectedItem.src}
-              alt={product.name}
-              className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
-              onError={(e) => handleImageError(e, 800, 800)}
-              {...getProtectedImageProps()}
-            />
-          </div>
-        )}
+        {!isLightboxOpen ? mediaContent : null}
       </ProtectedMediaFrame>
+
+      {isLightboxOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black p-4">
+          <ProtectedMediaFrame watermark className="h-full w-full max-h-[100vh] max-w-[100vw] overflow-hidden bg-black">
+            <button
+              type="button"
+              onClick={closeLightbox}
+              className={`absolute right-4 top-4 z-20 ${fullscreenButtonClass}`}
+              aria-label="Exit fullscreen"
+              title="Exit fullscreen"
+            >
+              <IconMinimize className="h-5 w-5" />
+            </button>
+            {mediaContent}
+          </ProtectedMediaFrame>
+        </div>
+      )}
 
       {mediaItems.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5">

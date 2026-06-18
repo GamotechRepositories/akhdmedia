@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import ProductThumbnail from '../components/ui/ProductThumbnail';
 import { preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
-import { getCartItemPrice } from '../utils/cartHelpers';
+import { getCartItemBasePrice } from '../utils/cartHelpers';
 
 const IconTrash = (props) => (
   <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,7 +34,7 @@ const IconArrowLeft = (props) => (
 );
 
 const Cart = () => {
-  const { cart, removeFromCart, updateQuantity, getCartTotal, loading } = useCart();
+  const { cart, removeFromCart, updateQuantity, getCartSubtotal, loading } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [removingId, setRemovingId] = useState(null);
@@ -124,7 +124,7 @@ const Cart = () => {
                 {cart.map((item) => {
                   const product = item.product || item;
                   const itemId = item.id;
-                  const productPrice = getCartItemPrice(item);
+                  const productPrice = getCartItemBasePrice(item);
 
                   return (
                     <div key={itemId} className="p-5 sm:p-6 border-b border-gray-100 last:border-0 hover:bg-gray-50/30 transition-colors">
@@ -216,16 +216,10 @@ const Cart = () => {
               <h2 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h2>
 
               <dl className="space-y-3.5 text-sm">
-                <div className="flex justify-between pb-4 border-b border-gray-200">
-                  <dt className="text-gray-600">Subtotal</dt>
-                  <dd className="font-medium text-gray-900">{formatCurrency(getCartTotal())}</dd>
-                </div>
-
-                <div className="flex justify-between items-center pt-3">
+                <div className="flex justify-between items-center">
                   <dt className="text-base font-semibold text-gray-900">Total</dt>
-                  <dd className="text-xl font-semibold text-gray-900">{formatCurrency(getCartTotal())}</dd>
+                  <dd className="text-xl font-semibold text-gray-900">{formatCurrency(getCartSubtotal())}</dd>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Including GST</p>
               </dl>
 
               <div className="mt-6 pt-6 border-t border-gray-100">

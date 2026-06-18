@@ -166,7 +166,7 @@ const AdminLayout = () => {
               Signed in as
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-white">
-              {admin?.name || 'AKHDMEDIA'}
+              {BRAND.name}
             </p>
             <p className="truncate text-xs text-slate-400">{admin?.email}</p>
           </div>

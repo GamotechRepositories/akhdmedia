@@ -97,6 +97,7 @@ export const normalizeProductPayload = (body = {}) => {
     subCategorySlug: body.subCategorySlug?.trim() || '',
     brand: body.brand?.trim() || '',
     price: 0,
+    gstPercentage: Number(body.gstPercentage) || 0,
     resolutionPricing: new Map(),
     rating: Number(body.rating) || 0,
     description: body.description?.trim() || '',
@@ -104,6 +105,7 @@ export const normalizeProductPayload = (body = {}) => {
     availableTiers: getAvailableTiers(body),
     deliveryFiles: buildDeliveryFilesMap(body),
     isActive: body.isActive !== false,
+    showInLatest: body.showInLatest === true,
   }
 
   if (pricingMode === PRICING_MODES.CUSTOM) {
@@ -199,6 +201,10 @@ export const validateProductPayload = (payload) => {
     })
   } else if (!Number.isFinite(payload.price) || payload.price < 0) {
     errors.push('Valid price is required')
+  }
+
+  if (!Number.isFinite(payload.gstPercentage) || payload.gstPercentage < 0 || payload.gstPercentage > 100) {
+    errors.push('GST percentage must be between 0 and 100')
   }
 
   if (payload.mediaType === MEDIA_TYPES.VIDEO) {

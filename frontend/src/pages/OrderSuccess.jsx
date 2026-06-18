@@ -12,6 +12,7 @@ import {
 } from '../constants/email';
 import { formatCurrency, formatCurrencyForPdf } from '../utils/formatters';
 import { downloadLicenseCertificatePdf } from '../utils/licenseCertificatePdf';
+import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const OrderSuccess = () => {
 
   const orderId = searchParams.get('orderId') || '';
   const orderNumber = order?.orderNumber?.slice(-8).toUpperCase() || '--------';
-  const orderTotal = order?.totalAmount || 0;
+  const { subtotal: orderSubtotal, gst: orderGst, total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
   const customerEmail = order?.billingAddress?.email || '';
   const orderItems = order?.items || [];
   const maxResends = order?.maxLicenseEmailResends ?? MAX_LICENSE_EMAIL_RESENDS;
@@ -69,7 +70,9 @@ const OrderSuccess = () => {
       orderDateLabel,
       customerName: order?.billingAddress?.name || '',
       customerEmail,
-      orderTotalLabel: formatCurrencyForPdf(orderTotal),
+      subtotalLabel: formatCurrencyForPdf(orderSubtotal),
+      gstLabel: formatCurrencyForPdf(orderGst),
+      orderTotalLabel: formatCurrencyForPdf(orderPayableTotal),
       orderItems,
     });
   };
@@ -235,7 +238,10 @@ const OrderSuccess = () => {
           {orderItems.length > 0 && (
             <div className="border-b border-gray-100 px-6 py-4">
               <div className="space-y-3">
-                {orderItems.map((item, index) => (
+                {orderItems.map((item, index) => {
+                  const lineAmounts = getOrderLineAmountBreakdown(item, order || {});
+
+                  return (
                   <div key={`${item.productId}-${index}`} className="flex items-center gap-3">
                     {item.image ? (
                       <img src={item.image} alt={item.name} className="h-14 w-20 rounded-lg object-cover" />
@@ -250,17 +256,26 @@ const OrderSuccess = () => {
                         {item.imageSize || 'Standard'} · Qty {item.quantity}
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(item.lineTotal)}</p>
+                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(lineAmounts.total)}</p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
 
           <div className="space-y-2 border-b border-gray-100 px-6 py-4 text-sm">
             <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-medium text-gray-900">{formatCurrency(orderSubtotal)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">GST</span>
+              <span className="font-medium text-gray-900">{formatCurrency(orderGst)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
               <span className="text-gray-600">Total due</span>
-              <span className="font-bold text-gray-900">{formatCurrency(orderTotal)}</span>
+              <span className="font-bold text-gray-900">{formatCurrency(orderPayableTotal)}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-gray-600">Date</span>
@@ -291,7 +306,7 @@ const OrderSuccess = () => {
               disabled={resumingPayment || !canResumePayment}
               className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
-              {resumingPayment ? 'Opening payment...' : `Pay ${formatCurrency(orderTotal)}`}
+              {resumingPayment ? 'Opening payment...' : `Pay ${formatCurrency(orderPayableTotal)}`}
             </button>
             <button
               type="button"
@@ -405,8 +420,16 @@ const OrderSuccess = () => {
 
         <div className="space-y-2 border-t border-gray-200 bg-stone-100 px-6 py-4 text-sm">
           <div className="flex justify-between gap-4">
+            <span className="text-gray-600">Subtotal</span>
+            <span className="font-medium text-gray-900">{formatCurrency(orderSubtotal)}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-gray-600">GST</span>
+            <span className="font-medium text-gray-900">{formatCurrency(orderGst)}</span>
+          </div>
+          <div className="flex justify-between gap-4">
             <span className="text-gray-600">Total paid</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(orderTotal)}</span>
+            <span className="font-semibold text-gray-900">{formatCurrency(orderPayableTotal)}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-gray-600">Payment</span>

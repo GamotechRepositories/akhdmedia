@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatPayableCurrency } from '../utils/formatters';
 import { BRAND } from '../config/brand';
 
 const STEPS = ['billing', 'summary'];
@@ -88,7 +88,7 @@ const StepIndicator = ({ step }) => (
 );
 
 const Checkout = () => {
-  const { cart, getCartTotal, clearCart, loading: cartLoading } = useCart();
+  const { cart, getCartTotal, getCartSubtotal, getCartGstTotal, clearCart, loading: cartLoading } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState('billing');
@@ -473,7 +473,22 @@ const Checkout = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(getCartTotal())}</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatPayableCurrency(getCartTotal())}</p>
+                </div>
+              </div>
+
+              <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50 px-3 py-3 text-sm">
+                <div className="flex items-center justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(getCartSubtotal())}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-gray-600">
+                  <span>GST</span>
+                  <span>{formatPayableCurrency(getCartGstTotal())}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
+                  <span>Total payable</span>
+                  <span>{formatPayableCurrency(getCartTotal())}</span>
                 </div>
               </div>
 
@@ -513,7 +528,7 @@ const Checkout = () => {
                 disabled={loading || isProcessingOrder}
                 className="mt-4 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
-                {loading || isProcessingOrder ? 'Opening payment...' : `Pay ${formatCurrency(getCartTotal())}`}
+                {loading || isProcessingOrder ? 'Opening payment...' : `Pay ${formatPayableCurrency(getCartTotal())}`}
               </button>
 
               <p className="mt-3 text-center text-[11px] text-gray-400">

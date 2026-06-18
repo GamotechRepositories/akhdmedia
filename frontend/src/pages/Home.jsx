@@ -12,7 +12,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { products, loading } = useCatalog();
-  const latestProducts = products.slice(0, 8);
+  const latestProducts = products.filter((product) => product.showInLatest).slice(0, 8);
 
   useEffect(() => {
     const search = searchParams.get('search')?.trim();

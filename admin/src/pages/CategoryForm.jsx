@@ -13,6 +13,7 @@ import {
   fetchCategory,
   updateCategory,
 } from '../api/client'
+import { BRAND } from '../config/brand'
 import MediaUpload from '../components/MediaUpload'
 
 const emptySubCategory = () => ({ slug: '', name: '' })
@@ -226,7 +227,7 @@ const CategoryForm = () => {
                 checked={form.isActive}
                 onChange={(e) => updateField('isActive', e.target.checked)}
               />
-              Show in storefront navbar
+              Show in {BRAND.name} navbar
             </label>
           </div>
         </FormStep>
@@ -234,7 +235,7 @@ const CategoryForm = () => {
         <FormStep
           step="2"
           title="Subcategories"
-          hint="Optional filters inside this category on the storefront."
+          hint={`Optional filters inside this category on the ${BRAND.websiteLabel}.`}
           tone="emerald"
         >
           <div className="mb-3 flex justify-end">
@@ -303,7 +304,7 @@ const CategoryForm = () => {
         <FormStep
           step="4"
           title="Homepage browse section"
-          hint="Decide if this category appears on the storefront homepage."
+          hint={`Decide if this category appears on the ${BRAND.websiteLabel} homepage.`}
           tone="amber"
         >
           <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-white/80 p-4 text-sm">

@@ -11,6 +11,8 @@ import {
   fetchProducts,
   fetchTransactions,
 } from '../api/client'
+import { getOrderAmountBreakdown } from '../utils/orderAmounts'
+import { BRAND } from '../config/brand'
 
 const formatCurrency = (amount = 0) =>
   new Intl.NumberFormat('en-IN', {
@@ -269,7 +271,7 @@ const Dashboard = () => {
         <StatCard
           label="Categories"
           value={loading ? '—' : categories.length}
-          hint="Storefront navigation groups"
+          hint={`${BRAND.name} navigation groups`}
           accent="bg-amber-500"
           to="/categories"
           linkLabel="Manage categories"
@@ -309,7 +311,10 @@ const Dashboard = () => {
             ) : recentOrders.length === 0 ? (
               <p className="px-6 py-8 text-sm text-slate-500">No orders yet.</p>
             ) : (
-              recentOrders.map((order) => (
+              recentOrders.map((order) => {
+                const { subtotal, gst, total } = getOrderAmountBreakdown(order)
+
+                return (
                 <div
                   key={order.id}
                   className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
@@ -325,7 +330,10 @@ const Dashboard = () => {
                   </div>
                   <div className="flex items-center gap-4 sm:text-right">
                     <div>
-                      <p className="font-bold text-slate-900">{formatCurrency(order.totalAmount)}</p>
+                      <p className="text-xs text-slate-500">
+                        Subtotal {formatCurrency(subtotal)} · GST {formatCurrency(gst)}
+                      </p>
+                      <p className="font-bold text-slate-900">{formatCurrency(total)}</p>
                       <span
                         className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${
                           order.paymentStatus === 'paid'
@@ -346,7 +354,8 @@ const Dashboard = () => {
                     </Link>
                   </div>
                 </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchTransaction } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
+import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts'
 import FormStep from '../components/FormStep'
 import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
@@ -106,6 +107,7 @@ const TransactionDetail = () => {
   const reasons = (transaction.purchaseReasons || []).map((reason) =>
     formatPurchaseReason(reason, transaction.purchaseReasonOther),
   )
+  const { subtotal, gst, total } = getOrderAmountBreakdown(transaction)
 
   return (
     <div className="space-y-4">
@@ -133,7 +135,9 @@ const TransactionDetail = () => {
                 {transaction.transactionStatusLabel}
               </div>
             </div>
-            <ReadOnlyField label="Amount" value={formatCurrency(transaction.amount)} />
+            <ReadOnlyField label="Subtotal" value={formatCurrency(subtotal)} />
+            <ReadOnlyField label="GST" value={formatCurrency(gst)} />
+            <ReadOnlyField label="Total" value={formatCurrency(total)} />
             <ReadOnlyField label="Created on" value={formatDate(transaction.createdAt)} />
             <ReadOnlyField label="Last updated" value={formatDate(transaction.updatedAt)} />
           </div>
@@ -196,24 +200,30 @@ const TransactionDetail = () => {
                   <th className="px-4 py-3">License</th>
                   <th className="px-4 py-3">License No</th>
                   <th className="px-4 py-3">Qty</th>
-                  <th className="px-4 py-3">Price</th>
+                  <th className="px-4 py-3">Subtotal</th>
+                  <th className="px-4 py-3">GST</th>
                   <th className="px-4 py-3">Line total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {transaction.items?.map((item, index) => (
+                {transaction.items?.map((item, index) => {
+                  const lineAmounts = getOrderLineAmountBreakdown(item, transaction)
+
+                  return (
                   <tr key={`${item.productId}-${item.imageSize}-${index}`}>
                     <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.clipId || '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{item.imageSize || '—'}</td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.licenseNumber || '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{item.quantity}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatCurrency(item.price)}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.subtotal)}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.gst)}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {formatCurrency(item.lineTotal)}
+                      {formatCurrency(lineAmounts.total)}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

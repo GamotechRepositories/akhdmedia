@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { cartAPI } from '../services/commerceApi';
-import { getCartItemPrice } from '../utils/cartHelpers';
+import { getCartItemBasePrice, getCartItemGstAmount } from '../utils/cartHelpers';
+import { buildPayableTotals } from '../utils/money';
 
 const CartContext = createContext();
 
@@ -14,6 +15,8 @@ export const useCart = () => {
 
 const emptyCart = {
   items: [],
+  subtotal: 0,
+  gstTotal: 0,
   total: 0,
   itemCount: 0,
 };
@@ -28,6 +31,8 @@ export const CartProvider = ({ children }) => {
     setCart(nextCart);
     setCartMeta({
       items: nextCart,
+      subtotal: response?.data?.cart?.subtotal ?? 0,
+      gstTotal: response?.data?.cart?.gstTotal ?? 0,
       total: response?.data?.cart?.total ?? 0,
       itemCount: response?.data?.cart?.itemCount ?? 0,
     });
@@ -91,10 +96,26 @@ export const CartProvider = ({ children }) => {
     applyCartResponse(response);
   }, [applyCartResponse]);
 
-  const getCartTotal = useCallback(
-    () => cart.reduce((total, item) => total + getCartItemPrice(item) * item.quantity, 0),
-    [cart],
+  const getPayableBreakdown = useCallback(() => {
+    const subtotal =
+      cartMeta.subtotal ||
+      cart.reduce((total, item) => total + getCartItemBasePrice(item) * item.quantity, 0);
+    const rawGstTotal = cart.reduce(
+      (total, item) => total + getCartItemGstAmount(item) * item.quantity,
+      0,
+    );
+
+    return buildPayableTotals({ subtotal, gstTotal: rawGstTotal });
+  }, [cart, cartMeta.subtotal]);
+
+  const getCartTotal = useCallback(() => getPayableBreakdown().total, [getPayableBreakdown]);
+
+  const getCartSubtotal = useCallback(
+    () => cartMeta.subtotal || cart.reduce((total, item) => total + getCartItemBasePrice(item) * item.quantity, 0),
+    [cart, cartMeta.subtotal],
   );
+
+  const getCartGstTotal = useCallback(() => getPayableBreakdown().gstTotal, [getPayableBreakdown]);
 
   const getCartItemsCount = useCallback(
     () => cartMeta.itemCount || cart.reduce((count, item) => count + item.quantity, 0),
@@ -112,6 +133,8 @@ export const CartProvider = ({ children }) => {
         updateQuantity,
         clearCart,
         getCartTotal,
+        getCartSubtotal,
+        getCartGstTotal,
         getCartItemsCount,
         loadCart,
       }}

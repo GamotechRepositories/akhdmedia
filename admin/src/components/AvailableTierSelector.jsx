@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { RESOLUTION_TIERS, isStandardTier } from '../constants/resolutionTiers'
 import { inputClass } from './ui/adminUi'
+import { BRAND } from '../config/brand'
 
 const AvailableTierSelector = ({
   eligibleTiers = [],
@@ -44,7 +45,7 @@ const AvailableTierSelector = ({
         Which qualities are available for customers?
       </p>
       <p className="mb-3 text-xs text-slate-500">
-        Tick the qualities you want to sell. Only checked options appear on the storefront and in pricing below.
+        Tick the qualities you want to sell. Only checked options appear on the {BRAND.websiteLabel} and in pricing below.
       </p>
 
       <div className="space-y-2">

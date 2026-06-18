@@ -112,6 +112,8 @@ const ProductDetail = () => {
   const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
   const listingPrice = lowestTierInfo?.price ?? product.price;
   const selectedTierInfo = product.imageSizes?.[selectedImageSize] || lowestTierInfo || null;
+  const displayTierName = selectedImageSize || lowestTierName || '—';
+  const displayPrice = selectedTierInfo?.price ?? listingPrice;
   const licenseIncludedLabel = product.videoInfo?.orientationNote?.trim() || '';
 
   const openUnavailableModal = () => setShowUnavailableModal(true);
@@ -242,9 +244,9 @@ const ProductDetail = () => {
               <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-white/10 pt-4">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
-                    License from · {lowestTierName || '—'}
+                    License from · {displayTierName}
                   </p>
-                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(listingPrice)}</p>
+                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(displayPrice)}</p>
                 </div>
                 {lowestTierInfo && (
                   <div className="text-right text-xs text-white/70">

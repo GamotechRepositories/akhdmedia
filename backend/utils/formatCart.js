@@ -1,4 +1,5 @@
 import Category from '../models/Category.js'
+import { buildPayableTotals } from './money.js'
 import formatProduct, { buildCategoryMap } from './formatProduct.js'
 import {
   getLicenseResendWindowEndsAt,
@@ -26,19 +27,23 @@ export const formatCartResponse = (cart, categoryMap) => {
       productId: formattedProduct?.id || item.product?._id?.toString() || '',
       quantity: item.quantity,
       imageSize: item.imageSize || '',
+      basePrice: item.basePrice ?? item.price ?? 0,
+      gstPercentage: item.gstPercentage ?? formattedProduct?.gstPercentage ?? 0,
+      gstAmount: item.gstAmount ?? 0,
       price: item.price,
     }
   })
 
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  )
+  const subtotal = items.reduce((sum, item) => sum + item.basePrice * item.quantity, 0)
+  const rawGstTotal = items.reduce((sum, item) => sum + item.gstAmount * item.quantity, 0)
+  const { gstTotal, total } = buildPayableTotals({ subtotal, gstTotal: rawGstTotal })
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   return {
     id: cart._id?.toString() || '',
     items,
+    subtotal,
+    gstTotal,
     total,
     itemCount,
   }
@@ -56,6 +61,8 @@ export const formatOrderResponse = (order) => {
     billingAddress: order.billingAddress,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus || '',
+    subtotalAmount: order.subtotalAmount ?? 0,
+    gstAmount: order.gstAmount ?? 0,
     totalAmount: order.totalAmount,
     status: order.status,
     razorpayOrderId: order.razorpayOrderId || '',

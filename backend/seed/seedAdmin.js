@@ -13,7 +13,7 @@ const seedAdmin = async () => {
     {
       email: ADMIN_EMAIL,
       password: hashedPassword,
-      name: 'AKHDMEDIA',
+      name: 'AKHD MEDIA & CO',
       phone: '0000000000',
       role: 'admin',
     },

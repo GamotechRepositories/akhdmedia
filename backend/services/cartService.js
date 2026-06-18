@@ -1,6 +1,6 @@
 import Cart from '../models/Cart.js'
 import Product from '../models/Product.js'
-import AppError from '../utils/AppError.js'
+import { buildPayableTotals, roundMoney } from '../utils/money.js'
 import {
   getListingPrice,
   resolveImageSizes,
@@ -15,6 +15,18 @@ const resolveItemPrice = (product, imageSize = '') => {
   }
 
   return getListingPrice(product)
+}
+
+const getGstBreakdown = (basePrice, gstPercentage = 0) => {
+  const normalizedBasePrice = Number(basePrice) || 0
+  const normalizedGstPercentage = Number(gstPercentage) || 0
+  const gstAmount = roundMoney((normalizedBasePrice * normalizedGstPercentage) / 100)
+  return {
+    basePrice: normalizedBasePrice,
+    gstPercentage: normalizedGstPercentage,
+    gstAmount,
+    totalPrice: roundMoney(normalizedBasePrice + gstAmount),
+  }
 }
 
 export const getOrCreateCart = async (sessionId) => {
@@ -50,19 +62,25 @@ export const addCartItem = async (sessionId, { productId, quantity = 1, imageSiz
   assertProductPurchasable(product)
 
   const normalizedQuantity = Math.max(1, Number(quantity) || 1)
-  const price = resolveItemPrice(product, imageSize)
+  const pricing = getGstBreakdown(resolveItemPrice(product, imageSize), product.gstPercentage)
   const cart = await getOrCreateCart(sessionId)
   const existingItem = findMatchingItem(cart, productId, imageSize)
 
   if (existingItem) {
     existingItem.quantity += normalizedQuantity
-    existingItem.price = price
+    existingItem.basePrice = pricing.basePrice
+    existingItem.gstPercentage = pricing.gstPercentage
+    existingItem.gstAmount = pricing.gstAmount
+    existingItem.price = pricing.totalPrice
   } else {
     cart.items.push({
       product: productId,
       quantity: normalizedQuantity,
       imageSize: imageSize || '',
-      price,
+      basePrice: pricing.basePrice,
+      gstPercentage: pricing.gstPercentage,
+      gstAmount: pricing.gstAmount,
+      price: pricing.totalPrice,
     })
   }
 
@@ -113,7 +131,7 @@ export const replaceCartWithItem = async (sessionId, { productId, quantity = 1, 
   assertProductPurchasable(product)
 
   const normalizedQuantity = Math.max(1, Number(quantity) || 1)
-  const price = resolveItemPrice(product, imageSize)
+  const pricing = getGstBreakdown(resolveItemPrice(product, imageSize), product.gstPercentage)
   const cart = await getOrCreateCart(sessionId)
 
   cart.items = [
@@ -121,7 +139,10 @@ export const replaceCartWithItem = async (sessionId, { productId, quantity = 1, 
       product: productId,
       quantity: normalizedQuantity,
       imageSize: imageSize || '',
-      price,
+      basePrice: pricing.basePrice,
+      gstPercentage: pricing.gstPercentage,
+      gstAmount: pricing.gstAmount,
+      price: pricing.totalPrice,
     },
   ]
 
@@ -136,12 +157,19 @@ export const clearCartItems = async (sessionId) => {
   return cart
 }
 
-export const getCartTotals = (items = []) =>
-  items.reduce(
+export const getCartTotals = (items = []) => {
+  const raw = items.reduce(
     (acc, item) => {
-      acc.total += item.price * item.quantity
+      acc.subtotal += (item.basePrice ?? item.price ?? 0) * item.quantity
+      acc.gstTotal += (item.gstAmount ?? 0) * item.quantity
       acc.itemCount += item.quantity
       return acc
     },
-    { total: 0, itemCount: 0 },
+    { subtotal: 0, gstTotal: 0, itemCount: 0 },
   )
+
+  return {
+    ...buildPayableTotals(raw),
+    itemCount: raw.itemCount,
+  }
+}
