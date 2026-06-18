@@ -17,6 +17,12 @@ const parseSearchKeywords = (value) => {
   return [...new Set(String(value || '').split(',').map((item) => item.trim()).filter(Boolean))]
 }
 
+const parseSortOrder = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  if (!digits) return 0
+  return Number.parseInt(digits, 10)
+}
+
 const buildActorPayload = (body = {}) => {
   const name = body.name?.trim()
   const slug = slugify(body.slug || name)
@@ -26,13 +32,13 @@ const buildActorPayload = (body = {}) => {
     slug,
     searchKeywords: parseSearchKeywords(body.searchKeywords),
     image: body.image?.trim() || '',
-    sortOrder: Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0,
+    sortOrder: parseSortOrder(body.sortOrder),
     isActive: body.isActive !== false,
   }
 }
 
 export const getPublicActors = asyncHandler(async (req, res) => {
-  const actors = await Actor.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).lean()
+  const actors = await Actor.find({ isActive: true }).sort({ sortOrder: 1, createdAt: 1 }).lean()
 
   res.json(
     actors.map((actor) => ({
@@ -40,12 +46,13 @@ export const getPublicActors = asyncHandler(async (req, res) => {
       name: actor.name,
       slug: actor.slug,
       image: actor.image || '',
+      sortOrder: actor.sortOrder ?? 0,
     })),
   )
 })
 
 export const getActors = asyncHandler(async (req, res) => {
-  const actors = await Actor.find().sort({ sortOrder: 1, name: 1 })
+  const actors = await Actor.find().sort({ sortOrder: 1, createdAt: 1 })
   res.json(actors)
 })
 

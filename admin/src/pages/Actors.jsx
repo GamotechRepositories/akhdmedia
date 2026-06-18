@@ -70,7 +70,7 @@ const Actors = () => {
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3">Order</th>
+              <th className="px-4 py-3">Order (0+)</th>
               <th className="px-4 py-3">Image</th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Search keywords</th>

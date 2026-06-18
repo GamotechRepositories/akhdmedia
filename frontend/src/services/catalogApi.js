@@ -16,6 +16,13 @@ const DEFAULT_SITE_CONTENT = {
   heroSlides: [],
 };
 
+const sortActorsByOrder = (actors = []) =>
+  [...actors].sort((left, right) => {
+    const orderDiff = (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return String(left.id || '').localeCompare(String(right.id || ''));
+  });
+
 export { DEFAULT_SITE_CONTENT };
 
 export const fetchCatalog = async () => {
@@ -32,7 +39,7 @@ export const fetchCatalog = async () => {
   return {
     categories,
     products,
-    actors: actorsRes.data || [],
+    actors: sortActorsByOrder(actorsRes.data || []),
     navLinks: buildNavLinks(categories),
     catalogCategories: buildCatalogCategories(categories),
     subCategoriesMap: buildSubCategories(categories),

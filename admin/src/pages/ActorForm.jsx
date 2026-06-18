@@ -18,6 +18,12 @@ const slugify = (value = '') =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
+const parseSortOrder = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  if (!digits) return 0
+  return Number.parseInt(digits, 10)
+}
+
 const keywordsToInput = (keywords = []) => keywords.join(', ')
 
 const ActorForm = () => {
@@ -31,7 +37,7 @@ const ActorForm = () => {
     slug: '',
     searchKeywords: '',
     image: '',
-    sortOrder: 0,
+    sortOrder: '0',
     isActive: true,
   })
   const [loading, setLoading] = useState(isEdit)
@@ -57,7 +63,7 @@ const ActorForm = () => {
           slug: actor.slug || '',
           searchKeywords: keywordsToInput(actor.searchKeywords),
           image: actor.image || '',
-          sortOrder: actor.sortOrder ?? 0,
+          sortOrder: String(actor.sortOrder ?? 0),
           isActive: actor.isActive ?? true,
         })
       } catch (err) {
@@ -108,7 +114,7 @@ const ActorForm = () => {
       slug: form.slug.trim(),
       searchKeywords: form.searchKeywords,
       image: form.image.trim(),
-      sortOrder: Number(form.sortOrder) || 0,
+      sortOrder: parseSortOrder(form.sortOrder),
       isActive: form.isActive,
     }
 
@@ -190,14 +196,14 @@ const ActorForm = () => {
                   inputMode="numeric"
                   value={form.sortOrder}
                   onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, '');
-                    updateField('sortOrder', digits === '' ? 0 : Number(digits));
+                    const digits = e.target.value.replace(/\D/g, '')
+                    updateField('sortOrder', digits)
                   }}
                   className={inputClass}
-                  placeholder="e.g. 1"
+                  placeholder="e.g. 0"
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  Homepage order: 1 = first, 2 = second. Lower numbers appear first.
+                  Homepage order starts at 0. Use 0, 1, 2, 3… or any higher number. Lower numbers appear first.
                 </p>
               </label>
             </div>
