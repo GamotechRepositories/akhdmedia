@@ -83,15 +83,9 @@ const HomeContent = () => {
 
   const updateHeroSlide = (index, field, value) => {
     setHeroSlides((current) =>
-      current.map((slide, slideIndex) => {
-        if (slideIndex !== index) return slide
-
-        if (field === 'cta' && !String(value).trim()) {
-          return { ...slide, cta: '', link: '' }
-        }
-
-        return { ...slide, [field]: value }
-      }),
+      current.map((slide, slideIndex) =>
+        slideIndex === index ? { ...slide, [field]: value } : slide,
+      ),
     )
   }
 
@@ -102,7 +96,6 @@ const HomeContent = () => {
           ? {
               ...slide,
               link: categoryLinkFromSlug(slug),
-              cta: slide.cta.trim() || 'Browse',
             }
           : slide,
       ),
@@ -206,17 +199,7 @@ const HomeContent = () => {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block text-sm">
-                    <span className="font-medium text-slate-700">Badge text</span>
-                    <input
-                      value={slide.badge}
-                      onChange={(e) => updateHeroSlide(index, 'badge', e.target.value)}
-                      className={inputClass}
-                      placeholder="Nature Vault"
-                    />
-                  </label>
-
-                  <label className="block text-sm">
+                  <label className="block text-sm sm:col-span-2">
                     <span className="font-medium text-slate-700">Button text</span>
                     <input
                       value={slide.cta}
@@ -225,7 +208,7 @@ const HomeContent = () => {
                       placeholder="Browse"
                     />
                     <span className="mt-1 block text-[11px] text-slate-500">
-                      Leave empty to hide the button on the {BRAND.websiteLabel}.
+                      Leave empty to hide the button. The banner image still links to the selected category.
                     </span>
                   </label>
 
@@ -239,24 +222,24 @@ const HomeContent = () => {
                     />
                   </label>
 
-                  {slide.cta.trim() ? (
-                    <label className="block text-sm sm:col-span-2">
-                      <span className="font-medium text-slate-700">Category</span>
-                      <select
-                        required
-                        value={categorySlugFromLink(slide.link)}
-                        onChange={(e) => updateHeroCategory(index, e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="">Select category</option>
-                        {categories.map((category) => (
-                          <option key={category._id} value={category.slug}>
-                            {category.navLabel}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
+                  <label className="block text-sm sm:col-span-2">
+                    <span className="font-medium text-slate-700">Category</span>
+                    <select
+                      value={categorySlugFromLink(slide.link)}
+                      onChange={(e) => updateHeroCategory(index, e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select category</option>
+                      {categories.map((category) => (
+                        <option key={category._id} value={category.slug}>
+                          {category.navLabel}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-[11px] text-slate-500">
+                      Optional. Makes the banner clickable on the {BRAND.websiteLabel}.
+                    </span>
+                  </label>
 
                   <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
                     <input

@@ -9,7 +9,8 @@ import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 
 const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) => {
   const hasButton = Boolean(slide.cta?.trim());
-  const hasOverlay = Boolean(slide.badge?.trim() || slide.headline?.trim() || hasButton);
+  const hasLink = Boolean(slide.link?.trim());
+  const hasOverlay = Boolean(slide.headline?.trim() || hasButton);
   const slideClassName = `absolute inset-0 transition-opacity duration-700 ease-in-out ${
     isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
   }`;
@@ -35,14 +36,15 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
         </>
       ) : null}
 
-      <div className={`relative z-10 flex h-full items-end sm:items-center ${compact ? 'px-5 pb-8 pt-16' : 'px-5 sm:px-10 lg:px-20'}`}>
+      <div
+        className={`relative z-10 flex h-full ${
+          compact
+            ? 'items-end px-5 pb-8 pt-16'
+            : 'items-end px-5 pb-4 sm:px-10 sm:pb-6 lg:px-20 lg:pb-8'
+        }`}
+      >
         {hasOverlay ? (
           <div className="max-w-2xl text-white">
-            {slide.badge ? (
-              <span className="mb-2 inline-flex items-center rounded-full border border-white/20 bg-black/40 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] sm:mb-4 sm:px-3 sm:py-1 sm:text-[10px]">
-                {slide.badge}
-              </span>
-            ) : null}
             {slide.headline ? (
               <h2 className={`font-black leading-tight tracking-tight ${compact ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl lg:text-5xl'}`}>
                 {slide.headline}
@@ -60,10 +62,11 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
     </>
   );
 
-  if (hasButton && slide.link) {
+  if (hasLink) {
     return (
       <Link
         to={slide.link}
+        aria-label={slide.headline?.trim() || slide.cta?.trim() || 'View category'}
         aria-hidden={!isActive}
         tabIndex={isActive ? 0 : -1}
         className={slideClassName}
@@ -127,7 +130,6 @@ const mapSettingsHeroSlides = (slides = []) =>
     .map((slide, index) => ({
       id: `hero-settings-${index}`,
       link: slide.link || '',
-      badge: slide.badge || '',
       headline: slide.headline || '',
       cta: slide.cta || '',
       image: slide.image,
