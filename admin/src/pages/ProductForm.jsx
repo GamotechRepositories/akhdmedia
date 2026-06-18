@@ -16,6 +16,7 @@ import PricingModeSelector from '../components/PricingModeSelector'
 import ResolutionTierEditor from '../components/ResolutionTierEditor'
 import MediaUpload from '../components/MediaUpload'
 import MasterQualitySelector from '../components/MasterQualitySelector'
+import SearchableSelect from '../components/SearchableSelect'
 import {
   compactFormClass,
   inputClass,
@@ -267,6 +268,16 @@ const ProductForm = () => {
   const selectedCategory = useMemo(
     () => categories.find((category) => category.slug === form.categorySlug),
     [categories, form.categorySlug]
+  )
+
+  const actorOptions = useMemo(
+    () =>
+      actors.map((actor) => ({
+        value: actor._id,
+        label: actor.name,
+        keywords: actor.searchKeywords || [],
+      })),
+    [actors],
   )
 
   const updateField = (field, value) => {
@@ -604,12 +615,12 @@ const ProductForm = () => {
 
         <FormStep step="2" title="Product details" tone="sky">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm sm:col-span-2">
+            <label className="block text-sm">
               <span className="font-medium text-slate-700">Product Name</span>
               <input required value={form.name} onChange={(e) => updateField('name', e.target.value)} className={inputClass} />
             </label>
 
-            <label className="block text-sm sm:col-span-2">
+            <label className="block text-sm">
               <span className="font-medium text-slate-700">Clip ID</span>
               <input
                 readOnly
@@ -649,20 +660,15 @@ const ProductForm = () => {
               </select>
             </label>
 
-            <label className="block text-sm sm:col-span-2">
+            <label className="block text-sm">
               <span className="font-medium text-slate-700">Actor</span>
-              <select
+              <SearchableSelect
                 value={form.actorId}
-                onChange={(e) => updateField('actorId', e.target.value)}
-                className={inputClass}
-              >
-                <option value="">No actor</option>
-                {actors.map((actor) => (
-                  <option key={actor._id} value={actor._id}>
-                    {actor.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => updateField('actorId', value)}
+                options={actorOptions}
+                emptyLabel="No actor"
+                searchPlaceholder="Search actors..."
+              />
               <p className="mt-1 text-[11px] text-slate-500">
                 Link this product to an actor so customers can find it by actor name or keywords in search.
               </p>

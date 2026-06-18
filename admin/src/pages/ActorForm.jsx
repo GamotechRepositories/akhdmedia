@@ -159,45 +159,50 @@ const ActorForm = () => {
 
       <div className={compactFormClass}>
         <FormStep step="1" title="Actor details" hint="Name and search keywords for discovery" tone="sky">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-slate-700">Actor name</span>
-              <input
-                value={form.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className={inputClass}
-                placeholder="e.g. John Doe"
-                required
-              />
-            </label>
+          <div className="grid gap-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Actor name</span>
+                <input
+                  value={form.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. John Doe"
+                  required
+                />
+              </label>
 
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-slate-700">Slug</span>
-              <input
-                value={form.slug}
-                onChange={(e) => handleSlugChange(e.target.value)}
-                className={inputClass}
-                placeholder="auto-generated-from-name"
-              />
-              <p className="mt-1 text-xs text-slate-500">Used for image storage path. Set before uploading image.</p>
-            </label>
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Slug</span>
+                <input
+                  value={form.slug}
+                  onChange={(e) => handleSlugChange(e.target.value)}
+                  className={inputClass}
+                  placeholder="auto-generated-from-name"
+                />
+                <p className="mt-1 text-xs text-slate-500">Used for image storage path. Set before uploading image.</p>
+              </label>
 
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-slate-700">Display position</span>
-              <input
-                type="number"
-                min="0"
-                value={form.sortOrder}
-                onChange={(e) => updateField('sortOrder', Number(e.target.value))}
-                className={inputClass}
-                placeholder="e.g. 1"
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Homepage order: 1 = first, 2 = second, and so on. Lower numbers appear first.
-              </p>
-            </label>
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Display position</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.sortOrder}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '');
+                    updateField('sortOrder', digits === '' ? 0 : Number(digits));
+                  }}
+                  className={inputClass}
+                  placeholder="e.g. 1"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Homepage order: 1 = first, 2 = second. Lower numbers appear first.
+                </p>
+              </label>
+            </div>
 
-            <label className="block text-sm sm:col-span-2">
+            <label className="block text-sm">
               <span className="font-medium text-slate-700">Search keywords</span>
               <textarea
                 rows={3}
@@ -209,7 +214,7 @@ const ActorForm = () => {
               <p className="mt-1 text-xs text-slate-500">Comma-separated keywords used when customers search actors.</p>
             </label>
 
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <input
                 type="checkbox"
                 checked={form.isActive}

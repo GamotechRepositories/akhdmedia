@@ -257,10 +257,15 @@ const CategoryForm = () => {
             <label className="block text-sm">
               <span className="font-medium text-slate-700">Sort Order</span>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={form.sortOrder}
-                onChange={(e) => updateField('sortOrder', Number(e.target.value))}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '');
+                  updateField('sortOrder', digits === '' ? 0 : Number(digits));
+                }}
                 className={inputClass}
+                placeholder="e.g. 1"
               />
             </label>
 
