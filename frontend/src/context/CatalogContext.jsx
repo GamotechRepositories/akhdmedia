@@ -55,8 +55,23 @@ export const CatalogProvider = ({ children }) => {
   );
 
   const getRelatedProducts = useCallback(
-    (productId, limit = 4) =>
-      catalog.products.filter((product) => product.id !== productId).slice(0, limit),
+    (productId, limit = 4) => {
+      const currentProduct = catalog.products.find((product) => product.id === productId);
+      const otherProducts = catalog.products.filter((product) => product.id !== productId);
+
+      if (!currentProduct?.actorId) {
+        return otherProducts.slice(0, limit);
+      }
+
+      const sameActorProducts = otherProducts.filter(
+        (product) => product.actorId && product.actorId === currentProduct.actorId,
+      );
+      const otherActorProducts = otherProducts.filter(
+        (product) => !product.actorId || product.actorId !== currentProduct.actorId,
+      );
+
+      return [...sameActorProducts, ...otherActorProducts].slice(0, limit);
+    },
     [catalog.products],
   );
 
