@@ -44,6 +44,7 @@ const CategoryForm = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const slugManuallyEdited = useRef(isEdit)
+  const subSlugManuallyEdited = useRef(new Set())
 
   useEffect(() => {
     if (!isEdit) return
@@ -64,6 +65,13 @@ const CategoryForm = () => {
             ? category.subCategories
             : [emptySubCategory()],
         })
+        subSlugManuallyEdited.current = new Set(
+          (category.subCategories || [])
+            .map((subCategory, index) =>
+              subCategory.slug && subCategory.slug !== slugify(subCategory.name) ? index : null,
+            )
+            .filter((index) => index !== null),
+        )
       } catch (err) {
         setError(err.message)
       } finally {
@@ -94,9 +102,31 @@ const CategoryForm = () => {
   const updateSubCategory = (index, field, value) => {
     setForm((current) => ({
       ...current,
-      subCategories: current.subCategories.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item
-      ),
+      subCategories: current.subCategories.map((item, itemIndex) => {
+        if (itemIndex !== index) return item
+
+        if (field === 'name') {
+          return {
+            ...item,
+            name: value,
+            slug: subSlugManuallyEdited.current.has(index) ? item.slug : slugify(value),
+          }
+        }
+
+        if (field === 'slug') {
+          if (value.trim()) {
+            subSlugManuallyEdited.current.add(index)
+          } else {
+            subSlugManuallyEdited.current.delete(index)
+          }
+          return {
+            ...item,
+            slug: slugify(value),
+          }
+        }
+
+        return { ...item, [field]: value }
+      }),
     }))
   }
 
@@ -108,6 +138,14 @@ const CategoryForm = () => {
   }
 
   const removeSubCategory = (index) => {
+    subSlugManuallyEdited.current.delete(index)
+    const nextManual = new Set()
+    subSlugManuallyEdited.current.forEach((itemIndex) => {
+      if (itemIndex < index) nextManual.add(itemIndex)
+      if (itemIndex > index) nextManual.add(itemIndex - 1)
+    })
+    subSlugManuallyEdited.current = nextManual
+
     setForm((current) => ({
       ...current,
       subCategories: current.subCategories.filter((_, itemIndex) => itemIndex !== index),
@@ -129,7 +167,12 @@ const CategoryForm = () => {
       ...form,
       breadcrumb: form.navLabel.trim() || form.label.trim(),
       description: '',
-      subCategories: form.subCategories.filter((item) => item.name.trim()),
+      subCategories: form.subCategories
+        .filter((item) => item.name.trim())
+        .map((item) => ({
+          name: item.name.trim(),
+          slug: slugify(item.slug || item.name),
+        })),
     }
 
     try {
@@ -252,24 +295,26 @@ const CategoryForm = () => {
             {form.subCategories.map((subCategory, index) => (
               <div
                 key={index}
-                className="grid gap-3 rounded-lg border border-emerald-200/80 bg-white/80 p-4 sm:grid-cols-[1fr_1fr_auto]"
+                className="grid gap-3 rounded-lg border border-emerald-200/80 bg-white/80 p-4 sm:grid-cols-[1fr_auto] sm:items-start"
               >
-                <input
-                  value={subCategory.name}
-                  onChange={(e) => updateSubCategory(index, 'name', e.target.value)}
-                  className={inputClass}
-                  placeholder="City Timelapse"
-                />
-                <input
-                  value={subCategory.slug}
-                  onChange={(e) => updateSubCategory(index, 'slug', e.target.value)}
-                  className={inputClass}
-                  placeholder="city-timelapse"
-                />
+                <label className="block text-sm">
+                  <span className="font-medium text-slate-700">Subcategory name</span>
+                  <input
+                    value={subCategory.name}
+                    onChange={(e) => updateSubCategory(index, 'name', e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. City Timelapse"
+                  />
+                  {subCategory.name.trim() ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      URL slug: {slugify(subCategory.slug || subCategory.name)}
+                    </p>
+                  ) : null}
+                </label>
                 <button
                   type="button"
                   onClick={() => removeSubCategory(index)}
-                  className="text-sm font-semibold text-red-600 hover:underline"
+                  className="text-sm font-semibold text-red-600 hover:underline sm:mt-7"
                 >
                   Remove
                 </button>

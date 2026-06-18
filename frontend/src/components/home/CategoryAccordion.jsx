@@ -7,24 +7,35 @@ import OptimizedImage from '../ui/OptimizedImage';
 
 const AUTO_SCROLL_MS = 4000;
 const MOBILE_CARD_CLASS = 'aspect-[4/5] w-[44vw] max-w-[155px]';
+const DESKTOP_VISIBLE_CARDS = 5;
+const DESKTOP_AUTO_SCROLL_STEP = 2;
+
+const getDesktopCardClass = (panelCount) =>
+  panelCount > DESKTOP_VISIBLE_CARDS
+    ? 'w-[calc((100%-2rem)/5)] shrink-0'
+    : 'min-w-0 flex-1 hover:flex-[3]';
+
+const scrollContainerToIndex = (container, index) => {
+  const card = container?.children[index];
+  if (!card) return;
+
+  container.scrollTo({
+    left: card.offsetLeft - container.offsetLeft,
+    behavior: 'smooth',
+  });
+};
 
 const CategoryAccordion = () => {
   const { categories, loading } = useCatalog();
   const panels = mapCategoryPanels(categories);
   const scrollRef = useRef(null);
+  const desktopScrollRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const resumeTimerRef = useRef(null);
 
   const scrollToIndex = useCallback((index) => {
-    const container = scrollRef.current;
-    if (!container?.children[index]) return;
-
-    const card = container.children[index];
-    container.scrollTo({
-      left: card.offsetLeft - container.offsetLeft,
-      behavior: 'smooth',
-    });
+    scrollContainerToIndex(scrollRef.current, index);
     setActiveIndex(index);
   }, []);
 
@@ -41,16 +52,16 @@ const CategoryAccordion = () => {
     if (panels.length <= 1 || isPaused) return undefined;
 
     const timer = window.setInterval(() => {
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      const useDesktopScroll = isDesktop && panels.length > DESKTOP_VISIBLE_CARDS;
+      const container = useDesktopScroll ? desktopScrollRef.current : scrollRef.current;
+      const step = useDesktopScroll ? DESKTOP_AUTO_SCROLL_STEP : 1;
+
+      if (!container) return;
+
       setActiveIndex((current) => {
-        const next = (current + 1) % panels.length;
-        const container = scrollRef.current;
-        if (container?.children[next]) {
-          const card = container.children[next];
-          container.scrollTo({
-            left: card.offsetLeft - container.offsetLeft,
-            behavior: 'smooth',
-          });
-        }
+        const next = current + step >= panels.length ? 0 : current + step;
+        scrollContainerToIndex(container, next);
         return next;
       });
     }, AUTO_SCROLL_MS);
@@ -135,12 +146,21 @@ const CategoryAccordion = () => {
           )}
         </div>
 
-        <div className="hidden h-[320px] w-full gap-2 md:flex lg:h-[400px]">
+        <div
+          ref={desktopScrollRef}
+          className={`hidden h-[320px] gap-2 md:flex lg:h-[400px] ${
+            panels.length > DESKTOP_VISIBLE_CARDS
+              ? 'overflow-x-auto pb-2 scrollbar-hide'
+              : 'w-full'
+          }`}
+          onMouseEnter={pauseAutoScroll}
+          onMouseLeave={resumeAutoScrollLater}
+        >
           {panels.map((category) => (
             <Link
               key={category.id}
               to={`/videos/${category.id}`}
-              className="group relative min-w-0 flex-1 cursor-pointer overflow-hidden rounded-lg transition-all duration-500 ease-out hover:flex-[3]"
+              className={`group relative cursor-pointer overflow-hidden rounded-lg transition-all duration-500 ease-out ${getDesktopCardClass(panels.length)}`}
             >
               <OptimizedImage
                 src={category.image}

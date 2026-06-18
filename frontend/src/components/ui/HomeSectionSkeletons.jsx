@@ -45,9 +45,12 @@ export const CategoryAccordionSkeleton = () => (
         ))}
       </div>
 
-      <div className="hidden h-[320px] w-full gap-2 md:flex lg:h-[400px]">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="min-w-0 flex-1 animate-pulse rounded-lg bg-gray-200" />
+      <div className="hidden h-[320px] gap-2 overflow-x-auto pb-2 scrollbar-hide md:flex lg:h-[400px]">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div
+            key={i}
+            className="w-[calc((100%-2rem)/5)] shrink-0 animate-pulse rounded-lg bg-gray-200"
+          />
         ))}
       </div>
     </div>
