@@ -9,18 +9,17 @@ const AUTO_SCROLL_MS = 4000;
 const MOBILE_CARD_CLASS = 'aspect-[4/5] w-[44vw] max-w-[155px]';
 const DESKTOP_VISIBLE_CARDS = 5;
 const DESKTOP_AUTO_SCROLL_STEP = 2;
+const HOVER_EDGE_SCROLL_MS = 500;
 
-const getDesktopCardClass = (panelCount) =>
-  panelCount > DESKTOP_VISIBLE_CARDS
-    ? 'w-[calc((100%-2rem)/5)] shrink-0'
-    : 'min-w-0 flex-1 hover:flex-[3]';
+const DESKTOP_CARD_CLASS =
+  'group relative z-0 min-w-0 flex-1 cursor-pointer overflow-hidden rounded-lg transition-all duration-500 ease-out hover:z-20 hover:flex-[3]';
 
-const scrollContainerToIndex = (container, index) => {
-  const card = container?.children[index];
-  if (!card) return;
+const scrollTrackToIndex = (scrollContainer, track, index) => {
+  const card = track?.children[index];
+  if (!scrollContainer || !card) return;
 
-  container.scrollTo({
-    left: card.offsetLeft - container.offsetLeft,
+  scrollContainer.scrollTo({
+    left: card.offsetLeft - scrollContainer.offsetLeft,
     behavior: 'smooth',
   });
 };
@@ -30,12 +29,19 @@ const CategoryAccordion = () => {
   const panels = mapCategoryPanels(categories);
   const scrollRef = useRef(null);
   const desktopScrollRef = useRef(null);
+  const desktopTrackRef = useRef(null);
+  const hoverScrollLockRef = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const resumeTimerRef = useRef(null);
 
   const scrollToIndex = useCallback((index) => {
-    scrollContainerToIndex(scrollRef.current, index);
+    scrollTrackToIndex(scrollRef.current, scrollRef.current, index);
+    setActiveIndex(index);
+  }, []);
+
+  const scrollDesktopToIndex = useCallback((index) => {
+    scrollTrackToIndex(desktopScrollRef.current, desktopTrackRef.current, index);
     setActiveIndex(index);
   }, []);
 
@@ -61,7 +67,11 @@ const CategoryAccordion = () => {
 
       setActiveIndex((current) => {
         const next = current + step >= panels.length ? 0 : current + step;
-        scrollContainerToIndex(container, next);
+        if (useDesktopScroll) {
+          scrollTrackToIndex(container, desktopTrackRef.current, next);
+        } else {
+          scrollTrackToIndex(container, container, next);
+        }
         return next;
       });
     }, AUTO_SCROLL_MS);
@@ -82,6 +92,37 @@ const CategoryAccordion = () => {
     }
     resumeTimerRef.current = window.setTimeout(() => setIsPaused(false), 3500);
   };
+
+  const handleDesktopCardHover = (index) => {
+    if (panels.length <= DESKTOP_VISIBLE_CARDS || hoverScrollLockRef.current) return;
+
+    const container = desktopScrollRef.current;
+    const track = desktopTrackRef.current;
+    const card = track?.children[index];
+    if (!container || !card) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const isRightEdgeCard = cardRect.right >= containerRect.right - 12;
+    const isLeftEdgeCard = cardRect.left <= containerRect.left + 12;
+
+    let targetIndex = null;
+    if (isRightEdgeCard && index < panels.length - 1) {
+      targetIndex = index + 1;
+    } else if (isLeftEdgeCard && index > 0) {
+      targetIndex = index - 1;
+    }
+
+    if (targetIndex === null) return;
+
+    hoverScrollLockRef.current = true;
+    scrollDesktopToIndex(targetIndex);
+    window.setTimeout(() => {
+      hoverScrollLockRef.current = false;
+    }, HOVER_EDGE_SCROLL_MS);
+  };
+
+  const hasDesktopScroll = panels.length > DESKTOP_VISIBLE_CARDS;
 
   if (loading) return <CategoryAccordionSkeleton />;
   if (panels.length === 0) return null;
@@ -148,39 +189,46 @@ const CategoryAccordion = () => {
 
         <div
           ref={desktopScrollRef}
-          className={`hidden h-[320px] gap-2 md:flex lg:h-[400px] ${
-            panels.length > DESKTOP_VISIBLE_CARDS
-              ? 'overflow-x-auto pb-2 scrollbar-hide'
-              : 'w-full'
-          }`}
+          className={`hidden md:block ${hasDesktopScroll ? 'overflow-x-auto pb-2 scrollbar-hide' : ''}`}
           onMouseEnter={pauseAutoScroll}
           onMouseLeave={resumeAutoScrollLater}
         >
-          {panels.map((category) => (
-            <Link
-              key={category.id}
-              to={`/videos/${category.id}`}
-              className={`group relative cursor-pointer overflow-hidden rounded-lg transition-all duration-500 ease-out ${getDesktopCardClass(panels.length)}`}
-            >
-              <OptimizedImage
-                src={category.image}
-                alt={category.label}
-                width={800}
-                height={500}
-                quality={75}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-black/25 transition-colors duration-500 group-hover:bg-black/10" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-90" />
+          <div
+            ref={desktopTrackRef}
+            className="flex h-[320px] w-full gap-2 lg:h-[400px]"
+            style={
+              hasDesktopScroll
+                ? { width: `${(panels.length / DESKTOP_VISIBLE_CARDS) * 100}%` }
+                : undefined
+            }
+          >
+            {panels.map((category, index) => (
+              <Link
+                key={category.id}
+                to={`/videos/${category.id}`}
+                onMouseEnter={() => handleDesktopCardHover(index)}
+                className={DESKTOP_CARD_CLASS}
+              >
+                <OptimizedImage
+                  src={category.image}
+                  alt={category.label}
+                  width={800}
+                  height={500}
+                  quality={75}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/25 transition-colors duration-500 group-hover:bg-black/10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-100" />
 
-              <div className="absolute bottom-0 flex w-full flex-col items-start justify-end p-4 lg:p-6">
-                <h3 className="text-lg font-bold uppercase tracking-widest text-white lg:text-2xl">
-                  {category.label}
-                </h3>
-              </div>
-            </Link>
-          ))}
+                <div className="absolute bottom-0 flex w-full flex-col items-start justify-end p-4 lg:p-6">
+                  <h3 className="text-lg font-bold uppercase tracking-widest text-white lg:text-2xl">
+                    {category.label}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </section>

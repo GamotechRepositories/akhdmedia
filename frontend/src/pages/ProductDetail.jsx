@@ -206,11 +206,11 @@ const ProductDetail = () => {
 
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-8">
-          <div className="lg:sticky lg:top-6 lg:self-start">
+          <div className="transform-gpu lg:sticky lg:top-6 lg:self-start [contain:layout]">
             <ProductMediaGallery product={product} />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="scroll-section overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm [contain-intrinsic-size:auto_720px]">
             <div className="border-b border-gray-100 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-5 py-5 text-white sm:px-6">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {product.brand && (
@@ -356,7 +356,7 @@ const ProductDetail = () => {
         </div>
 
         {relatedProducts.length > 0 && (
-          <div className="mt-10 border-t border-gray-200 pt-8 sm:mt-12">
+          <div className="scroll-section mt-10 border-t border-gray-200 pt-8 sm:mt-12 [contain-intrinsic-size:auto_520px]">
             <h2 className="mb-5 text-lg font-bold text-gray-900 sm:text-xl">More like this</h2>
             <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4">
               {relatedProducts.map((p) => (

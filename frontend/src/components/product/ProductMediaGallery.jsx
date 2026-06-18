@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
+import OptimizedImage from '../ui/OptimizedImage';
 import VideoThumbnail from '../ui/VideoThumbnail';
-import { handleImageError } from '../../utils/imageFallback';
+import { useInView } from '../../hooks/useInView';
 import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
@@ -21,14 +22,14 @@ import {
 } from '../icons/Icons';
 import {
   PROTECTED_MEDIA_CLASS,
-  getProtectedImageProps,
   getProtectedVideoProps,
 } from '../../utils/mediaProtection';
 
 const fullscreenButtonClass =
-  'group/fullscreen flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/75 text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:border-white/40 hover:bg-black/90 active:scale-95 sm:h-10 sm:w-10';
+  'group/fullscreen flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95 sm:h-10 sm:w-10';
 const videoControlButtonClass =
-  'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/75 text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:border-white/40 hover:bg-black/90 active:scale-95';
+  'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95';
+const SCROLL_RESUME_MS = 250;
 
 const getDefaultMediaIndex = (items) => {
   const videoIndex = items.findIndex((item) => item.type === 'video');
@@ -38,6 +39,7 @@ const getDefaultMediaIndex = (items) => {
 const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
   const videoRef = useRef(null);
+  const { ref: galleryRef, isInView } = useInView('120px 0px 120px 0px');
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
     getDefaultMediaIndex(buildProductMediaItems(product)),
@@ -66,17 +68,55 @@ const ProductMediaGallery = ({ product }) => {
     video.load();
     setIsVideoPlaying(false);
 
+    if (!isInView || isLightboxOpen) {
+      video.pause();
+      return;
+    }
+
     const startDemo = async () => {
       try {
         video.muted = isMuted;
         await video.play();
+        setIsVideoPlaying(true);
       } catch {
         setIsVideoPlaying(false);
       }
     };
 
     startDemo();
-  }, [selectedMediaIndex, isVideoSelected, product?.id, isLightboxOpen, isMuted]);
+  }, [selectedMediaIndex, isVideoSelected, product?.id, isLightboxOpen, isMuted, isInView]);
+
+  useEffect(() => {
+    if (!isVideoSelected || !isInView) return undefined;
+
+    const video = videoRef.current;
+    let resumeTimer;
+
+    const handleScroll = () => {
+      if (!video) return;
+
+      if (!video.paused) {
+        video.pause();
+        setIsVideoPlaying(false);
+      }
+
+      window.clearTimeout(resumeTimer);
+      resumeTimer = window.setTimeout(() => {
+        if (!isInView || isLightboxOpen) return;
+
+        video.play()
+          .then(() => setIsVideoPlaying(true))
+          .catch(() => setIsVideoPlaying(false));
+      }, SCROLL_RESUME_MS);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.clearTimeout(resumeTimer);
+    };
+  }, [isVideoSelected, isInView, isLightboxOpen, selectedItem?.src]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -251,7 +291,7 @@ const ProductMediaGallery = ({ product }) => {
             className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
             loop
             muted={isMuted}
-            preload="metadata"
+            preload={isInView ? 'metadata' : 'none'}
             onPlay={() => setIsVideoPlaying(true)}
             onPause={() => setIsVideoPlaying(false)}
             onEnded={() => setIsVideoPlaying(false)}
@@ -301,12 +341,14 @@ const ProductMediaGallery = ({ product }) => {
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <img
+          <OptimizedImage
             src={selectedItem.src}
             alt={product.name}
+            width={1200}
+            height={1200}
+            quality={80}
             className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
-            onError={(e) => handleImageError(e, 800, 800)}
-            {...getProtectedImageProps()}
+            loading="eager"
           />
         </div>
       )}
@@ -316,7 +358,7 @@ const ProductMediaGallery = ({ product }) => {
   const renderMediaChrome = (compact = false) => (
     <>
       <div
-        className={`absolute z-10 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm ${
+        className={`absolute z-10 rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white ${
           compact ? 'left-3 top-3' : 'left-4 top-4'
         }`}
       >
@@ -342,7 +384,7 @@ const ProductMediaGallery = ({ product }) => {
           <button
             type="button"
             onClick={handlePrevMedia}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-white transition hover:bg-black/90"
             aria-label="Previous"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -352,7 +394,7 @@ const ProductMediaGallery = ({ product }) => {
           <button
             type="button"
             onClick={handleNextMedia}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-white transition hover:bg-black/90"
             aria-label="Next"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,7 +407,7 @@ const ProductMediaGallery = ({ product }) => {
   );
 
   return (
-    <>
+    <div ref={galleryRef} className="transform-gpu [contain:layout_paint]">
       <ProtectedMediaFrame
         ref={frameRef}
         watermark
@@ -400,11 +442,14 @@ const ProductMediaGallery = ({ product }) => {
               {item.type === 'video' ? (
                 <>
                   {item.poster ? (
-                    <img
+                    <OptimizedImage
                       src={item.poster}
                       alt="Video preview"
+                      width={192}
+                      height={108}
+                      quality={70}
+                      loading="lazy"
                       className={`h-full w-full object-cover ${PROTECTED_MEDIA_CLASS}`}
-                      {...getProtectedImageProps()}
                     />
                   ) : (
                     <VideoThumbnail
@@ -420,19 +465,21 @@ const ProductMediaGallery = ({ product }) => {
                   </div>
                 </>
               ) : (
-                <img
+                <OptimizedImage
                   src={item.src}
                   alt={item.label}
+                  width={192}
+                  height={108}
+                  quality={70}
+                  loading="lazy"
                   className={`h-full w-full object-cover ${PROTECTED_MEDIA_CLASS}`}
-                  onError={(e) => handleImageError(e, 80, 80)}
-                  {...getProtectedImageProps()}
                 />
               )}
             </button>
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 };
 
