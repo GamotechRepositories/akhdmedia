@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createActor, fetchActor, updateActor } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
+import ActorImageUpload from '../components/ActorImageUpload'
 import FormStep from '../components/FormStep'
-import MediaUpload from '../components/MediaUpload'
 import {
   compactFormClass,
   inputClass,
@@ -31,6 +31,7 @@ const ActorForm = () => {
     slug: '',
     searchKeywords: '',
     image: '',
+    sortOrder: 0,
     isActive: true,
   })
   const [loading, setLoading] = useState(isEdit)
@@ -56,6 +57,7 @@ const ActorForm = () => {
           slug: actor.slug || '',
           searchKeywords: keywordsToInput(actor.searchKeywords),
           image: actor.image || '',
+          sortOrder: actor.sortOrder ?? 0,
           isActive: actor.isActive ?? true,
         })
       } catch (err) {
@@ -106,6 +108,7 @@ const ActorForm = () => {
       slug: form.slug.trim(),
       searchKeywords: form.searchKeywords,
       image: form.image.trim(),
+      sortOrder: Number(form.sortOrder) || 0,
       isActive: form.isActive,
     }
 
@@ -180,6 +183,21 @@ const ActorForm = () => {
             </label>
 
             <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Display position</span>
+              <input
+                type="number"
+                min="0"
+                value={form.sortOrder}
+                onChange={(e) => updateField('sortOrder', Number(e.target.value))}
+                className={inputClass}
+                placeholder="e.g. 1"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Homepage order: 1 = first, 2 = second, and so on. Lower numbers appear first.
+              </p>
+            </label>
+
+            <label className="block text-sm sm:col-span-2">
               <span className="font-medium text-slate-700">Search keywords</span>
               <textarea
                 rows={3}
@@ -203,14 +221,11 @@ const ActorForm = () => {
         </FormStep>
 
         <FormStep step="2" title="Actor image" hint="Profile photo shown in actor listings" tone="violet">
-          <MediaUpload
-            label="Actor image"
-            accept="image/*"
-            uploadType="actor-image"
+          <ActorImageUpload
             value={form.image}
-            onChange={(value) => updateField('image', value)}
+            onChange={(url) => updateField('image', url)}
             actorSlug={slugify(form.slug || form.name)}
-            placeholder="Upload image or paste URL"
+            disabled={!form.slug.trim()}
           />
           {!form.slug.trim() && (
             <p className="mt-2 text-xs text-amber-700">Enter actor name/slug before uploading an image.</p>

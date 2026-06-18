@@ -49,7 +49,7 @@ export const resolveUploadTarget = ({
       throw new AppError('Category slug is required before uploading cover image', 400)
     }
     const ext = getExtension(filename, '.jpg')
-    const objectName = `cover${ext}`
+    const objectName = `cover-${Date.now()}${ext}`
     const s3Key = `${AWS_S3_PUBLIC_PREFIX}/categories/${slug}/${objectName}`
     return {
       scope: 'public',
@@ -77,7 +77,7 @@ export const resolveUploadTarget = ({
       throw new AppError('Actor slug is required before uploading image', 400)
     }
     const ext = getExtension(filename, '.jpg')
-    const objectName = `profile${ext}`
+    const objectName = `profile-${Date.now()}${ext}`
     const s3Key = `${AWS_S3_PUBLIC_PREFIX}/actors/${slug}/${objectName}`
     return {
       scope: 'public',

@@ -26,12 +26,13 @@ const buildActorPayload = (body = {}) => {
     slug,
     searchKeywords: parseSearchKeywords(body.searchKeywords),
     image: body.image?.trim() || '',
+    sortOrder: Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0,
     isActive: body.isActive !== false,
   }
 }
 
 export const getPublicActors = asyncHandler(async (req, res) => {
-  const actors = await Actor.find({ isActive: true }).sort({ name: 1 }).lean()
+  const actors = await Actor.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).lean()
 
   res.json(
     actors.map((actor) => ({
@@ -44,7 +45,7 @@ export const getPublicActors = asyncHandler(async (req, res) => {
 })
 
 export const getActors = asyncHandler(async (req, res) => {
-  const actors = await Actor.find().sort({ name: 1 })
+  const actors = await Actor.find().sort({ sortOrder: 1, name: 1 })
   res.json(actors)
 })
 

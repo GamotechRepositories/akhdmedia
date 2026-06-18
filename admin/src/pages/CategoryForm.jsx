@@ -288,7 +288,7 @@ const CategoryForm = () => {
             label="Category cover image"
             accept="image/*"
             uploadType="category-cover"
-            categorySlug={form.slug || form.navLabel}
+            categorySlug={slugify(form.slug || form.navLabel)}
             value={form.coverImage}
             onChange={(url) => updateField('coverImage', url)}
             placeholder="Upload or paste image URL"

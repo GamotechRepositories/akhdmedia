@@ -79,7 +79,18 @@ const MediaUpload = ({
       setUploadProgress(100)
       setUploadedSize(uploadedBytes)
 
-      const nextValue = valueKind === 'key' ? response.data.key : response.data.url
+      const nextValue =
+        valueKind === 'key'
+          ? response.data.key
+          : (() => {
+              const uploadedUrl = response.data.url || ''
+              if (!uploadedUrl) return ''
+              if (uploadedUrl === value) {
+                const separator = uploadedUrl.includes('?') ? '&' : '?'
+                return `${uploadedUrl}${separator}v=${Date.now()}`
+              }
+              return uploadedUrl
+            })()
       const uploadedFilename = response.data.filename || file.name
       onChange(nextValue, {
         filename: uploadedFilename,
@@ -144,7 +155,10 @@ const MediaUpload = ({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (inputRef.current) inputRef.current.value = ''
+            inputRef.current?.click()
+          }}
           disabled={uploading || disabled || !uploadReady}
           className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
         >
@@ -228,6 +242,7 @@ const MediaUpload = ({
 
       {previewUrl && isImage && (
         <img
+          key={previewUrl}
           src={previewUrl}
           alt=""
           className="mt-2 max-h-[28rem] w-full rounded-md bg-slate-100 object-contain"

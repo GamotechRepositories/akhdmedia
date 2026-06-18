@@ -7,7 +7,8 @@ const ActorRail = ({ actors = [], isLoading = false }) => {
     return (
       <section className="border-b border-gray-100 bg-white pt-6 pb-2 sm:pt-8 sm:pb-3">
         <div className={PAGE_CONTAINER}>
-          <div className="-mx-4 flex gap-4 overflow-hidden px-4 sm:gap-6 md:mx-0 md:px-0">
+        <div className="flex justify-center">
+          <div className="-mx-4 flex w-max max-w-full snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide sm:gap-6 md:mx-0 md:px-0">
             {Array.from({ length: 6 }, (_, index) => (
               <div key={index} className="w-[92px] shrink-0 sm:w-[108px]">
                 <div className="aspect-square animate-pulse rounded-full bg-gray-200" />
@@ -15,6 +16,7 @@ const ActorRail = ({ actors = [], isLoading = false }) => {
               </div>
             ))}
           </div>
+        </div>
         </div>
       </section>
     );
@@ -25,8 +27,9 @@ const ActorRail = ({ actors = [], isLoading = false }) => {
   return (
     <section className="border-b border-gray-100 bg-white pt-6 pb-2 sm:pt-8 sm:pb-3">
       <div className={PAGE_CONTAINER}>
-        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide sm:gap-6 md:mx-0 md:px-0">
-          {actors.map((actor) => (
+        <div className="flex justify-center">
+          <div className="-mx-4 flex w-max max-w-full snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide sm:gap-6 md:mx-0 md:px-0">
+            {actors.map((actor) => (
               <Link
                 key={actor.id}
                 to={`/videos?actor=${encodeURIComponent(actor.id)}`}
@@ -54,6 +57,7 @@ const ActorRail = ({ actors = [], isLoading = false }) => {
                 </p>
               </Link>
             ))}
+          </div>
         </div>
       </div>
     </section>
