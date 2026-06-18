@@ -62,25 +62,6 @@ const ActorImageUpload = ({
     setError('')
   }
 
-  const openCropperWithUrl = async (url) => {
-    if (!url) return
-    clearCropSource()
-    setError('')
-
-    try {
-      const response = await fetch(url, { mode: 'cors' })
-      if (!response.ok) {
-        throw new Error('Could not load image for cropping')
-      }
-      const blob = await response.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      cropSourceRef.current = objectUrl
-      setImageSrc(objectUrl)
-    } catch {
-      setError('Could not open this image for cropping. Upload a new photo instead.')
-    }
-  }
-
   const handleFileChange = (event) => {
     const file = event.target.files?.[0]
     openCropperWithFile(file)
@@ -170,17 +151,6 @@ const ActorImageUpload = ({
         >
           {!uploadReady ? 'Enter slug first' : imageSrc ? 'Choose another photo' : 'Choose photo'}
         </button>
-
-        {value && !imageSrc ? (
-          <button
-            type="button"
-            onClick={() => openCropperWithUrl(value)}
-            disabled={uploading || disabled || !uploadReady}
-            className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-          >
-            Re-adjust crop
-          </button>
-        ) : null}
 
         {value && !uploading && !imageSrc ? (
           <span className="text-[11px] font-medium text-emerald-600">

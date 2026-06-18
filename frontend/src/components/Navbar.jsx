@@ -179,7 +179,7 @@ const Navbar = () => {
   );
 
   const navLinkClass = (isActive) =>
-    `whitespace-nowrap text-sm font-semibold uppercase tracking-[0.12em] transition-colors relative xl:text-[15px] 2xl:text-base ${
+    `whitespace-nowrap text-sm font-semibold tracking-normal transition-colors relative xl:text-[15px] 2xl:text-base ${
       isActive ? 'text-black' : 'text-gray-500 hover:text-black'
     }`;
 
@@ -355,7 +355,7 @@ const Navbar = () => {
                     <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100 group-hover:-translate-y-1">
                       <div className="relative grid gap-1 rounded-none border border-gray-100 bg-white p-6 shadow-xl">
                         <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-gray-100 bg-white" />
-                        <h3 className="mb-2 border-b pb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+                        <h3 className="mb-2 border-b pb-2 text-xs font-bold tracking-wide text-gray-400">
                           {link.label} Footage
                         </h3>
                         {link.subItems.map((sub) => (
