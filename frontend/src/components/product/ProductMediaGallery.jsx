@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
@@ -8,6 +9,7 @@ import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
   getFullscreenElement,
+  isIOSDevice,
   isVideoNativeFullscreen,
   requestElementFullscreen,
   supportsElementFullscreen,
@@ -66,12 +68,7 @@ const ProductMediaGallery = ({ product }) => {
     video.load();
     setIsVideoPlaying(false);
 
-    if (!isInView || isLightboxOpen) {
-      video.pause();
-      return;
-    }
-
-    const startDemo = async () => {
+    const startPlayback = async () => {
       try {
         video.muted = isMuted;
         await video.play();
@@ -81,11 +78,21 @@ const ProductMediaGallery = ({ product }) => {
       }
     };
 
-    startDemo();
+    if (isLightboxOpen) {
+      startPlayback();
+      return;
+    }
+
+    if (!isInView) {
+      video.pause();
+      return;
+    }
+
+    startPlayback();
   }, [selectedMediaIndex, isVideoSelected, product?.id, isLightboxOpen, isMuted, isInView]);
 
   useEffect(() => {
-    if (!isVideoSelected || !isInView) return undefined;
+    if (!isVideoSelected || !isInView || isLightboxOpen) return undefined;
 
     const video = videoRef.current;
     let resumeTimer;
@@ -162,12 +169,39 @@ const ProductMediaGallery = ({ product }) => {
       }
     };
 
-    document.body.style.overflow = 'hidden';
+    const scrollY = window.scrollY;
+    const lockBodyScroll = () => {
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    };
+
+    const updateViewportHeight = () => {
+      const height = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty('--media-lightbox-height', `${height}px`);
+    };
+
+    lockBodyScroll();
+    updateViewportHeight();
     window.addEventListener('keydown', onKeyDown);
+    window.visualViewport?.addEventListener('resize', updateViewportHeight);
+    window.visualViewport?.addEventListener('scroll', updateViewportHeight);
 
     return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
       document.body.style.overflow = '';
+      document.documentElement.style.removeProperty('--media-lightbox-height');
       window.removeEventListener('keydown', onKeyDown);
+      window.visualViewport?.removeEventListener('resize', updateViewportHeight);
+      window.visualViewport?.removeEventListener('scroll', updateViewportHeight);
+      window.scrollTo(0, scrollY);
     };
   }, [isLightboxOpen]);
 
@@ -240,6 +274,11 @@ const ProductMediaGallery = ({ product }) => {
       }
 
       exitVideoFullscreen(video);
+      return;
+    }
+
+    if (isIOSDevice()) {
+      openLightbox();
       return;
     }
 
@@ -388,6 +427,18 @@ const ProductMediaGallery = ({ product }) => {
     </>
   );
 
+  const lightbox = isLightboxOpen
+    ? createPortal(
+        <div className="media-lightbox" role="dialog" aria-modal="true" aria-label="Fullscreen media preview">
+          <ProtectedMediaFrame watermark className="media-lightbox__frame">
+            {renderMediaChrome(false)}
+            <div className="media-lightbox__media">{mediaContent}</div>
+          </ProtectedMediaFrame>
+        </div>,
+        document.body,
+      )
+    : null;
+
   return (
     <div ref={galleryRef} className="transform-gpu [contain:layout_paint]">
       <ProtectedMediaFrame
@@ -399,14 +450,7 @@ const ProductMediaGallery = ({ product }) => {
         {!isLightboxOpen ? mediaContent : null}
       </ProtectedMediaFrame>
 
-      {isLightboxOpen && (
-        <div className="media-lightbox" role="dialog" aria-modal="true" aria-label="Fullscreen media preview">
-          <ProtectedMediaFrame watermark className="media-lightbox__frame flex items-center justify-center">
-            {renderMediaChrome(false)}
-            {mediaContent}
-          </ProtectedMediaFrame>
-        </div>
-      )}
+      {lightbox}
 
       {mediaItems.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5">
