@@ -91,7 +91,7 @@ const CarouselControls = ({ heroSlides, activeIndex, prev, next, goTo, compact =
           type="button"
           onClick={prev}
           aria-label="Previous slide"
-          className="absolute top-1/2 left-3 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-gray-800 opacity-0 shadow-lg transition-all group-hover:opacity-100 hover:scale-110 sm:left-4 sm:p-3"
+          className="absolute top-1/2 left-3 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-gray-800 shadow-lg transition-transform hover:scale-110 sm:left-4 sm:p-3"
         >
           <IconChevronLeft className="h-5 w-5" />
         </button>
@@ -99,7 +99,7 @@ const CarouselControls = ({ heroSlides, activeIndex, prev, next, goTo, compact =
           type="button"
           onClick={next}
           aria-label="Next slide"
-          className="absolute top-1/2 right-3 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-gray-800 opacity-0 shadow-lg transition-all group-hover:opacity-100 hover:scale-110 sm:right-4 sm:p-3"
+          className="absolute top-1/2 right-3 z-20 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-gray-800 shadow-lg transition-transform hover:scale-110 sm:right-4 sm:p-3"
         >
           <IconChevronRight className="h-5 w-5" />
         </button>
@@ -123,6 +123,7 @@ const CarouselControls = ({ heroSlides, activeIndex, prev, next, goTo, compact =
 );
 
 const SWIPE_THRESHOLD = 50;
+const BANNER_AUTO_INTERVAL_MS = 4000;
 
 const mapSettingsHeroSlides = (slides = []) =>
   slides
@@ -143,7 +144,10 @@ const HeroCarousel = () => {
     () => mapSettingsHeroSlides(siteContent?.heroSlides || []),
     [siteContent?.heroSlides],
   );
-  const { activeIndex, next, prev, goTo, pause, resume } = useCarousel(heroSlides.length);
+  const { activeIndex, next, prev, goTo, pause, resume } = useCarousel(
+    heroSlides.length,
+    BANNER_AUTO_INTERVAL_MS,
+  );
   const { ref, isInView } = useInView();
   const motionEnabled = isInView;
   const touchStart = useRef({ x: 0, y: 0 });

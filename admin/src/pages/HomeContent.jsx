@@ -34,6 +34,7 @@ const HomeContent = () => {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [savingSlideIndex, setSavingSlideIndex] = useState(null)
+  const [deletingSlideIndex, setDeletingSlideIndex] = useState(null)
   const [savingTicker, setSavingTicker] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -106,10 +107,29 @@ const HomeContent = () => {
     setHeroSlides((current) => [...current, emptyHeroSlide()])
   }
 
-  const removeHeroSlide = (index) => {
-    setHeroSlides((current) =>
-      current.length === 1 ? current : current.filter((_, slideIndex) => slideIndex !== index),
-    )
+  const handleDeleteHeroSlide = async (index) => {
+    if (heroSlides.length === 1) {
+      setError('At least one hero slide is required.')
+      return
+    }
+
+    if (!window.confirm('Are you sure you want to delete?')) return
+
+    const nextSlides = heroSlides.filter((_, slideIndex) => slideIndex !== index)
+
+    setDeletingSlideIndex(index)
+    setError('')
+    setSuccess('')
+
+    try {
+      await updateSiteContent({ heroSlides: nextSlides })
+      setHeroSlides(nextSlides)
+      setSuccess(`Slide ${index + 1} deleted successfully.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeletingSlideIndex(null)
+    }
   }
 
   const handleSaveSlide = async (index) => {
@@ -191,10 +211,11 @@ const HomeContent = () => {
                   <p className="text-sm font-semibold text-slate-900">Slide {index + 1}</p>
                   <button
                     type="button"
-                    onClick={() => removeHeroSlide(index)}
-                    className="text-sm font-semibold text-red-600 hover:underline"
+                    onClick={() => handleDeleteHeroSlide(index)}
+                    disabled={deletingSlideIndex === index || heroSlides.length === 1}
+                    className="text-sm font-semibold text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Remove
+                    {deletingSlideIndex === index ? 'Deleting...' : 'Delete'}
                   </button>
                 </div>
 
