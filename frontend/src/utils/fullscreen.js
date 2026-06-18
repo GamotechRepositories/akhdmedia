@@ -4,6 +4,34 @@ export const getFullscreenElement = () =>
   document.msFullscreenElement ||
   null;
 
+export const isIOSDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+};
+
+export const isMobileDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+};
+
+export const supportsElementFullscreen = () => {
+  if (typeof document === 'undefined') return false;
+
+  const element = document.createElement('div');
+  return Boolean(
+    element.requestFullscreen ||
+      element.webkitRequestFullscreen ||
+      element.msRequestFullscreen,
+  );
+};
+
+export const isVideoNativeFullscreen = (video) =>
+  Boolean(video?.webkitDisplayingFullscreen);
+
 export const requestElementFullscreen = async (element) => {
   if (!element) return;
 
@@ -22,6 +50,27 @@ export const requestElementFullscreen = async (element) => {
   }
 };
 
+export const requestVideoFullscreen = async (video) => {
+  if (!video) return false;
+
+  if (typeof video.webkitEnterFullscreen === 'function') {
+    video.webkitEnterFullscreen();
+    return true;
+  }
+
+  if (video.requestFullscreen) {
+    await video.requestFullscreen();
+    return true;
+  }
+
+  if (video.webkitRequestFullscreen) {
+    video.webkitRequestFullscreen();
+    return true;
+  }
+
+  return false;
+};
+
 export const exitDocumentFullscreen = async () => {
   if (document.exitFullscreen) {
     await document.exitFullscreen();
@@ -35,6 +84,19 @@ export const exitDocumentFullscreen = async () => {
 
   if (document.msExitFullscreen) {
     document.msExitFullscreen();
+  }
+};
+
+export const exitVideoFullscreen = (video) => {
+  if (!video) return;
+
+  if (typeof video.webkitExitFullscreen === 'function' && video.webkitDisplayingFullscreen) {
+    video.webkitExitFullscreen();
+    return;
+  }
+
+  if (getFullscreenElement() === video) {
+    exitDocumentFullscreen();
   }
 };
 

@@ -3,7 +3,16 @@ import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import VideoThumbnail from '../ui/VideoThumbnail';
 import { handleImageError } from '../../utils/imageFallback';
-import { getFullscreenElement, toggleElementFullscreen } from '../../utils/fullscreen';
+import {
+  exitDocumentFullscreen,
+  exitVideoFullscreen,
+  getFullscreenElement,
+  isIOSDevice,
+  isVideoNativeFullscreen,
+  requestElementFullscreen,
+  requestVideoFullscreen,
+  supportsElementFullscreen,
+} from '../../utils/fullscreen';
 import {
   IconMaximize,
   IconMinimize,
@@ -37,9 +46,11 @@ const ProductMediaGallery = ({ product }) => {
   const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isNativeVideoFullscreen, setIsNativeVideoFullscreen] = useState(false);
 
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
+  const isImmersive = isLightboxOpen || isFullscreen || isNativeVideoFullscreen;
 
   useEffect(() => {
     setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
@@ -86,6 +97,23 @@ const ProductMediaGallery = ({ product }) => {
       document.removeEventListener('webkitfullscreenchange', syncFullscreen);
     };
   }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideoSelected) return undefined;
+
+    const syncNativeFullscreen = () => {
+      setIsNativeVideoFullscreen(isVideoNativeFullscreen(video));
+    };
+
+    video.addEventListener('webkitbeginfullscreen', syncNativeFullscreen);
+    video.addEventListener('webkitendfullscreen', syncNativeFullscreen);
+
+    return () => {
+      video.removeEventListener('webkitbeginfullscreen', syncNativeFullscreen);
+      video.removeEventListener('webkitendfullscreen', syncNativeFullscreen);
+    };
+  }, [isVideoSelected, selectedItem?.src]);
 
   useEffect(() => {
     if (!isLightboxOpen) return undefined;
@@ -150,37 +178,59 @@ const ProductMediaGallery = ({ product }) => {
     setIsMuted(nextMuted);
   };
 
+  const openLightbox = () => {
+    setIsLightboxOpen(true);
+  };
+
   const toggleFullscreen = async () => {
     const frame = frameRef.current;
     const video = videoRef.current;
 
-    if (isLightboxOpen) {
-      closeLightbox();
-      return;
-    }
-
-    if (getFullscreenElement() === frame) {
-      try {
-        await toggleElementFullscreen(frame);
-      } catch {
-        // ignore
+    if (isImmersive) {
+      if (isLightboxOpen) {
+        closeLightbox();
+        return;
       }
+
+      if (getFullscreenElement()) {
+        try {
+          await exitDocumentFullscreen();
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
+      exitVideoFullscreen(video);
       return;
     }
 
-    try {
-      await toggleElementFullscreen(frame);
-      return;
-    } catch {
-      // fall through to platform-specific or lightbox fallback
+    if (isVideoSelected && video && isIOSDevice()) {
+      try {
+        if (await requestVideoFullscreen(video)) return;
+      } catch {
+        // fall through
+      }
     }
 
-    if (isVideoSelected && video?.webkitEnterFullscreen) {
-      video.webkitEnterFullscreen();
-      return;
+    if (frame && supportsElementFullscreen()) {
+      try {
+        await requestElementFullscreen(frame);
+        return;
+      } catch {
+        // fall through
+      }
     }
 
-    setIsLightboxOpen(true);
+    if (isVideoSelected && video) {
+      try {
+        if (await requestVideoFullscreen(video)) return;
+      } catch {
+        // fall through to lightbox
+      }
+    }
+
+    openLightbox();
   };
 
   const closeLightbox = () => {
@@ -263,6 +313,57 @@ const ProductMediaGallery = ({ product }) => {
     </>
   );
 
+  const renderMediaChrome = (compact = false) => (
+    <>
+      <div
+        className={`absolute z-10 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm ${
+          compact ? 'left-3 top-3' : 'left-4 top-4'
+        }`}
+      >
+        {isVideoSelected ? 'Demo preview' : 'Preview'}
+      </div>
+
+      <button
+        type="button"
+        onClick={toggleFullscreen}
+        className={`absolute z-20 ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass}`}
+        aria-label={isImmersive ? 'Exit fullscreen' : 'View fullscreen'}
+        title={isImmersive ? 'Exit fullscreen' : 'Fullscreen'}
+      >
+        {isImmersive ? (
+          <IconMinimize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+        ) : (
+          <IconMaximize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+        )}
+      </button>
+
+      {mediaItems.length > 1 && (
+        <div className={`absolute z-20 flex gap-1.5 ${compact ? 'bottom-3 right-3' : 'bottom-4 right-4'}`}>
+          <button
+            type="button"
+            onClick={handlePrevMedia}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
+            aria-label="Previous"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleNextMedia}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
+            aria-label="Next"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <>
       <ProtectedMediaFrame
@@ -270,64 +371,14 @@ const ProductMediaGallery = ({ product }) => {
         watermark
         className="aspect-[10/9] w-full min-h-[260px] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[340px] sm:rounded-2xl lg:min-h-[420px] lg:aspect-[4/3]"
       >
-        <div className="absolute left-3 top-3 z-10 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-          {isVideoSelected ? 'Demo preview' : 'Preview'}
-        </div>
-
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          className={`absolute right-3 top-3 z-20 ${fullscreenButtonClass}`}
-          aria-label={isFullscreen || isLightboxOpen ? 'Exit fullscreen' : 'View fullscreen'}
-          title={isFullscreen || isLightboxOpen ? 'Exit fullscreen' : 'Fullscreen'}
-        >
-          {isFullscreen || isLightboxOpen ? (
-            <IconMinimize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
-          ) : (
-            <IconMaximize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
-          )}
-        </button>
-
-        {mediaItems.length > 1 && (
-          <div className="absolute bottom-3 right-3 z-20 flex gap-1.5">
-            <button
-              type="button"
-              onClick={handlePrevMedia}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
-              aria-label="Previous"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={handleNextMedia}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
-              aria-label="Next"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-        )}
-
+        {renderMediaChrome(true)}
         {!isLightboxOpen ? mediaContent : null}
       </ProtectedMediaFrame>
 
       {isLightboxOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black p-4">
-          <ProtectedMediaFrame watermark className="h-full w-full max-h-[100vh] max-w-[100vw] overflow-hidden bg-black">
-            <button
-              type="button"
-              onClick={closeLightbox}
-              className={`absolute right-4 top-4 z-20 ${fullscreenButtonClass}`}
-              aria-label="Exit fullscreen"
-              title="Exit fullscreen"
-            >
-              <IconMinimize className="h-5 w-5" />
-            </button>
+        <div className="media-lightbox" role="dialog" aria-modal="true" aria-label="Fullscreen media preview">
+          <ProtectedMediaFrame watermark className="media-lightbox__frame flex items-center justify-center">
+            {renderMediaChrome(false)}
             {mediaContent}
           </ProtectedMediaFrame>
         </div>
