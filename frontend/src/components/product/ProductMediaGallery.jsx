@@ -8,10 +8,8 @@ import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
   getFullscreenElement,
-  isIOSDevice,
   isVideoNativeFullscreen,
   requestElementFullscreen,
-  requestVideoFullscreen,
   supportsElementFullscreen,
 } from '../../utils/fullscreen';
 import {
@@ -245,26 +243,10 @@ const ProductMediaGallery = ({ product }) => {
       return;
     }
 
-    if (isVideoSelected && video && isIOSDevice()) {
-      try {
-        if (await requestVideoFullscreen(video)) return;
-      } catch {
-        // fall through
-      }
-    }
-
     if (frame && supportsElementFullscreen()) {
       try {
         await requestElementFullscreen(frame);
         return;
-      } catch {
-        // fall through
-      }
-    }
-
-    if (isVideoSelected && video) {
-      try {
-        if (await requestVideoFullscreen(video)) return;
       } catch {
         // fall through to lightbox
       }

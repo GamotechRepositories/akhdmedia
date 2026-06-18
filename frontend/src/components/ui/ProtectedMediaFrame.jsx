@@ -8,7 +8,7 @@ const ProtectedMediaFrame = forwardRef(({ children, className = '', watermark = 
     className={`protected-media-shell relative ${className}`.trim()}
   >
     {children}
-    {watermark && <div className="protected-media-watermark z-[5]" aria-hidden />}
+    {watermark && <div className="protected-media-watermark" aria-hidden />}
   </div>
 ));
 
