@@ -101,6 +101,8 @@ export const buildProductSearchText = (product, subCategoriesMap = {}) => {
     product.brand,
     product.description,
     product.clipId,
+    product.actorName,
+    ...(product.actorSearchKeywords || []),
     product.videoInfo?.fps,
     product.videoInfo?.duration,
     ...collectMediaTypeTerms(product),

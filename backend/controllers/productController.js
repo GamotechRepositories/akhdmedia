@@ -12,6 +12,7 @@ import {
   validateProductPayload,
 } from '../utils/normalizeProduct.js'
 import { enrichAdminProduct } from '../utils/enrichAdminProduct.js'
+import { applyActorSelection } from '../utils/applyActorToProduct.js'
 const getCategoryMap = async () => {
   const categories = await Category.find()
   return buildCategoryMap(categories)
@@ -81,7 +82,9 @@ export const createProduct = asyncHandler(async (req, res) => {
     return
   }
 
-  const payload = validateProductPayload(normalizeProductPayload(req.body))
+  const payload = validateProductPayload(
+    await applyActorSelection(normalizeProductPayload(req.body), req.body.actorId),
+  )
   payload.clipId = await resolveClipId(payload.clipId)
   await assertClipIdAvailable(payload.clipId)
 
@@ -108,7 +111,9 @@ export const updateProduct = asyncHandler(async (req, res) => {
     return
   }
 
-  const payload = validateProductPayload(normalizeProductPayload(req.body))
+  const payload = validateProductPayload(
+    await applyActorSelection(normalizeProductPayload(req.body), req.body.actorId),
+  )
   payload.clipId = await resolveClipId(payload.clipId, existing.clipId || '')
   await assertClipIdAvailable(payload.clipId, existing._id.toString())
 

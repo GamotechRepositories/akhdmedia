@@ -36,6 +36,7 @@ export const resolveUploadTarget = ({
   type,
   clipId,
   categorySlug = '',
+  actorSlug = '',
   filename = '',
   previewIndex = 1,
   tier = '',
@@ -62,6 +63,22 @@ export const resolveUploadTarget = ({
     const ext = getExtension(filename, '.jpg')
     const objectName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`
     const s3Key = `${AWS_S3_PUBLIC_PREFIX}/site/hero/${objectName}`
+    return {
+      scope: 'public',
+      s3Key,
+      key: s3Key,
+      filename: originalFilename,
+    }
+  }
+
+  if (type === 'actor-image') {
+    const slug = sanitizeCategorySlug(actorSlug || '')
+    if (!slug) {
+      throw new AppError('Actor slug is required before uploading image', 400)
+    }
+    const ext = getExtension(filename, '.jpg')
+    const objectName = `profile${ext}`
+    const s3Key = `${AWS_S3_PUBLIC_PREFIX}/actors/${slug}/${objectName}`
     return {
       scope: 'public',
       s3Key,
@@ -160,4 +177,5 @@ export const isPublicUploadType = (type) =>
   type === 'preview-video' ||
   type === 'video-poster' ||
   type === 'category-cover' ||
-  type === 'hero-slide'
+  type === 'hero-slide' ||
+  type === 'actor-image'

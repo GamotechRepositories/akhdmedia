@@ -19,10 +19,11 @@ const DEFAULT_SITE_CONTENT = {
 export { DEFAULT_SITE_CONTENT };
 
 export const fetchCatalog = async () => {
-  const [categoriesRes, productsRes, siteContentRes] = await Promise.all([
+  const [categoriesRes, productsRes, siteContentRes, actorsRes] = await Promise.all([
     api.get('/categories'),
     api.get('/products'),
     api.get('/site-content').catch(() => ({ data: DEFAULT_SITE_CONTENT })),
+    api.get('/actors').catch(() => ({ data: [] })),
   ]);
 
   const categories = categoriesRes.data;
@@ -31,6 +32,7 @@ export const fetchCatalog = async () => {
   return {
     categories,
     products,
+    actors: actorsRes.data || [],
     navLinks: buildNavLinks(categories),
     catalogCategories: buildCatalogCategories(categories),
     subCategoriesMap: buildSubCategories(categories),

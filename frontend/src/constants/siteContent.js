@@ -16,6 +16,10 @@ export const MOBILE_HERO = {
 };
 
 export const HOME_SECTIONS = {
+  actors: {
+    title: 'Browse by Actor',
+    subtitle: 'Select an actor to view their footage',
+  },
   freshDrops: {
     title: 'Latest Uploads',
     subtitle: 'Newly graded footage from our contributor network',

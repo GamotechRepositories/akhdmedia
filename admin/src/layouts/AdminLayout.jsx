@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  IconActors,
   IconCategories,
   IconDashboard,
   IconLogo,
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', end: true, icon: IconDashboard, description: 'Overview & tools' },
   { to: '/home-content', label: 'Homepage', icon: IconDashboard, description: 'Ticker & browse section' },
   { to: '/categories', label: 'Categories', icon: IconCategories, description: 'Navbar & subcategories' },
+  { to: '/actors', label: 'Actors', icon: IconActors, description: 'Actor profiles & search' },
   { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
   { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
   { to: '/transactions', label: 'Transactions', icon: IconTransactions, description: 'Payments & Razorpay' },
@@ -31,6 +33,8 @@ const pageTitles = {
   '/home-content': 'Homepage Content',
   '/categories': 'Categories',
   '/categories/new': 'Add Category',
+  '/actors': 'Actors',
+  '/actors/new': 'Add Actor',
   '/products': 'Products',
   '/products/new': 'Add Product',
   '/orders': 'Orders',

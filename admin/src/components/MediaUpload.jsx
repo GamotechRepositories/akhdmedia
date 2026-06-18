@@ -25,6 +25,7 @@ const MediaUpload = ({
   onPosterCaptured,
   clipId = '',
   categorySlug = '',
+  actorSlug = '',
   previewIndex = 0,
   tier = '',
 }) => {
@@ -68,6 +69,7 @@ const MediaUpload = ({
       const response = await uploadMedia(file, uploadType, reportProgress, {
         clipId,
         categorySlug,
+        actorSlug,
         previewIndex,
         tier,
       })
@@ -108,15 +110,18 @@ const MediaUpload = ({
   const displaySize = uploadedSize > 0 ? formatFileSize(uploadedSize) : ''
   const isCategoryUpload = uploadType === 'category-cover'
   const isHeroUpload = uploadType === 'hero-slide'
+  const isActorUpload = uploadType === 'actor-image'
   const uploadReady = isHeroUpload
     ? true
-    : isCategoryUpload
-      ? Boolean(categorySlug)
-      : Boolean(clipId)
+    : isActorUpload
+      ? Boolean(actorSlug?.trim())
+      : isCategoryUpload
+        ? Boolean(categorySlug)
+        : Boolean(clipId)
   const uploadButtonLabel = uploading
     ? `Uploading ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
     : !uploadReady
-      ? isCategoryUpload
+      ? isCategoryUpload || isActorUpload
         ? 'Enter slug first'
         : 'Preparing Clip ID...'
       : disabled

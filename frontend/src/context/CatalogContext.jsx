@@ -17,6 +17,7 @@ const emptyCatalog = {
   error: null,
   categories: [],
   products: [],
+  actors: [],
   navLinks: [],
   catalogCategories: {},
   subCategoriesMap: {},

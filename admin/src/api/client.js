@@ -93,6 +93,16 @@ export const updateCategory = (id, payload) => api.put(`/categories/${id}`, payl
 
 export const deleteCategory = (id) => api.delete(`/categories/${id}`)
 
+export const fetchActors = () => api.get('/admin/actors')
+
+export const fetchActor = (id) => api.get(`/admin/actors/${id}`)
+
+export const createActor = (payload) => api.post('/admin/actors', payload)
+
+export const updateActor = (id, payload) => api.put(`/admin/actors/${id}`, payload)
+
+export const deleteActor = (id) => api.delete(`/admin/actors/${id}`)
+
 export const fetchProducts = (admin = true) =>
   api.get('/products', { params: { admin: admin ? 'true' : 'false' } })
 
@@ -111,6 +121,7 @@ const uploadMediaViaProxy = (file, type, onProgress, options = {}) => {
   formData.append('type', type)
   if (options.clipId) formData.append('clipId', options.clipId)
   if (options.categorySlug) formData.append('categorySlug', options.categorySlug)
+  if (options.actorSlug) formData.append('actorSlug', options.actorSlug)
   if (options.previewIndex) formData.append('previewIndex', String(options.previewIndex))
   if (options.tier) formData.append('tier', options.tier)
   return api.post('/upload', formData, {
@@ -197,6 +208,7 @@ const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
     size: file.size,
     clipId: options.clipId,
     categorySlug: options.categorySlug,
+    actorSlug: options.actorSlug,
     previewIndex: options.previewIndex,
     tier: options.tier,
   })

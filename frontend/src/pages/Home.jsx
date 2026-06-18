@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
+import ActorRail from '../components/home/ActorRail';
 import NewsTicker from '../components/home/NewsTicker';
 import CategoryAccordion from '../components/home/CategoryAccordion';
 import ProductSection from '../components/home/ProductSection';
@@ -11,7 +12,7 @@ import { useCatalog } from '../context/CatalogContext';
 const Home = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { products, loading } = useCatalog();
+  const { products, actors, loading } = useCatalog();
   const latestProducts = products.filter((product) => product.showInLatest).slice(0, 8);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const Home = () => {
     <div className="min-h-screen bg-white font-sans text-gray-800">
       <HeroCarousel />
       <NewsTicker />
+      <ActorRail actors={actors} isLoading={loading} />
       <CategoryAccordion />
 
       <ProductSection

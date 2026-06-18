@@ -21,8 +21,10 @@ const CategoryPage = () => {
   const { category, subCategory } = useParams();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search')?.trim() || '';
+  const actorId = searchParams.get('actor')?.trim() || '';
   const {
     products,
+    actors,
     catalogCategories,
     filterProducts,
     getSubCategoryLabel,
@@ -37,7 +39,23 @@ const CategoryPage = () => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const selectedActor = useMemo(
+    () => actors.find((actor) => actor.id === actorId) || null,
+    [actors, actorId],
+  );
+
   const pageMeta = useMemo(() => {
+    if (selectedActor) {
+      return {
+        title: `${selectedActor.name} Footage`,
+        breadcrumbs: [
+          { label: 'Home', to: '/' },
+          { label: 'Videos', to: '/videos' },
+          { label: selectedActor.name, to: null },
+        ],
+      };
+    }
+
     if (searchQuery) {
       return {
         title: `Search results for "${searchQuery}"`,
@@ -74,15 +92,19 @@ const CategoryPage = () => {
         { label: 'Videos', to: null },
       ],
     };
-  }, [category, subCategory, subCategoryLabel, catalogCategories, searchQuery]);
+  }, [category, subCategory, subCategoryLabel, catalogCategories, searchQuery, selectedActor]);
 
   const baseProducts = useMemo(() => {
+    if (actorId) {
+      return products.filter((product) => product.actorId === actorId);
+    }
+
     if (searchQuery) {
       return filterProducts({ search: searchQuery });
     }
 
     return filterByCategory(products, category, subCategory);
-  }, [products, category, subCategory, searchQuery, filterProducts]);
+  }, [products, actorId, category, subCategory, searchQuery, filterProducts]);
 
   const filteredProducts = useCatalogFilters(baseProducts, filters);
   const { brands, resolutions, fps } = useMemo(
@@ -98,17 +120,17 @@ const CategoryPage = () => {
     setIsLoading(true);
     const timer = window.setTimeout(() => setIsLoading(false), 300);
     return () => window.clearTimeout(timer);
-  }, [category, subCategory, filters, catalogLoading, searchQuery]);
+  }, [category, subCategory, filters, catalogLoading, searchQuery, actorId]);
 
   useEffect(() => {
     setFilters(DEFAULT_CATALOG_FILTERS);
-  }, [category, subCategory]);
+  }, [category, subCategory, actorId]);
 
   useEffect(() => {
-    if (searchQuery) {
+    if (searchQuery || actorId) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [searchQuery]);
+  }, [searchQuery, actorId]);
 
   const toggleFilters = () => {
     if (window.innerWidth >= 1024) {
@@ -142,6 +164,24 @@ const CategoryPage = () => {
             </nav>
 
             <h1 className="mt-2 text-xl font-bold text-gray-900 sm:text-2xl lg:text-3xl">{pageMeta.title}</h1>
+            {selectedActor && (
+              <div className="mt-3 flex items-center gap-3">
+                {selectedActor.image ? (
+                  <img
+                    src={selectedActor.image}
+                    alt={selectedActor.name}
+                    className="h-12 w-12 rounded-full object-cover ring-2 ring-gray-200"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600">
+                    {selectedActor.name?.charAt(0) || '?'}
+                  </div>
+                )}
+                <p className="text-sm text-gray-600">
+                  Clips featuring <span className="font-semibold text-gray-900">{selectedActor.name}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">            {!isLoading && filteredProducts.length > 0 && (
@@ -227,11 +267,13 @@ const CategoryPage = () => {
             ) : (
               <div className="py-12 text-center">
                 <p className="mb-4 text-lg text-gray-600">
-                  {searchQuery
+                  {selectedActor
+                    ? `No clips found for ${selectedActor.name}.`
+                    : searchQuery
                     ? `No clips found for "${searchQuery}".`
                     : 'No clips match your filters.'}
                 </p>
-                {searchQuery ? (
+                {selectedActor || searchQuery ? (
                   <Link
                     to="/videos"
                     className="font-medium text-gray-900 underline underline-offset-4"

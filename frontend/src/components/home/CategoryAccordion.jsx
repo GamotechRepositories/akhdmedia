@@ -76,13 +76,10 @@ const CategoryAccordion = () => {
   if (panels.length === 0) return null;
 
   return (
-    <section className="scroll-section bg-white pt-5 pb-0 sm:pt-8">
+    <section className="scroll-section bg-white pt-2 pb-0 sm:pt-3">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-4 text-center sm:mb-8">
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-600 sm:text-xs">
-            Shot for post-production
-          </span>
-          <h2 className="mt-1.5 text-xl font-bold text-gray-600 sm:mt-2 sm:text-3xl">
+        <div className="mb-3 text-center sm:mb-5">
+          <h2 className="text-xl font-bold text-gray-600 sm:text-3xl">
             Browse by Footage Type
           </h2>
         </div>

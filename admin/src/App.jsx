@@ -4,6 +4,8 @@ import AdminLayout from './layouts/AdminLayout'
 import Dashboard from './pages/Dashboard'
 import Categories from './pages/Categories'
 import CategoryForm from './pages/CategoryForm'
+import Actors from './pages/Actors'
+import ActorForm from './pages/ActorForm'
 import Products from './pages/Products'
 import ProductForm from './pages/ProductForm'
 import Orders from './pages/Orders'
@@ -27,6 +29,9 @@ const App = () => (
         <Route path="categories" element={<Categories />} />
         <Route path="categories/new" element={<CategoryForm />} />
         <Route path="categories/:id/edit" element={<CategoryForm />} />
+        <Route path="actors" element={<Actors />} />
+        <Route path="actors/new" element={<ActorForm />} />
+        <Route path="actors/:id/edit" element={<ActorForm />} />
         <Route path="products" element={<Products />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/:id/edit" element={<ProductForm />} />

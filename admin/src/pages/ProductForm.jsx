@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   createProduct,
+  fetchActors,
   fetchCategories,
   fetchProduct,
   reserveClipId,
@@ -121,6 +122,7 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   categorySlug: '',
   subCategorySlug: '',
   brand: '',
+  actorId: '',
   price: 499,
   gstPercentage: 18,
   availableTiers: [],
@@ -156,6 +158,7 @@ const ProductForm = () => {
   const backState = listState ? { restore: listState } : undefined
 
   const [categories, setCategories] = useState([])
+  const [actors, setActors] = useState([])
   const [form, setForm] = useState(emptyForm())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -171,8 +174,9 @@ const ProductForm = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const categoriesRes = await fetchCategories()
+        const [categoriesRes, actorsRes] = await Promise.all([fetchCategories(), fetchActors()])
         setCategories(categoriesRes.data)
+        setActors(actorsRes.data || [])
 
         if (isEdit) {
           const productRes = await fetchProduct(id)
@@ -187,6 +191,7 @@ const ProductForm = () => {
             categorySlug: product.categorySlug,
             subCategorySlug: product.subCategory || '',
             brand: product.brand || '',
+            actorId: product.actorId || '',
             price: product.price,
             gstPercentage: product.gstPercentage ?? 18,
             availableTiers: mergeAvailableTiers(product),
@@ -374,6 +379,7 @@ const ProductForm = () => {
       categorySlug: current.categorySlug,
       subCategorySlug: current.subCategorySlug,
       brand: current.brand,
+      actorId: current.actorId,
       price: current.price,
       gstPercentage: current.gstPercentage,
       rating: current.rating,
@@ -641,6 +647,25 @@ const ProductForm = () => {
                   <option key={subCategory.slug} value={subCategory.slug}>{subCategory.name}</option>
                 ))}
               </select>
+            </label>
+
+            <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Actor</span>
+              <select
+                value={form.actorId}
+                onChange={(e) => updateField('actorId', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">No actor</option>
+                {actors.map((actor) => (
+                  <option key={actor._id} value={actor._id}>
+                    {actor.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Link this product to an actor so customers can find it by actor name or keywords in search.
+              </p>
             </label>
 
             <label className="block text-sm">
