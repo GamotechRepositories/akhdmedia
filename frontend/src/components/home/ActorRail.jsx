@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PAGE_CONTAINER } from '../../constants/layout';
-import { useHorizontalDragScroll } from '../../hooks/useHorizontalDragScroll';
+import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 import OptimizedImage from '../ui/OptimizedImage';
 
-const AUTO_SCROLL_MS = 4000;
-const AUTO_SCROLL_STEP = 2;
-const HOVER_EDGE_SCROLL_MS = 500;
-const HOVER_SCROLL_STEP = 2;
+const SCROLL_STEP = 2;
 
 const SCROLL_ROW_CLASS =
-  '-mx-4 flex w-max max-w-full snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-0.5 pb-2 scrollbar-hide sm:gap-6 md:mx-0 md:px-0';
+  'flex w-full snap-x snap-mandatory gap-4 overflow-x-auto px-12 pt-0.5 pb-2 scrollbar-hide sm:gap-6 sm:px-14';
+
+const scrollButtonClass =
+  'absolute top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/90 p-2.5 text-gray-800 shadow-lg transition-transform hover:scale-110 sm:p-3 md:flex';
 
 const scrollToActorIndex = (container, index) => {
   const card = container?.children[index];
@@ -22,151 +22,132 @@ const scrollToActorIndex = (container, index) => {
   });
 };
 
-const ActorScrollRow = ({ itemCount, enableAutoScroll = false, children }) => {
-  const { scrollRef, isScrollable, shouldPreventClick, dragHandlers } =
-    useHorizontalDragScroll(itemCount);
-  const hoverScrollLockRef = useRef(false);
-  const resumeTimerRef = useRef(null);
-  const [isPaused, setIsPaused] = useState(false);
+const getAnchorIndex = (container) => {
+  const cards = Array.from(container.children);
+  if (!cards.length) return 0;
 
-  const pauseAutoScroll = useCallback(() => {
-    if (resumeTimerRef.current) {
-      window.clearTimeout(resumeTimerRef.current);
+  const containerRect = container.getBoundingClientRect();
+
+  for (let index = 0; index < cards.length; index += 1) {
+    const cardRect = cards[index].getBoundingClientRect();
+    if (cardRect.right > containerRect.left + 8) {
+      return index;
     }
-    setIsPaused(true);
-  }, []);
+  }
 
-  const resumeAutoScrollLater = useCallback(() => {
-    if (resumeTimerRef.current) {
-      window.clearTimeout(resumeTimerRef.current);
-    }
-    resumeTimerRef.current = window.setTimeout(() => setIsPaused(false), 3500);
-  }, []);
+  return 0;
+};
 
-  useEffect(
-    () => () => {
-      if (resumeTimerRef.current) {
-        window.clearTimeout(resumeTimerRef.current);
-      }
-    },
-    [],
-  );
+const ActorScrollControls = ({ scrollRef, itemCount, isScrollable, canScrollLeft, canScrollRight }) => {
+  const scrollByStep = (direction) => {
+    const container = scrollRef.current;
+    if (!container) return;
 
-  useEffect(() => {
-    if (!enableAutoScroll || !isScrollable || itemCount <= 1 || isPaused) return undefined;
+    const anchorIndex = getAnchorIndex(container);
+    const targetIndex =
+      direction === 'next'
+        ? Math.min(anchorIndex + SCROLL_STEP, itemCount - 1)
+        : Math.max(anchorIndex - SCROLL_STEP, 0);
 
-    const timer = window.setInterval(() => {
-      const container = scrollRef.current;
-      if (!container) return;
+    scrollToActorIndex(container, targetIndex);
+  };
 
-      const cards = Array.from(container.children);
-      if (!cards.length) return;
-
-      const containerRect = container.getBoundingClientRect();
-      let lastVisibleIndex = 0;
-
-      cards.forEach((card, index) => {
-        const cardRect = card.getBoundingClientRect();
-        if (cardRect.left < containerRect.right - 8) {
-          lastVisibleIndex = index;
-        }
-      });
-
-      const nextIndex =
-        lastVisibleIndex + AUTO_SCROLL_STEP >= itemCount
-          ? 0
-          : lastVisibleIndex + AUTO_SCROLL_STEP;
-
-      scrollToActorIndex(container, nextIndex);
-    }, AUTO_SCROLL_MS);
-
-    return () => window.clearInterval(timer);
-  }, [enableAutoScroll, isScrollable, isPaused, itemCount, scrollRef]);
-
-  const handleActorHover = useCallback(
-    (index) => {
-      if (!enableAutoScroll || !isScrollable || hoverScrollLockRef.current) return;
-
-      const container = scrollRef.current;
-      if (!container) return;
-
-      const cards = Array.from(container.children);
-      const card = cards[index];
-      if (!card) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const cardRect = card.getBoundingClientRect();
-      const edgeGap = 20;
-      const nextCard = cards[index + 1];
-      const prevCard = cards[index - 1];
-      const nextCardRect = nextCard?.getBoundingClientRect();
-      const prevCardRect = prevCard?.getBoundingClientRect();
-
-      const isOnRightEdge = cardRect.right >= containerRect.right - edgeGap;
-      const isSecondFromRightEdge = Boolean(
-        nextCardRect && nextCardRect.right >= containerRect.right - edgeGap,
-      );
-      const isOnLeftEdge = cardRect.left <= containerRect.left + edgeGap;
-      const isSecondFromLeftEdge = Boolean(
-        prevCardRect && prevCardRect.left <= containerRect.left + edgeGap,
-      );
-
-      let targetIndex = null;
-      if (index < itemCount - 1 && (isOnRightEdge || isSecondFromRightEdge)) {
-        targetIndex = Math.min(index + HOVER_SCROLL_STEP, itemCount - 1);
-      } else if (index > 0 && (isOnLeftEdge || isSecondFromLeftEdge)) {
-        targetIndex = Math.max(index - HOVER_SCROLL_STEP, 0);
-      }
-
-      if (targetIndex === null || targetIndex === index) return;
-
-      hoverScrollLockRef.current = true;
-      scrollToActorIndex(container, targetIndex);
-      window.setTimeout(() => {
-        hoverScrollLockRef.current = false;
-      }, HOVER_EDGE_SCROLL_MS);
-    },
-    [enableAutoScroll, isScrollable, itemCount, scrollRef],
-  );
+  if (!isScrollable) return null;
 
   return (
-    <div className="flex justify-center">
-      <div
-        ref={scrollRef}
-        {...dragHandlers}
-        onMouseDown={(event) => {
-          dragHandlers.onMouseDown?.(event);
-          pauseAutoScroll();
-        }}
-        onMouseEnter={pauseAutoScroll}
-        onMouseLeave={resumeAutoScrollLater}
-        onTouchStart={pauseAutoScroll}
-        onTouchEnd={resumeAutoScrollLater}
-        className={`${SCROLL_ROW_CLASS}${isScrollable ? ' cursor-grab' : ''}`}
-        aria-label={isScrollable ? 'Actors list. Drag or scroll with mouse to browse.' : undefined}
+    <>
+      <button
+        type="button"
+        onClick={() => scrollByStep('prev')}
+        disabled={!canScrollLeft}
+        aria-label="Scroll actors left"
+        className={`${scrollButtonClass} left-0 disabled:cursor-not-allowed disabled:opacity-40`}
       >
-        {children(shouldPreventClick, handleActorHover)}
+        <IconChevronLeft className="h-5 w-5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => scrollByStep('next')}
+        disabled={!canScrollRight}
+        aria-label="Scroll actors right"
+        className={`${scrollButtonClass} right-0 disabled:cursor-not-allowed disabled:opacity-40`}
+      >
+        <IconChevronRight className="h-5 w-5" />
+      </button>
+    </>
+  );
+};
+
+const useActorScrollState = (scrollRef, itemCount) => {
+  const [isScrollable, setIsScrollable] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const scrollable = el.scrollWidth > el.clientWidth + 1;
+    setIsScrollable(scrollable);
+    setCanScrollLeft(el.scrollLeft > 8);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }, [scrollRef]);
+
+  useEffect(() => {
+    updateScrollState();
+    const el = scrollRef.current;
+    if (!el) return undefined;
+
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+    if (el.firstElementChild) {
+      observer.observe(el.firstElementChild);
+    }
+
+    el.addEventListener('scroll', updateScrollState, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      el.removeEventListener('scroll', updateScrollState);
+    };
+  }, [itemCount, scrollRef, updateScrollState]);
+
+  return { isScrollable, canScrollLeft, canScrollRight };
+};
+
+const ActorScrollRow = ({ itemCount, scrollRef, children }) => {
+  const { isScrollable, canScrollLeft, canScrollRight } = useActorScrollState(scrollRef, itemCount);
+
+  return (
+    <div className={`relative ${PAGE_CONTAINER}`}>
+      <ActorScrollControls
+        scrollRef={scrollRef}
+        itemCount={itemCount}
+        isScrollable={isScrollable}
+        canScrollLeft={canScrollLeft}
+        canScrollRight={canScrollRight}
+      />
+      <div ref={scrollRef} className={SCROLL_ROW_CLASS}>
+        {children}
       </div>
     </div>
   );
 };
 
 const ActorRail = ({ actors = [], isLoading = false }) => {
+  const scrollRef = useRef(null);
+
   if (isLoading) {
     return (
       <section className="border-b border-gray-100 bg-white pt-10 pb-2 sm:pt-12 sm:pb-3">
-        <div className={PAGE_CONTAINER}>
-          <ActorScrollRow itemCount={6}>
-            {() =>
-              Array.from({ length: 6 }, (_, index) => (
-                <div key={index} className="w-[92px] shrink-0 sm:w-[108px]">
-                  <div className="aspect-square animate-pulse rounded-full border-2 border-gray-200 bg-gray-200" />
-                  <div className="mx-auto mt-3 h-3 w-16 animate-pulse rounded bg-gray-200" />
-                </div>
-              ))
-            }
-          </ActorScrollRow>
-        </div>
+        <ActorScrollRow itemCount={6} scrollRef={scrollRef}>
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="w-[92px] shrink-0 sm:w-[108px]">
+              <div className="aspect-square animate-pulse rounded-full border-2 border-gray-200 bg-gray-200" />
+              <div className="mx-auto mt-3 h-3 w-16 animate-pulse rounded bg-gray-200" />
+            </div>
+          ))}
+        </ActorScrollRow>
       </section>
     );
   }
@@ -175,47 +156,36 @@ const ActorRail = ({ actors = [], isLoading = false }) => {
 
   return (
     <section className="border-b border-gray-100 bg-white pt-10 pb-2 sm:pt-12 sm:pb-3">
-      <div className={PAGE_CONTAINER}>
-        <ActorScrollRow itemCount={actors.length} enableAutoScroll>
-          {(shouldPreventClick, handleActorHover) =>
-            actors.map((actor, index) => (
-              <Link
-                key={actor.id}
-                to={`/videos?actor=${encodeURIComponent(actor.id)}`}
-                draggable={false}
-                onMouseEnter={() => handleActorHover(index)}
-                onClick={(event) => {
-                  if (shouldPreventClick()) {
-                    event.preventDefault();
-                  }
-                }}
-                className="group w-[92px] shrink-0 snap-start text-center sm:w-[108px]"
-              >
-                <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100 transition-colors group-hover:border-gray-900">
-                  {actor.image ? (
-                    <OptimizedImage
-                      src={actor.image}
-                      alt={actor.name}
-                      width={216}
-                      height={216}
-                      quality={85}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gray-200 text-2xl font-bold text-gray-500">
-                      {actor.name?.charAt(0) || '?'}
-                    </div>
-                  )}
+      <ActorScrollRow itemCount={actors.length} scrollRef={scrollRef}>
+        {actors.map((actor) => (
+          <Link
+            key={actor.id}
+            to={`/videos?actor=${encodeURIComponent(actor.id)}`}
+            className="group w-[92px] shrink-0 snap-start text-center sm:w-[108px]"
+          >
+            <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100 transition-colors group-hover:border-gray-900">
+              {actor.image ? (
+                <OptimizedImage
+                  src={actor.image}
+                  alt={actor.name}
+                  width={216}
+                  height={216}
+                  quality={85}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gray-200 text-2xl font-bold text-gray-500">
+                  {actor.name?.charAt(0) || '?'}
                 </div>
-                <p className="mt-3 line-clamp-2 text-xs font-semibold text-gray-900 sm:text-sm">
-                  {actor.name}
-                </p>
-              </Link>
-            ))
-          }
-        </ActorScrollRow>
-      </div>
+              )}
+            </div>
+            <p className="mt-3 line-clamp-2 text-xs font-semibold text-gray-900 sm:text-sm">
+              {actor.name}
+            </p>
+          </Link>
+        ))}
+      </ActorScrollRow>
     </section>
   );
 };
