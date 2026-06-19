@@ -26,7 +26,11 @@ const Home = () => {
     <div className="min-h-screen bg-white font-sans text-gray-800">
       <HeroCarousel />
       <NewsTicker />
-      <ActorRail actors={actors} isLoading={loading} />
+      <ActorRail
+        actors={actors}
+        isLoading={loading}
+        viewAllLink={HOME_SECTIONS.actors.viewAllLink}
+      />
       <CategoryAccordion />
 
       <ProductSection

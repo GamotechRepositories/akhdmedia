@@ -154,15 +154,6 @@ const ActorForm = () => {
         onClose={() => setShowSuccess(false)}
       />
 
-      <div className="flex justify-end gap-3">
-        <Link to="/actors" className={secondaryBtnClass}>
-          Cancel
-        </Link>
-        <button type="submit" disabled={saving} className={primaryBtnClass}>
-          {saving ? 'Saving...' : isEdit ? 'Update Actor' : 'Create Actor'}
-        </button>
-      </div>
-
       <div className={compactFormClass}>
         <FormStep step="1" title="Actor details" hint="Name and search keywords for discovery" tone="sky">
           <div className="grid gap-4">
@@ -242,6 +233,15 @@ const ActorForm = () => {
             <p className="mt-2 text-xs text-amber-700">Enter actor name/slug before uploading an image.</p>
           )}
         </FormStep>
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <Link to="/actors" className={secondaryBtnClass}>
+          Cancel
+        </Link>
+        <button type="submit" disabled={saving} className={primaryBtnClass}>
+          {saving ? 'Saving...' : isEdit ? 'Update Actor' : 'Create Actor'}
+        </button>
       </div>
     </form>
   )

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
 import Home from './pages/Home';
+import ActorsPage from './pages/ActorsPage';
 import CategoryPage from './pages/CategoryPage';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
@@ -35,6 +36,7 @@ function AppContent() {
       <main className="mobile-page-bottom flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/actors" element={<ActorsPage />} />
           <Route path="/videos" element={<CategoryPage />} />
           <Route path="/videos/:category/:subCategory" element={<CategoryPage />} />
           <Route path="/videos/:category" element={<CategoryPage />} />

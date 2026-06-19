@@ -50,7 +50,7 @@ const CategoryPage = () => {
         title: `${selectedActor.name} Footage`,
         breadcrumbs: [
           { label: 'Home', to: '/' },
-          { label: 'Videos', to: '/videos' },
+          { label: 'Actors', to: '/actors' },
           { label: selectedActor.name, to: null },
         ],
       };

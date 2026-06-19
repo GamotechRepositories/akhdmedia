@@ -17,8 +17,7 @@ export const MOBILE_HERO = {
 
 export const HOME_SECTIONS = {
   actors: {
-    title: 'Browse by Actor',
-    subtitle: 'Select an actor to view their footage',
+    viewAllLink: '/actors',
   },
   freshDrops: {
     title: 'Latest Uploads',
