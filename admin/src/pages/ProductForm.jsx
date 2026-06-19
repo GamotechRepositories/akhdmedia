@@ -226,12 +226,6 @@ const ProductForm = () => {
   }, [showCreateSuccess])
 
   useEffect(() => {
-    if (!showUpdateSuccess) return undefined
-    const timer = window.setTimeout(() => setShowUpdateSuccess(false), 4000)
-    return () => window.clearTimeout(timer)
-  }, [showUpdateSuccess])
-
-  useEffect(() => {
     const loadData = async () => {
       try {
         const [categoriesRes, actorsRes] = await Promise.all([fetchCategories(), fetchActors()])
@@ -551,14 +545,12 @@ const ProductForm = () => {
         const { data: savedProduct } = await updateProduct(id, payload)
         setForm(mapProductToForm(savedProduct))
         setShowUpdateSuccess(true)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
         await createProduct(payload)
         const nextClip = await reserveClipId()
         setForm({ ...emptyForm(form.mediaType), clipId: nextClip.clipId })
         setError('')
         setShowCreateSuccess(true)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
       }
     } catch (err) {
       setError(err.message)
@@ -592,11 +584,16 @@ const ProductForm = () => {
         onClose={() => setError('')}
       />
 
-      {showUpdateSuccess && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          Product updated — preview images and demo video are saved.
-        </div>
-      )}
+      <AdminAlertModal
+        open={showUpdateSuccess}
+        title="Product updated successfully"
+        message="Preview images and demo video are saved."
+        variant="success"
+        onClose={() => {
+          setShowUpdateSuccess(false)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
+      />
 
       {showCreateSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

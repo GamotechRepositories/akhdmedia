@@ -4,6 +4,7 @@ import {
   createSupportRequest,
   getAllSupportRequests,
   getSupportRequestById,
+  replyToSupportRequest,
   updateSupportRequestStatus,
 } from '../services/supportService.js'
 
@@ -47,6 +48,18 @@ export const patchSupportRequest = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Support request updated',
+    data: {
+      request: formatSupportRequest(request),
+    },
+  })
+})
+
+export const sendSupportReply = asyncHandler(async (req, res) => {
+  const request = await replyToSupportRequest(req.params.id, req.body)
+
+  res.json({
+    success: true,
+    message: 'Reply sent to customer',
     data: {
       request: formatSupportRequest(request),
     },

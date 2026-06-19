@@ -9,6 +9,11 @@ export const formatSupportRequest = (request) => ({
   message: request.message,
   status: request.status,
   adminNotes: request.adminNotes || '',
+  replies: (request.replies || []).map((reply) => ({
+    message: reply.message,
+    sentAt: reply.sentAt,
+  })),
+  lastReplyAt: request.lastReplyAt || null,
   createdAt: request.createdAt,
   updatedAt: request.updatedAt,
 })

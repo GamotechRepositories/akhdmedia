@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { fetchOrders, fetchSupportRequest, updateSupportRequest } from '../api/client'
+import { fetchOrders, fetchSupportRequest, replySupportRequest, updateSupportRequest } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
 
@@ -47,11 +47,14 @@ const SupportDetail = () => {
   const [request, setRequest] = useState(null)
   const [status, setStatus] = useState('open')
   const [adminNotes, setAdminNotes] = useState('')
+  const [replyMessage, setReplyMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [sendingReply, setSendingReply] = useState(false)
   const [error, setError] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [notice, setNotice] = useState('')
+  const [showReplySuccess, setShowReplySuccess] = useState(false)
   const [matchedOrder, setMatchedOrder] = useState(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [orderModalMessage, setOrderModalMessage] = useState('')
@@ -137,6 +140,33 @@ const SupportDetail = () => {
       setError(err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSendReply = async () => {
+    const trimmedReply = replyMessage.trim()
+
+    if (trimmedReply.length < 5) {
+      setError('Reply must be at least 5 characters.')
+      return
+    }
+
+    setSendingReply(true)
+    setNotice('')
+    try {
+      const response = await replySupportRequest(id, {
+        replyMessage: trimmedReply,
+        status,
+      })
+      const nextRequest = response.data.data?.request
+      setRequest(nextRequest)
+      setStatus(nextRequest?.status || status)
+      setReplyMessage('')
+      setShowReplySuccess(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSendingReply(false)
     }
   }
 
@@ -289,6 +319,57 @@ const SupportDetail = () => {
         <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{request.message}</p>
       </div>
 
+      <div className={`${cardClass} p-5`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Reply to customer</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Type your solution or update below. It will be emailed to {request.email} in a professional format.
+            </p>
+          </div>
+          <p className="text-xs font-medium text-slate-500">Ticket {request.ticketNumber}</p>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <label htmlFor="replyMessage" className="mb-1.5 block text-sm font-medium text-slate-700">
+              Your reply
+            </label>
+            <textarea
+              id="replyMessage"
+              value={replyMessage}
+              onChange={(event) => setReplyMessage(event.target.value)}
+              rows={6}
+              className={inputClass}
+              placeholder="Explain the solution, next steps, or what the customer should do..."
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSendReply}
+            disabled={sendingReply || !replyMessage.trim()}
+            className={primaryBtnClass}
+          >
+            {sendingReply ? 'Sending...' : 'Send reply to customer'}
+          </button>
+        </div>
+
+        {request.replies?.length > 0 && (
+          <div className="mt-6 border-t border-slate-200 pt-5">
+            <h3 className="text-sm font-semibold text-slate-900">Sent replies</h3>
+            <div className="mt-3 space-y-3">
+              {request.replies.map((reply, index) => (
+                <div key={`${reply.sentAt}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-medium text-slate-500">{formatDate(reply.sentAt)}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{reply.message}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {showOrderModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true">
@@ -312,9 +393,17 @@ const SupportDetail = () => {
 
       <AdminAlertModal
         open={Boolean(error) && Boolean(request)}
-        title="Could not save changes"
+        title="Could not continue"
         message={error}
         onClose={() => setError('')}
+      />
+
+      <AdminAlertModal
+        open={showReplySuccess}
+        title="Reply sent successfully"
+        message={`Your response has been emailed to ${request.email}.`}
+        variant="success"
+        onClose={() => setShowReplySuccess(false)}
       />
     </div>
   )

@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import connectDB from './config/db.js'
+import { isEmailConfigured } from './config/email.js'
 import { isAwsEnabled, LOCAL_PUBLIC_DIR } from './config/storage.js'
 import apiRoutes from './routes/index.js'
 import errorHandler from './middleware/errorHandler.js'
@@ -56,6 +57,11 @@ const startServer = async () => {
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
+    console.log(
+      isEmailConfigured()
+        ? 'Email: Resend configured'
+        : 'Email: Resend NOT configured (set RESEND_API_KEY and RESEND_FROM)',
+    )
     console.log(
       isAwsEnabled()
         ? `Storage: AWS S3 (${process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME})`

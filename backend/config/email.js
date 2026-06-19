@@ -3,8 +3,10 @@ export const BRAND_NAME = 'AKHD MEDIA & CO'
 export const getResendApiKey = () =>
   process.env.RESEND_API_KEY?.trim() || process.env.api_key?.trim() || ''
 
-export const getResendFrom = () =>
-  process.env.RESEND_FROM?.trim() || 'AKHD MEDIA & CO <noreply@akhdmedia.com>'
+export const getResendFrom = () => {
+  const raw = process.env.RESEND_FROM?.trim() || 'AKHD MEDIA & CO <noreply@akhdmedia.com>'
+  return raw.replace(/^["']+|["']+$/g, '')
+}
 
 export const isEmailConfigured = () => Boolean(getResendApiKey() && getResendFrom())
 

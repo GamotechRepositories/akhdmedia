@@ -92,7 +92,8 @@ const Support = () => {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Request Submitted</h1>
           <p className="mt-3 text-sm leading-relaxed text-gray-600">
-            Our support team has received your request. We will reply to your email shortly.
+            Your request has been received. A confirmation email has been sent to your inbox.
+            Our team will review your issue and respond as quickly as possible.
           </p>
           <p className="mt-4 font-mono text-sm font-semibold text-gray-900">Ticket #{submittedTicket}</p>
           <Link

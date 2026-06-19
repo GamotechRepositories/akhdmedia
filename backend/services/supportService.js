@@ -1,5 +1,6 @@
 import SupportRequest from '../models/SupportRequest.js'
 import AppError from '../utils/AppError.js'
+import { sendSupportReplyEmail, sendSupportRequestConfirmationEmail } from './emailService.js'
 
 const VALID_SUBJECTS = new Set(['download', 'license_email', 'payment', 'license', 'other'])
 const VALID_STATUSES = new Set(['open', 'in_progress', 'resolved', 'closed'])
@@ -35,6 +36,19 @@ export const createSupportRequest = async (payload, sessionId = '') => {
     status: 'open',
   })
 
+  try {
+    const emailResult = await sendSupportRequestConfirmationEmail(request)
+    if (!emailResult.sent) {
+      console.warn(
+        `[email] Support confirmation not sent to ${email}:`,
+        emailResult.reason,
+        emailResult.error || '',
+      )
+    }
+  } catch (err) {
+    console.error('[email] Support confirmation email failed:', err.message)
+  }
+
   return request
 }
 
@@ -59,6 +73,45 @@ export const updateSupportRequestStatus = async (id, { status, adminNotes }) => 
 
   if (adminNotes !== undefined) {
     request.adminNotes = adminNotes.trim()
+  }
+
+  await request.save()
+  return request
+}
+
+export const replyToSupportRequest = async (id, { replyMessage, status }) => {
+  const message = replyMessage?.trim()
+
+  if (!message || message.length < 5) {
+    throw new AppError('Reply must be at least 5 characters', 400)
+  }
+
+  const request = await getSupportRequestById(id)
+
+  const emailResult = await sendSupportReplyEmail({
+    request,
+    replyMessage: message,
+  })
+
+  if (!emailResult.sent) {
+    throw new AppError(
+      emailResult.reason === 'resend_not_configured'
+        ? 'Email service is not configured. Please set up Resend on the server.'
+        : 'Could not send reply email to the customer',
+      503,
+    )
+  }
+
+  request.replies.push({ message, sentAt: new Date() })
+  request.lastReplyAt = new Date()
+
+  if (status) {
+    if (!VALID_STATUSES.has(status)) {
+      throw new AppError('Invalid support request status', 400)
+    }
+    request.status = status
+  } else if (request.status === 'open') {
+    request.status = 'in_progress'
   }
 
   await request.save()

@@ -261,6 +261,8 @@ export const fetchSupportRequest = (id) => api.get(`/admin/support/${id}`)
 
 export const updateSupportRequest = (id, payload) => api.patch(`/admin/support/${id}`, payload)
 
+export const replySupportRequest = (id, payload) => api.post(`/admin/support/${id}/reply`, payload)
+
 export const fetchUsers = () => api.get('/admin/users')
 
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
