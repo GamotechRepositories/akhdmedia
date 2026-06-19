@@ -31,6 +31,23 @@ const videoControlButtonClass =
   'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95';
 const SCROLL_RESUME_MS = 250;
 
+const formatVideoTime = (seconds = 0) => {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const total = Math.floor(seconds);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
+const getBufferedEnd = (video) => {
+  if (!video?.buffered?.length) return 0;
+  try {
+    return video.buffered.end(video.buffered.length - 1);
+  } catch {
+    return 0;
+  }
+};
+
 const getDefaultMediaIndex = (items) => {
   const videoIndex = items.findIndex((item) => item.type === 'video');
   return videoIndex === -1 ? 0 : videoIndex;
@@ -39,6 +56,7 @@ const getDefaultMediaIndex = (items) => {
 const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
   const videoRef = useRef(null);
+  const progressBarRef = useRef(null);
   const { ref: galleryRef, isInView } = useInView('120px 0px 120px 0px');
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
@@ -49,16 +67,37 @@ const ProductMediaGallery = ({ product }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isNativeVideoFullscreen, setIsNativeVideoFullscreen] = useState(false);
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoBufferedEnd, setVideoBufferedEnd] = useState(0);
 
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
   const isImmersive = isLightboxOpen || isFullscreen || isNativeVideoFullscreen;
+  const shouldBufferVideo = isInView || isLightboxOpen;
+
+  useEffect(() => {
+    if (!isVideoSelected || !selectedItem?.src) return undefined;
+
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'video';
+    link.href = selectedItem.src;
+    document.head.appendChild(link);
+
+    return () => {
+      link.remove();
+    };
+  }, [isVideoSelected, selectedItem?.src, product?.id]);
 
   useEffect(() => {
     setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
     setIsVideoPlaying(false);
     setIsMuted(true);
     setIsLightboxOpen(false);
+    setVideoCurrentTime(0);
+    setVideoDuration(0);
+    setVideoBufferedEnd(0);
   }, [product?.id]);
 
   useEffect(() => {
@@ -67,6 +106,40 @@ const ProductMediaGallery = ({ product }) => {
 
     video.load();
     setIsVideoPlaying(false);
+    setVideoCurrentTime(0);
+    setVideoDuration(0);
+    setVideoBufferedEnd(0);
+  }, [product?.id, selectedItem?.src, isVideoSelected]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideoSelected) return undefined;
+
+    const syncProgress = () => {
+      setVideoCurrentTime(video.currentTime || 0);
+      setVideoDuration(Number.isFinite(video.duration) ? video.duration : 0);
+      setVideoBufferedEnd(getBufferedEnd(video));
+    };
+
+    syncProgress();
+    video.addEventListener('timeupdate', syncProgress);
+    video.addEventListener('progress', syncProgress);
+    video.addEventListener('loadedmetadata', syncProgress);
+    video.addEventListener('durationchange', syncProgress);
+    video.addEventListener('seeked', syncProgress);
+
+    return () => {
+      video.removeEventListener('timeupdate', syncProgress);
+      video.removeEventListener('progress', syncProgress);
+      video.removeEventListener('loadedmetadata', syncProgress);
+      video.removeEventListener('durationchange', syncProgress);
+      video.removeEventListener('seeked', syncProgress);
+    };
+  }, [isVideoSelected, selectedItem?.src, product?.id]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideoSelected) return;
 
     const startPlayback = async () => {
       try {
@@ -85,11 +158,12 @@ const ProductMediaGallery = ({ product }) => {
 
     if (!isInView) {
       video.pause();
+      setIsVideoPlaying(false);
       return;
     }
 
     startPlayback();
-  }, [selectedMediaIndex, isVideoSelected, product?.id, isLightboxOpen, isMuted, isInView]);
+  }, [isInView, isLightboxOpen, isVideoSelected, selectedItem?.src, product?.id]);
 
   useEffect(() => {
     if (!isVideoSelected || !isInView || isLightboxOpen) return undefined;
@@ -250,6 +324,110 @@ const ProductMediaGallery = ({ product }) => {
     setIsMuted(nextMuted);
   };
 
+  const handleSeek = (event) => {
+    const video = videoRef.current;
+    const bar = progressBarRef.current;
+    if (!video || !bar || !videoDuration) return;
+
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    video.currentTime = ratio * videoDuration;
+    setVideoCurrentTime(video.currentTime);
+    setVideoBufferedEnd(getBufferedEnd(video));
+  };
+
+  const playedPercent = videoDuration ? Math.min(100, (videoCurrentTime / videoDuration) * 100) : 0;
+  const bufferedPercent = videoDuration ? Math.min(100, (videoBufferedEnd / videoDuration) * 100) : 0;
+  const remainingSeconds = Math.max(0, videoDuration - videoCurrentTime);
+
+  const renderVideoProgressBar = (variant = 'inline') => {
+    const isOverlay = variant === 'overlay';
+
+    if (isOverlay) {
+      return (
+        <div className="flex min-w-[140px] flex-1 items-center gap-2">
+          <div
+            ref={progressBarRef}
+            role="slider"
+            aria-label="Video progress"
+            aria-valuemin={0}
+            aria-valuemax={videoDuration || 0}
+            aria-valuenow={videoCurrentTime}
+            tabIndex={0}
+            onClick={handleSeek}
+            onKeyDown={(event) => {
+              const video = videoRef.current;
+              if (!video || !videoDuration) return;
+              if (event.key === 'ArrowRight') {
+                video.currentTime = Math.min(videoDuration, video.currentTime + 5);
+              }
+              if (event.key === 'ArrowLeft') {
+                video.currentTime = Math.max(0, video.currentTime - 5);
+              }
+            }}
+            className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-white/25"
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-white/45"
+              style={{ width: `${bufferedPercent}%` }}
+            />
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-white"
+              style={{ width: `${playedPercent}%` }}
+            />
+          </div>
+          <p className="shrink-0 text-[10px] font-medium tabular-nums text-white/95">
+            {formatVideoTime(videoCurrentTime)} / {formatVideoTime(videoDuration)}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-2 flex w-full min-w-0 max-w-full items-center gap-1.5 sm:gap-3">
+        <div
+          ref={progressBarRef}
+          role="slider"
+          aria-label="Video progress"
+          aria-valuemin={0}
+          aria-valuemax={videoDuration || 0}
+          aria-valuenow={videoCurrentTime}
+          tabIndex={0}
+          onClick={handleSeek}
+          onKeyDown={(event) => {
+            const video = videoRef.current;
+            if (!video || !videoDuration) return;
+            if (event.key === 'ArrowRight') {
+              video.currentTime = Math.min(videoDuration, video.currentTime + 5);
+            }
+            if (event.key === 'ArrowLeft') {
+              video.currentTime = Math.max(0, video.currentTime - 5);
+            }
+          }}
+          className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gray-300"
+            style={{ width: `${bufferedPercent}%` }}
+          />
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gray-900"
+            style={{ width: `${playedPercent}%` }}
+          />
+        </div>
+        <p className="shrink-0 whitespace-nowrap text-[9px] tabular-nums text-gray-500 sm:text-[10px] md:text-xs">
+          {formatVideoTime(videoCurrentTime)} / {formatVideoTime(videoDuration)}
+          {videoDuration > 0 && (
+            <span className="text-gray-400 max-[359px]:hidden">
+              {' '}
+              · {formatVideoTime(remainingSeconds)} left
+            </span>
+          )}
+        </p>
+      </div>
+    );
+  };
+
   const openLightbox = () => {
     setIsLightboxOpen(true);
   };
@@ -311,8 +489,9 @@ const ProductMediaGallery = ({ product }) => {
             poster={selectedItem.poster}
             className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
             loop
+            playsInline
             muted={isMuted}
-            preload={isInView ? 'metadata' : 'none'}
+            preload={shouldBufferVideo ? 'auto' : 'none'}
             onPlay={() => setIsVideoPlaying(true)}
             onPause={() => setIsVideoPlaying(false)}
             onEnded={() => setIsVideoPlaying(false)}
@@ -335,30 +514,35 @@ const ProductMediaGallery = ({ product }) => {
             </button>
           )}
 
-          {isVideoPlaying && (
-            <div className="absolute bottom-3 left-3 z-20 flex gap-2">
-              <button
-                type="button"
-                onClick={toggleVideoPlay}
-                className={videoControlButtonClass}
-                aria-label="Pause demo video"
-                title="Pause"
-              >
+          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleVideoPlay}
+              className={videoControlButtonClass}
+              aria-label={isVideoPlaying ? 'Pause demo video' : 'Play demo video'}
+              title={isVideoPlaying ? 'Pause' : 'Play'}
+            >
+              {isVideoPlaying ? (
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                 </svg>
-              </button>
-              <button
-                type="button"
-                onClick={toggleVideoMute}
-                className={videoControlButtonClass}
-                aria-label={isMuted ? 'Unmute demo video' : 'Mute demo video'}
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? <IconVolumeOff className="h-4 w-4" /> : <IconVolumeOn className="h-4 w-4" />}
-              </button>
-            </div>
-          )}
+              ) : (
+                <svg className="ml-0.5 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={toggleVideoMute}
+              className={videoControlButtonClass}
+              aria-label={isMuted ? 'Unmute demo video' : 'Mute demo video'}
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <IconVolumeOff className="h-4 w-4" /> : <IconVolumeOn className="h-4 w-4" />}
+            </button>
+            {isLightboxOpen ? renderVideoProgressBar('overlay') : null}
+          </div>
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
@@ -440,7 +624,7 @@ const ProductMediaGallery = ({ product }) => {
     : null;
 
   return (
-    <div ref={galleryRef} className="transform-gpu [contain:layout_paint]">
+    <div ref={galleryRef} className="w-full min-w-0 max-w-full overflow-x-hidden transform-gpu [contain:layout_paint]">
       <ProtectedMediaFrame
         ref={frameRef}
         watermark
@@ -450,10 +634,12 @@ const ProductMediaGallery = ({ product }) => {
         {!isLightboxOpen ? mediaContent : null}
       </ProtectedMediaFrame>
 
+      {isVideoSelected && !isLightboxOpen && renderVideoProgressBar('inline')}
+
       {lightbox}
 
       {mediaItems.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5">
+        <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5 ${isVideoSelected ? 'mt-2' : 'mt-3'}`}>
           {mediaItems.map((item, index) => (
             <button
               key={`${item.type}-${index}`}
