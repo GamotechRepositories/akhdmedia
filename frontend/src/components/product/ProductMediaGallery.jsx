@@ -624,7 +624,7 @@ const ProductMediaGallery = ({ product }) => {
     : null;
 
   return (
-    <div ref={galleryRef} className="w-full min-w-0 max-w-full overflow-x-hidden transform-gpu [contain:layout_paint]">
+    <div ref={galleryRef} className="w-full min-w-0 max-w-full overflow-x-hidden">
       <ProtectedMediaFrame
         ref={frameRef}
         watermark
