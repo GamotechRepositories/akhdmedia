@@ -282,56 +282,100 @@ const SUPPORT_SUBJECT_LABELS = {
 const formatPlainTextAsHtml = (value = '') =>
   escapeHtml(value).replace(/\r?\n/g, '<br>')
 
-const SUPPORT_REQUEST_RECEIVED_EMAIL_TEMPLATE = `<!DOCTYPE html>
-<html>
+const wrapSupportEmail = ({ title, bodyHtml, currentYear }) => `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Support request received</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
 </head>
-<body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
-  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;padding:30px;">
-    <h1 style="text-align:center;color:#111827;">${BRAND_NAME}</h1>
-    <h2 style="color:#111827;margin-bottom:8px;">We Have Received Your Request</h2>
-    <p style="font-size:13px;color:#6b7280;margin-top:0;">Ticket <strong style="color:#374151;">{{ticket_number}}</strong></p>
-
-    <p>Hi {{customer_name}},</p>
-
-    <p>
-      Thank you for reaching out to ${BRAND_NAME}. Your support request has been received successfully.
-      Our team will review your issue and work to resolve it as quickly as possible.
-    </p>
-
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;padding:16px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0;color:#065f46;font-size:14px;line-height:1.6;">
-        <strong>What happens next?</strong><br>
-        A member of our support team will review your request and respond to you by email with an update or solution.
-      </p>
-    </div>
-
-    <div style="background:#f9fafb;padding:20px;border-radius:8px;margin:20px 0;">
-      <p style="margin:0 0 12px;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Request summary</p>
-      <p style="margin:0 0 8px;color:#374151;font-size:14px;"><strong>Issue type:</strong> {{issue_type}}</p>
-      {{order_number_row}}
-      <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;"><strong>Your message:</strong><br>{{original_message}}</p>
-    </div>
-
-    <p style="font-size:14px;color:#374151;line-height:1.6;">
-      Please keep this email for your records. You can reply to this email if you have additional details to share.
-    </p>
-
-    <p style="font-size:13px;color:#6b7280;margin-top:24px;">
-      Warm regards,<br>
-      <strong style="color:#111827;">${BRAND_NAME} Support Team</strong>
-    </p>
-
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;">
-
-    <p style="font-size:12px;color:#666;text-align:center;">
-      © {{current_year}} ${BRAND_NAME}. All rights reserved.
-    </p>
-  </div>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#111827;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+    <tr>
+      <td align="center" style="padding:0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:720px;">
+          <tr>
+            <td style="padding:28px 24px 20px;border-bottom:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:17px;font-weight:700;letter-spacing:0.03em;color:#111827;">${BRAND_NAME}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px 32px;">
+              ${bodyHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 24px 32px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;text-align:center;">
+                © ${currentYear} ${BRAND_NAME}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`
+
+const supportParagraph = (html) =>
+  `<p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:#111827;">${html}</p>`
+
+const supportSectionLabel = (label) =>
+  `<p style="margin:24px 0 8px;font-size:13px;font-weight:600;color:#111827;letter-spacing:0.04em;text-transform:uppercase;">${label}</p>`
+
+const buildSupportConfirmationBody = ({
+  customerName,
+  ticketNumber,
+  issueType,
+  orderNumberRow,
+  originalMessage,
+}) => `
+  <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">We Have Received Your Request</h1>
+  <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#4b5563;">Ticket <strong style="color:#111827;">${ticketNumber}</strong></p>
+  ${supportParagraph(`Hi ${customerName},`)}
+  ${supportParagraph(
+    `Thank you for reaching out to ${BRAND_NAME}. Your support request has been received successfully. Our team will review your issue and work to resolve it as quickly as possible.`,
+  )}
+  ${supportParagraph(
+    '<strong>What happens next?</strong><br>A member of our support team will review your request and respond to you by email with an update or solution.',
+  )}
+  ${supportSectionLabel('Request summary')}
+  ${supportParagraph(`<strong>Issue type:</strong> ${issueType}`)}
+  ${orderNumberRow}
+  ${supportParagraph(`<strong>Your message:</strong><br>${originalMessage}`)}
+  ${supportParagraph(
+    'Please keep this email for your records. You can reply to this email if you have additional details to share.',
+  )}
+  ${supportParagraph(
+    `Warm regards,<br><strong>${BRAND_NAME} Support Team</strong>`,
+  )}
+`
+
+const buildSupportReplyBody = ({
+  customerName,
+  ticketNumber,
+  issueType,
+  replyMessage,
+  originalMessage,
+  supportUrl,
+}) => `
+  <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">Support Team Response</h1>
+  <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#4b5563;">Ticket <strong style="color:#111827;">${ticketNumber}</strong></p>
+  ${supportParagraph(`Hi ${customerName},`)}
+  ${supportParagraph(
+    `Thank you for contacting ${BRAND_NAME} support regarding <strong>${issueType}</strong>. We have reviewed your request and our team has shared the following update:`,
+  )}
+  ${supportParagraph(replyMessage)}
+  ${supportSectionLabel('Your original message')}
+  ${supportParagraph(originalMessage)}
+  ${supportParagraph(
+    `If you need further assistance, reply to this email or visit our <a href="${supportUrl}" style="color:#111827;text-decoration:underline;">support page</a>.`,
+  )}
+  ${supportParagraph(
+    `Warm regards,<br><strong>${BRAND_NAME} Support Team</strong>`,
+  )}
+`
 
 export const sendSupportRequestConfirmationEmail = async (request) => {
   const customerEmail = request.email?.trim()
@@ -350,15 +394,22 @@ export const sendSupportRequestConfirmationEmail = async (request) => {
   const currentYear = new Date().getFullYear()
   const issueType = SUPPORT_SUBJECT_LABELS[request.subject] || SUPPORT_SUBJECT_LABELS.other
   const orderNumberRow = request.orderNumber?.trim()
-    ? `<p style="margin:0 0 8px;color:#374151;font-size:14px;"><strong>Order number:</strong> ${escapeHtml(request.orderNumber.trim())}</p>`
+    ? supportParagraph(
+        `<strong>Order number:</strong> ${escapeHtml(request.orderNumber.trim())}`,
+      )
     : ''
 
-  const html = SUPPORT_REQUEST_RECEIVED_EMAIL_TEMPLATE.replace(/{{ticket_number}}/g, escapeHtml(request.ticketNumber))
-    .replace(/{{customer_name}}/g, escapeHtml(request.name || 'there'))
-    .replace(/{{issue_type}}/g, escapeHtml(issueType))
-    .replace(/{{order_number_row}}/g, orderNumberRow)
-    .replace(/{{original_message}}/g, formatPlainTextAsHtml(request.message))
-    .replace(/{{current_year}}/g, String(currentYear))
+  const html = wrapSupportEmail({
+    title: 'Support request received',
+    currentYear,
+    bodyHtml: buildSupportConfirmationBody({
+      customerName: escapeHtml(request.name || 'there'),
+      ticketNumber: escapeHtml(request.ticketNumber),
+      issueType: escapeHtml(issueType),
+      orderNumberRow,
+      originalMessage: formatPlainTextAsHtml(request.message),
+    }),
+  })
 
   const text = [
     `Hi ${request.name || 'there'},`,
@@ -395,53 +446,6 @@ export const sendSupportRequestConfirmationEmail = async (request) => {
   return { sent: true }
 }
 
-const SUPPORT_REPLY_EMAIL_TEMPLATE = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Support reply</title>
-</head>
-<body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
-  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;padding:30px;">
-    <h1 style="text-align:center;color:#111827;">${BRAND_NAME}</h1>
-    <h2 style="color:#111827;margin-bottom:8px;">Support Team Response</h2>
-    <p style="font-size:13px;color:#6b7280;margin-top:0;">Ticket <strong style="color:#374151;">{{ticket_number}}</strong></p>
-
-    <p>Hi {{customer_name}},</p>
-
-    <p>
-      Thank you for contacting ${BRAND_NAME} support regarding
-      <strong>{{issue_type}}</strong>. We have reviewed your request and our team has shared the following update:
-    </p>
-
-    <div style="background:#f9fafb;border-left:4px solid #111827;padding:20px;border-radius:8px;margin:24px 0;">
-      <p style="margin:0;color:#111827;line-height:1.7;white-space:normal;">{{reply_message}}</p>
-    </div>
-
-    <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;">
-      <p style="margin:0 0 8px;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Your original message</p>
-      <p style="margin:0;color:#374151;line-height:1.6;font-size:14px;">{{original_message}}</p>
-    </div>
-
-    <p style="font-size:14px;color:#374151;line-height:1.6;">
-      If you need further assistance, reply to this email or visit our
-      <a href="{{support_url}}" style="color:#111827;font-weight:bold;">support page</a>.
-    </p>
-
-    <p style="font-size:13px;color:#6b7280;margin-top:24px;">
-      Warm regards,<br>
-      <strong style="color:#111827;">${BRAND_NAME} Support Team</strong>
-    </p>
-
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;">
-
-    <p style="font-size:12px;color:#666;text-align:center;">
-      © {{current_year}} ${BRAND_NAME}. All rights reserved.
-    </p>
-  </div>
-</body>
-</html>`
-
 export const sendSupportReplyEmail = async ({ request, replyMessage }) => {
   const customerEmail = request.email?.trim()
 
@@ -460,19 +464,38 @@ export const sendSupportReplyEmail = async ({ request, replyMessage }) => {
   const issueType = SUPPORT_SUBJECT_LABELS[request.subject] || SUPPORT_SUBJECT_LABELS.other
   const supportUrl = `${getFrontendUrl()}/support`
 
-  const html = SUPPORT_REPLY_EMAIL_TEMPLATE.replace(/{{ticket_number}}/g, escapeHtml(request.ticketNumber))
-    .replace(/{{customer_name}}/g, escapeHtml(request.name || 'there'))
-    .replace(/{{issue_type}}/g, escapeHtml(issueType))
-    .replace(/{{reply_message}}/g, formatPlainTextAsHtml(replyMessage))
-    .replace(/{{original_message}}/g, formatPlainTextAsHtml(request.message))
-    .replace(/{{support_url}}/g, escapeHtml(supportUrl))
-    .replace(/{{current_year}}/g, String(currentYear))
+  const html = wrapSupportEmail({
+    title: 'Support reply',
+    currentYear,
+    bodyHtml: buildSupportReplyBody({
+      customerName: escapeHtml(request.name || 'there'),
+      ticketNumber: escapeHtml(request.ticketNumber),
+      issueType: escapeHtml(issueType),
+      replyMessage: formatPlainTextAsHtml(replyMessage),
+      originalMessage: formatPlainTextAsHtml(request.message),
+      supportUrl: escapeHtml(supportUrl),
+    }),
+  })
+
+  const text = [
+    `Hi ${request.name || 'there'},`,
+    '',
+    `Thank you for contacting ${BRAND_NAME} support regarding ${issueType}.`,
+    '',
+    replyMessage,
+    '',
+    'Your original message:',
+    request.message,
+    '',
+    `${BRAND_NAME} Support Team`,
+  ].join('\n')
 
   const { error } = await resend.emails.send({
     from: getResendFrom(),
     to: customerEmail,
     subject: `Re: Support request ${request.ticketNumber} — ${BRAND_NAME}`,
     html,
+    text,
   })
 
   if (error) {
