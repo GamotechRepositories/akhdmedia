@@ -10,8 +10,14 @@ import {
   MIN_CUSTOMER_TIER,
 } from '../constants/resolutionTiers.js'
 
+const stripUrlQuery = (url = '') => {
+  const trimmed = url?.trim() || ''
+  if (!trimmed) return ''
+  return trimmed.split('?')[0].split('#')[0]
+}
+
 const cleanImages = (images = []) =>
-  images.map((url) => url?.trim()).filter(Boolean)
+  images.map((url) => stripUrlQuery(url)).filter(Boolean)
 
 const cleanKeys = (keys = []) =>
   keys.map((key) => key?.trim()).filter(Boolean)
@@ -125,8 +131,8 @@ export const normalizeProductPayload = (body = {}) => {
   }
 
   if (mediaType === MEDIA_TYPES.VIDEO) {
-    payload.demoVideo = body.demoVideo?.trim() || ''
-    payload.videoPoster = body.videoPoster?.trim() || images[0] || ''
+    payload.demoVideo = stripUrlQuery(body.demoVideo)
+    payload.videoPoster = stripUrlQuery(body.videoPoster) || images[0] || ''
     payload.masterVideoKey = body.masterVideoKey?.trim() || ''
     payload.masterVideoFilename = body.masterVideoFilename?.trim() || ''
     payload.masterVideoTier = body.masterVideoTier?.trim() || ''

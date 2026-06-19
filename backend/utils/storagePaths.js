@@ -24,9 +24,9 @@ export const assertClipIdForUpload = (clipId = '') => {
 
 /**
  * Production S3 layout:
- *   public/products/{clipId}/previews/01.jpg
- *   public/products/{clipId}/poster.jpg
- *   public/products/{clipId}/demo.mp4
+ *   public/products/{clipId}/previews/preview-01-{timestamp}.jpg
+ *   public/products/{clipId}/poster-{timestamp}.jpg
+ *   public/products/{clipId}/demo-{timestamp}.mp4
  *   private/products/{clipId}/master/original.ext
  */
 const sanitizeCategorySlug = (value = '') =>
@@ -105,7 +105,7 @@ export const resolveUploadTarget = ({
     case 'preview-image': {
       const slot = String(Math.min(3, Math.max(1, Number(previewIndex) || 1))).padStart(2, '0')
       const ext = getExtension(filename, '.jpg')
-      const objectName = `${slot}${ext}`
+      const objectName = `preview-${slot}-${Date.now()}${ext}`
       const s3Key = `${AWS_S3_PUBLIC_PREFIX}/products/${id}/previews/${objectName}`
       return {
         scope: 'public',
@@ -116,7 +116,7 @@ export const resolveUploadTarget = ({
     }
     case 'preview-video': {
       const ext = getExtension(filename, '.mp4')
-      const objectName = `demo${ext}`
+      const objectName = `demo-${Date.now()}${ext}`
       const s3Key = `${AWS_S3_PUBLIC_PREFIX}/products/${id}/${objectName}`
       return {
         scope: 'public',
@@ -127,7 +127,7 @@ export const resolveUploadTarget = ({
     }
     case 'video-poster': {
       const ext = getExtension(filename, '.jpg')
-      const objectName = `poster${ext}`
+      const objectName = `poster-${Date.now()}${ext}`
       const s3Key = `${AWS_S3_PUBLIC_PREFIX}/products/${id}/${objectName}`
       return {
         scope: 'public',

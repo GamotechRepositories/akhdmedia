@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import {
   createProduct,
   fetchActors,
@@ -115,6 +115,49 @@ const mergeAvailableTiers = (product = {}) => {
   return getCustomerTiers(tiers)
 }
 
+const mapProductToForm = (product) => {
+  const mediaType = product.mediaType || MEDIA_TYPES.VIDEO
+
+  return {
+    mediaType,
+    pricingMode: product.pricingMode || PRICING_MODES.UNIFORM,
+    name: product.name,
+    clipId: product.clipId || '',
+    categorySlug: product.categorySlug,
+    subCategorySlug: product.subCategory || '',
+    brand: product.brand || '',
+    actorId: product.actorId || '',
+    price: product.price,
+    gstPercentage: product.gstPercentage ?? 18,
+    availableTiers: mergeAvailableTiers(product),
+    resolutionPricing: mergeTierConfig(product),
+    rating: product.rating || 0,
+    description: product.description || '',
+    images: [
+      product.images?.[0] || '',
+      product.images?.[1] || '',
+      product.images?.[2] || '',
+    ],
+    demoVideo: product.demoVideo || '',
+    videoPoster: product.videoPoster || '',
+    deliveryFiles: mergeDeliveryFiles(product),
+    masterVideoKey: product.masterVideoKey || '',
+    masterVideoFilename: product.masterVideoFilename || '',
+    masterVideoUrl: product.masterVideoUrl || '',
+    masterVideoTier: product.masterVideoTier || '',
+    isActive: product.isActive ?? true,
+    showInLatest: product.showInLatest ?? false,
+    videoInfo: {
+      quality: product.videoInfo?.quality || '',
+      fps: product.videoInfo?.fps || '',
+      size: product.videoInfo?.size || '',
+      duration: product.videoInfo?.duration || '',
+      format: product.videoInfo?.format || '',
+      orientationNote: product.videoInfo?.orientationNote || '',
+    },
+  }
+}
+
 const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   mediaType,
   pricingMode: PRICING_MODES.UNIFORM,
@@ -152,7 +195,6 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
 
 const ProductForm = () => {
   const { id } = useParams()
-  const navigate = useNavigate()
   const location = useLocation()
   const isEdit = Boolean(id)
   const listState = location.state?.fromList
@@ -165,12 +207,19 @@ const ProductForm = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showCreateSuccess, setShowCreateSuccess] = useState(false)
+  const [showUpdateSuccess, setShowUpdateSuccess] = useState(false)
 
   useEffect(() => {
     if (!showCreateSuccess) return undefined
     const timer = window.setTimeout(() => setShowCreateSuccess(false), 4000)
     return () => window.clearTimeout(timer)
   }, [showCreateSuccess])
+
+  useEffect(() => {
+    if (!showUpdateSuccess) return undefined
+    const timer = window.setTimeout(() => setShowUpdateSuccess(false), 4000)
+    return () => window.clearTimeout(timer)
+  }, [showUpdateSuccess])
 
   useEffect(() => {
     const loadData = async () => {
@@ -181,47 +230,7 @@ const ProductForm = () => {
 
         if (isEdit) {
           const productRes = await fetchProduct(id)
-          const product = productRes.data
-          const mediaType = product.mediaType || MEDIA_TYPES.VIDEO
-
-          setForm({
-            mediaType,
-            pricingMode: product.pricingMode || PRICING_MODES.UNIFORM,
-            name: product.name,
-            clipId: product.clipId || '',
-            categorySlug: product.categorySlug,
-            subCategorySlug: product.subCategory || '',
-            brand: product.brand || '',
-            actorId: product.actorId || '',
-            price: product.price,
-            gstPercentage: product.gstPercentage ?? 18,
-            availableTiers: mergeAvailableTiers(product),
-            resolutionPricing: mergeTierConfig(product),
-            rating: product.rating || 0,
-            description: product.description || '',
-            images: [
-              product.images?.[0] || '',
-              product.images?.[1] || '',
-              product.images?.[2] || '',
-            ],
-            demoVideo: product.demoVideo || '',
-            videoPoster: product.videoPoster || '',
-            deliveryFiles: mergeDeliveryFiles(product),
-            masterVideoKey: product.masterVideoKey || '',
-            masterVideoFilename: product.masterVideoFilename || '',
-            masterVideoUrl: product.masterVideoUrl || '',
-            masterVideoTier: product.masterVideoTier || '',
-            isActive: product.isActive ?? true,
-            showInLatest: product.showInLatest ?? false,
-            videoInfo: {
-              quality: product.videoInfo?.quality || '',
-              fps: product.videoInfo?.fps || '',
-              size: product.videoInfo?.size || '',
-              duration: product.videoInfo?.duration || '',
-              format: product.videoInfo?.format || '',
-              orientationNote: product.videoInfo?.orientationNote || '',
-            },
-          })
+          setForm(mapProductToForm(productRes.data))
         }
       } catch (err) {
         setError(err.message)
@@ -525,12 +534,10 @@ const ProductForm = () => {
 
     try {
       if (isEdit) {
-        await updateProduct(id, payload)
-        navigate('/products', {
-          state: listState
-            ? { restore: { ...listState, productId: id } }
-            : undefined,
-        })
+        const { data: savedProduct } = await updateProduct(id, payload)
+        setForm(mapProductToForm(savedProduct))
+        setShowUpdateSuccess(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
         await createProduct(payload)
         const nextClip = await reserveClipId()
@@ -570,6 +577,12 @@ const ProductForm = () => {
         message={error}
         onClose={() => setError('')}
       />
+
+      {showUpdateSuccess && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          Product updated — preview images and demo video are saved.
+        </div>
+      )}
 
       {showCreateSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -777,7 +790,7 @@ const ProductForm = () => {
           <div className="grid gap-2 sm:grid-cols-3">
             {form.images.map((image, index) => (
               <MediaUpload
-                key={index}
+                key={`preview-image-${index}-${image || 'empty'}`}
                 label={`Preview Image ${index + 1}`}
                 accept="image/jpeg,image/png,image/webp"
                 uploadType="preview-image"
@@ -794,6 +807,7 @@ const ProductForm = () => {
           {isVideo && (
             <div className="mt-3">
               <MediaUpload
+                key={`demo-video-${form.demoVideo || 'empty'}`}
                 label="Demo Video *"
                 accept="video/mp4,video/webm,video/quicktime"
                 uploadType="preview-video"

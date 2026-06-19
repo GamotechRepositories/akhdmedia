@@ -79,18 +79,16 @@ const MediaUpload = ({
       setUploadProgress(100)
       setUploadedSize(uploadedBytes)
 
+      const withCacheBuster = (url) => {
+        if (!url) return ''
+        const base = url.split('?')[0]
+        return `${base}?v=${Date.now()}`
+      }
+
       const nextValue =
         valueKind === 'key'
           ? response.data.key
-          : (() => {
-              const uploadedUrl = response.data.url || ''
-              if (!uploadedUrl) return ''
-              if (uploadedUrl === value) {
-                const separator = uploadedUrl.includes('?') ? '&' : '?'
-                return `${uploadedUrl}${separator}v=${Date.now()}`
-              }
-              return uploadedUrl
-            })()
+          : withCacheBuster(response.data.url || '')
       const uploadedFilename = response.data.filename || file.name
       onChange(nextValue, {
         filename: uploadedFilename,
