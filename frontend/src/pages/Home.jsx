@@ -12,8 +12,9 @@ import { useCatalog } from '../context/CatalogContext';
 const Home = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { products, actors, loading } = useCatalog();
+  const { products, actors, loading, siteContent } = useCatalog();
   const latestProducts = products.filter((product) => product.showInLatest).slice(0, 8);
+  const showActorsSection = siteContent?.showActorsSection !== false;
 
   useEffect(() => {
     const search = searchParams.get('search')?.trim();
@@ -26,11 +27,13 @@ const Home = () => {
     <div className="min-h-screen bg-white font-sans text-gray-800">
       <HeroCarousel />
       <NewsTicker />
-      <ActorRail
-        actors={actors}
-        isLoading={loading}
-        viewAllLink={HOME_SECTIONS.actors.viewAllLink}
-      />
+      {showActorsSection ? (
+        <ActorRail
+          actors={actors}
+          isLoading={loading}
+          viewAllLink={HOME_SECTIONS.actors.viewAllLink}
+        />
+      ) : null}
       <CategoryAccordion />
 
       <ProductSection

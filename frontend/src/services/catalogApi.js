@@ -14,6 +14,7 @@ const DEFAULT_SITE_CONTENT = {
     title: 'Browse by Footage Type',
   },
   heroSlides: [],
+  showActorsSection: true,
 };
 
 const sortActorsByOrder = (actors = []) =>

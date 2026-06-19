@@ -15,6 +15,7 @@ export const DEFAULT_SITE_SETTINGS = {
     title: 'Browse by Footage Type',
   },
   heroSlides: [],
+  showActorsSection: true,
 }
 
 const sanitizeTickerItems = (items = []) =>
@@ -79,6 +80,10 @@ export const updateSiteSettings = async (payload = {}) => {
     updates.heroSlides = heroSlides
   }
 
+  if (payload.showActorsSection !== undefined) {
+    updates.showActorsSection = payload.showActorsSection !== false
+  }
+
   if (!Object.keys(updates).length) {
     throw new AppError('No valid site content updates provided', 400)
   }
@@ -98,4 +103,5 @@ export const formatSiteSettings = (settings) => ({
   heroSlides: settings.heroSlides?.length
     ? settings.heroSlides
     : DEFAULT_SITE_SETTINGS.heroSlides,
+  showActorsSection: settings.showActorsSection !== false,
 })

@@ -41,6 +41,7 @@ const siteSettingsSchema = new mongoose.Schema(
       type: [heroSlideSchema],
       default: [],
     },
+    showActorsSection: { type: Boolean, default: true },
   },
   { timestamps: true },
 )

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteActor, fetchActors } from '../api/client'
+import { deleteActor, fetchActors, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
-import { primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
+import { cardClass, inputClass, primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
 
 const PAGE_SIZE = 50
 
@@ -12,13 +12,21 @@ const Actors = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [showActorsSection, setShowActorsSection] = useState(true)
+  const [savingVisibility, setSavingVisibility] = useState(false)
+  const [visibilityNotice, setVisibilityNotice] = useState('')
+  const [search, setSearch] = useState('')
 
   const loadActors = async () => {
     setLoading(true)
     setError('')
     try {
-      const response = await fetchActors()
-      setActors(response.data)
+      const [actorsResponse, siteContentResponse] = await Promise.all([
+        fetchActors(),
+        fetchSiteContent(),
+      ])
+      setActors(actorsResponse.data)
+      setShowActorsSection(siteContentResponse.data?.showActorsSection !== false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -41,11 +49,55 @@ const Actors = () => {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(actors.length / PAGE_SIZE))
+  const handleToggleHomepageVisibility = async () => {
+    const nextValue = !showActorsSection
+    setSavingVisibility(true)
+    setVisibilityNotice('')
+    setError('')
+
+    try {
+      await updateSiteContent({ showActorsSection: nextValue })
+      setShowActorsSection(nextValue)
+      setVisibilityNotice(
+        nextValue
+          ? 'Actors section is now visible on the homepage.'
+          : 'Actors section is hidden from the homepage.',
+      )
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingVisibility(false)
+    }
+  }
+
+  const filteredActors = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return actors
+
+    return actors.filter((actor) => {
+      const haystack = [
+        actor.name,
+        ...(actor.searchKeywords || []),
+        String(actor.sortOrder ?? ''),
+        actor.isActive ? 'active' : 'inactive',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+
+      return haystack.includes(query)
+    })
+  }, [actors, search])
+
+  const totalPages = Math.max(1, Math.ceil(filteredActors.length / PAGE_SIZE))
   const paginatedActors = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE
-    return actors.slice(start, start + PAGE_SIZE)
-  }, [actors, currentPage])
+    return filteredActors.slice(start, start + PAGE_SIZE)
+  }, [filteredActors, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages)
@@ -60,10 +112,43 @@ const Actors = () => {
         onClose={() => setError('')}
       />
 
-      <div className="flex justify-end">
-        <Link to="/actors/new" className={primaryBtnClass}>
-          Add Actor
-        </Link>
+      <div className={`${cardClass} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Show Actors section on homepage</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Turn off to hide the full Actors rail from the storefront home page.
+          </p>
+          {visibilityNotice ? (
+            <p className="mt-2 text-sm font-medium text-emerald-700">{visibilityNotice}</p>
+          ) : null}
+        </div>
+        <label className="inline-flex shrink-0 cursor-pointer items-center gap-3">
+          <span className="text-sm font-medium text-slate-700">
+            {showActorsSection ? 'Visible' : 'Hidden'}
+          </span>
+          <input
+            type="checkbox"
+            checked={showActorsSection}
+            onChange={handleToggleHomepageVisibility}
+            disabled={loading || savingVisibility}
+            className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 disabled:opacity-60"
+          />
+        </label>
+      </div>
+
+      <div className={`${cardClass} p-4`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search name or keywords..."
+            className={`${inputClass} mt-0 sm:max-w-md`}
+          />
+          <Link to="/actors/new" className={primaryBtnClass}>
+            Add Actor
+          </Link>
+        </div>
       </div>
 
       <div className={tableWrapClass}>
@@ -85,10 +170,10 @@ const Actors = () => {
                   Loading actors...
                 </td>
               </tr>
-            ) : actors.length === 0 ? (
+            ) : filteredActors.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  No actors yet.
+                  {search.trim() ? 'No actors match your search.' : 'No actors yet.'}
                 </td>
               </tr>
             ) : (
@@ -137,10 +222,11 @@ const Actors = () => {
         </table>
       </div>
 
-      {!loading && actors.length > PAGE_SIZE && (
+      {!loading && filteredActors.length > PAGE_SIZE && (
         <div className="flex items-center justify-between text-sm text-slate-600">
           <p>
-            Page {currentPage} of {totalPages}
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
+            {Math.min(currentPage * PAGE_SIZE, filteredActors.length)} of {filteredActors.length} actors
           </p>
           <div className="flex gap-2">
             <button
@@ -160,6 +246,9 @@ const Actors = () => {
               Next
             </button>
           </div>
+          <p>
+            Page {currentPage} of {totalPages}
+          </p>
         </div>
       )}
     </div>
