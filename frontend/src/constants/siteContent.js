@@ -17,7 +17,6 @@ export const MOBILE_HERO = {
 
 export const HOME_SECTIONS = {
   actors: {
-    title: 'Trending actors',
     viewAllLink: '/actors',
   },
   freshDrops: {

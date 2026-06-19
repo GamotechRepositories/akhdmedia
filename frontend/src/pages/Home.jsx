@@ -29,7 +29,6 @@ const Home = () => {
       <ActorRail
         actors={actors}
         isLoading={loading}
-        title={HOME_SECTIONS.actors.title}
         viewAllLink={HOME_SECTIONS.actors.viewAllLink}
       />
       <CategoryAccordion />
