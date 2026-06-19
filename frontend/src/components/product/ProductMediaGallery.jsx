@@ -31,14 +31,6 @@ const videoControlButtonClass =
   'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95';
 const SCROLL_RESUME_MS = 250;
 
-const formatVideoTime = (seconds = 0) => {
-  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-  const total = Math.floor(seconds);
-  const mins = Math.floor(total / 60);
-  const secs = total % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-};
-
 const getBufferedEnd = (video) => {
   if (!video?.buffered?.length) return 0;
   try {
@@ -338,14 +330,13 @@ const ProductMediaGallery = ({ product }) => {
 
   const playedPercent = videoDuration ? Math.min(100, (videoCurrentTime / videoDuration) * 100) : 0;
   const bufferedPercent = videoDuration ? Math.min(100, (videoBufferedEnd / videoDuration) * 100) : 0;
-  const remainingSeconds = Math.max(0, videoDuration - videoCurrentTime);
 
   const renderVideoProgressBar = (variant = 'inline') => {
     const isOverlay = variant === 'overlay';
 
     if (isOverlay) {
       return (
-        <div className="flex min-w-[140px] flex-1 items-center gap-2">
+        <div className="min-w-[140px] flex-1">
           <div
             ref={progressBarRef}
             role="slider"
@@ -365,7 +356,7 @@ const ProductMediaGallery = ({ product }) => {
                 video.currentTime = Math.max(0, video.currentTime - 5);
               }
             }}
-            className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-white/25"
+            className="relative h-1 w-full cursor-pointer rounded-full bg-white/25"
           >
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-white/45"
@@ -376,15 +367,12 @@ const ProductMediaGallery = ({ product }) => {
               style={{ width: `${playedPercent}%` }}
             />
           </div>
-          <p className="shrink-0 text-[10px] font-medium tabular-nums text-white/95">
-            {formatVideoTime(videoCurrentTime)} / {formatVideoTime(videoDuration)}
-          </p>
         </div>
       );
     }
 
     return (
-      <div className="mt-2 flex w-full min-w-0 max-w-full items-center gap-1.5 sm:gap-3">
+      <div className="mt-2 w-full min-w-0 max-w-full">
         <div
           ref={progressBarRef}
           role="slider"
@@ -404,7 +392,7 @@ const ProductMediaGallery = ({ product }) => {
               video.currentTime = Math.max(0, video.currentTime - 5);
             }
           }}
-          className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
+          className="relative h-1 w-full cursor-pointer rounded-full bg-gray-200"
         >
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-gray-300"
@@ -415,15 +403,6 @@ const ProductMediaGallery = ({ product }) => {
             style={{ width: `${playedPercent}%` }}
           />
         </div>
-        <p className="shrink-0 whitespace-nowrap text-[9px] tabular-nums text-gray-500 sm:text-[10px] md:text-xs">
-          {formatVideoTime(videoCurrentTime)} / {formatVideoTime(videoDuration)}
-          {videoDuration > 0 && (
-            <span className="text-gray-400 max-[359px]:hidden">
-              {' '}
-              · {formatVideoTime(remainingSeconds)} left
-            </span>
-          )}
-        </p>
       </div>
     );
   };
@@ -563,11 +542,11 @@ const ProductMediaGallery = ({ product }) => {
   const renderMediaChrome = (compact = false) => (
     <>
       <div
-        className={`absolute z-10 rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white ${
+        className={`absolute z-10 rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ${
           compact ? 'left-3 top-3' : 'left-4 top-4'
-        }`}
+        } ${isVideoSelected ? '' : 'uppercase'}`}
       >
-        {isVideoSelected ? 'Demo preview' : 'Preview'}
+        {isVideoSelected ? '40 sec Preview' : 'Preview'}
       </div>
 
       <button
