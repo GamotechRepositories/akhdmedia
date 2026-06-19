@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AlertModal from '../components/AlertModal'
+import AuthModalShell from '../components/auth/AuthModalShell'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
 import { GOOGLE_CLIENT_ID } from '../config/auth'
 import { useAuth } from '../context/AuthContext'
@@ -75,31 +76,13 @@ const Register = () => {
     }
   }
 
-  const handleClose = () => {
-    navigate(location.state?.from || '/', { replace: true })
-  }
-
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/35 px-4 py-6 backdrop-blur-md sm:py-12">
-      <div className="flex min-h-full items-start justify-center sm:items-center">
-      <div className="w-full max-w-md">
-        <div className="mb-4 text-center">
-          <h1 className="text-2xl font-bold text-white">Create Account</h1>
-        </div>
-
+    <>
+      <AuthModalShell title="Create Account" closeLabel="Close registration">
         <form
           onSubmit={handleSubmit}
-          className="relative rounded-2xl border border-white/40 bg-white/95 p-5 shadow-2xl"
+          className="rounded-2xl border border-white/40 bg-white/95 p-5 shadow-2xl sm:p-6"
         >
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label="Close registration"
-            className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
-          >
-            <span className="text-lg leading-none">&times;</span>
-          </button>
-
           <div className="space-y-3">
             <div>
               <label htmlFor="name" className="mb-1 block text-xs font-medium text-gray-700">
@@ -219,7 +202,7 @@ const Register = () => {
             </Link>
           </p>
         </form>
-      </div>
+      </AuthModalShell>
 
       <AlertModal
         open={Boolean(error)}
@@ -227,8 +210,7 @@ const Register = () => {
         message={error}
         onClose={() => setError('')}
       />
-      </div>
-    </div>
+    </>
   )
 }
 

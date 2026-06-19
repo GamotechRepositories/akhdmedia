@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AlertModal from '../components/AlertModal'
+import AuthModalShell from '../components/auth/AuthModalShell'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
 import { GOOGLE_CLIENT_ID } from '../config/auth'
 import { useAuth } from '../context/AuthContext'
@@ -67,31 +68,13 @@ const Login = () => {
     }
   }
 
-  const handleClose = () => {
-    navigate(location.state?.from || '/', { replace: true })
-  }
-
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/35 px-4 py-6 backdrop-blur-md sm:py-12">
-      <div className="flex min-h-full items-start justify-center sm:items-center">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">Sign In</h1>
-        </div>
-
+    <>
+      <AuthModalShell title="Sign In" closeLabel="Close login">
         <form
           onSubmit={handleSubmit}
-          className="relative rounded-2xl border border-white/40 bg-white/95 p-8 shadow-2xl"
+          className="rounded-2xl border border-white/40 bg-white/95 p-6 shadow-2xl sm:p-8"
         >
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label="Close login"
-            className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
-          >
-            <span className="text-lg leading-none">&times;</span>
-          </button>
-
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -171,7 +154,7 @@ const Login = () => {
             </Link>
           </p>
         </form>
-      </div>
+      </AuthModalShell>
 
       <AlertModal
         open={Boolean(error)}
@@ -179,8 +162,7 @@ const Login = () => {
         message={error}
         onClose={() => setError('')}
       />
-      </div>
-    </div>
+    </>
   )
 }
 
