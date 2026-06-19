@@ -7,6 +7,8 @@ import {
   getUserCookieName,
   getUserCookieOptions,
   registerUser,
+  requestPasswordReset,
+  resetPasswordWithToken,
   signUserToken,
   updateUserProfile,
 } from '../services/userAuthService.js'
@@ -38,6 +40,21 @@ export const login = asyncHandler(async (req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
   const user = await authenticateWithGoogle(req.body.credential)
   sendAuthResponse(res, user, 'Logged in with Google successfully')
+})
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  await requestPasswordReset(req.body.email)
+
+  res.json({
+    success: true,
+    message:
+      'If an account with that email exists, a password reset link has been sent to your inbox.',
+  })
+})
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const user = await resetPasswordWithToken(req.body.token, req.body.password)
+  sendAuthResponse(res, user, 'Password updated successfully')
 })
 
 export const logout = asyncHandler(async (req, res) => {

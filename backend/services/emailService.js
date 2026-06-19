@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { BRAND_NAME, getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
+import { BRAND_NAME, getFrontendUrl, getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
 import { SIGNED_URL_EXPIRY_SECONDS } from '../config/storage.js'
 
 let resendClient = null
@@ -200,4 +200,65 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
 
   console.log(`[email] License email sent to ${customerEmail} (${sentCount} item(s))`)
   return { sent: true, count: sentCount }
+}
+
+const PASSWORD_RESET_EMAIL_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Reset your password</title>
+</head>
+<body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
+  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;padding:30px;">
+    <h1 style="text-align:center;color:#111827;">${BRAND_NAME}</h1>
+    <h2>Reset your password</h2>
+    <p>Hi {{customer_name}},</p>
+    <p>We received a request to reset the password for your account. Click the button below to choose a new password.</p>
+    <div style="text-align:center;margin:30px 0;">
+      <a
+        href="{{reset_url}}"
+        style="background:#111827;color:white;text-decoration:none;padding:14px 24px;border-radius:6px;display:inline-block;font-weight:bold;"
+      >
+        Reset Password
+      </a>
+    </div>
+    <p style="font-size:13px;color:#6b7280;line-height:1.5;">
+      This link expires in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email.
+    </p>
+    <hr>
+    <p style="font-size:12px;color:#666;text-align:center;">
+      © {{current_year}} ${BRAND_NAME}. All rights reserved.
+    </p>
+  </div>
+</body>
+</html>`
+
+export const sendPasswordResetEmail = async ({ email, name, resetToken }) => {
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — password reset email not sent')
+    return { sent: false, reason: 'resend_not_configured' }
+  }
+
+  const resetUrl = `${getFrontendUrl()}/reset-password?token=${encodeURIComponent(resetToken)}`
+  const currentYear = new Date().getFullYear()
+
+  const html = PASSWORD_RESET_EMAIL_TEMPLATE.replace(/{{customer_name}}/g, escapeHtml(name || 'there'))
+    .replace(/{{reset_url}}/g, escapeHtml(resetUrl))
+    .replace(/{{current_year}}/g, String(currentYear))
+
+  const { error } = await resend.emails.send({
+    from: getResendFrom(),
+    to: email,
+    subject: `Reset your ${BRAND_NAME} password`,
+    html,
+  })
+
+  if (error) {
+    console.error('[email] Resend API error:', error)
+    throw new Error(error.message || 'Resend API error')
+  }
+
+  console.log(`[email] Password reset email sent to ${email}`)
+  return { sent: true }
 }

@@ -13,6 +13,8 @@ export const getFrontendUrl = () => {
   return raw.split(',')[0].trim()
 }
 
+export const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000
+
 export const MAX_LICENSE_EMAIL_RESENDS = 2
 
 export const LICENSE_EMAIL_RESEND_WINDOW_MS = 5 * 60 * 1000

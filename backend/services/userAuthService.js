@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
+import { PASSWORD_RESET_EXPIRY_MS } from '../config/email.js'
+import { sendPasswordResetEmail } from './emailService.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 
@@ -258,6 +261,69 @@ export const authenticateWithGoogle = async (credential) => {
       })
     }
   }
+
+  return user
+}
+
+const hashResetToken = (token) =>
+  crypto.createHash('sha256').update(token).digest('hex')
+
+const createPasswordResetToken = () => crypto.randomBytes(32).toString('hex')
+
+const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+
+export const requestPasswordReset = async (email) => {
+  const trimmedEmail = email?.trim().toLowerCase()
+
+  if (!trimmedEmail) {
+    throw new AppError('Email is required', 400)
+  }
+
+  if (!isValidEmail(trimmedEmail)) {
+    throw new AppError('Please enter a valid email address', 400)
+  }
+
+  const user = await User.findOne({ email: trimmedEmail }).select('+password +passwordResetToken')
+
+  if (!user?.password) {
+    return { sent: false }
+  }
+
+  const resetToken = createPasswordResetToken()
+  user.passwordResetToken = hashResetToken(resetToken)
+  user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS)
+  await user.save()
+
+  await sendPasswordResetEmail({
+    email: user.email,
+    name: user.name,
+    resetToken,
+  })
+
+  return { sent: true }
+}
+
+export const resetPasswordWithToken = async (token, password) => {
+  if (!token?.trim()) {
+    throw new AppError('Reset token is required', 400)
+  }
+
+  validatePassword(password)
+
+  const hashedToken = hashResetToken(token.trim())
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: new Date() },
+  }).select('+password +passwordResetToken')
+
+  if (!user) {
+    throw new AppError('This password reset link is invalid or has expired', 400)
+  }
+
+  user.password = await bcrypt.hash(password, SALT_ROUNDS)
+  user.passwordResetToken = ''
+  user.passwordResetExpires = undefined
+  await user.save()
 
   return user
 }
