@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AlertModal from '../components/AlertModal'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
+import { GOOGLE_CLIENT_ID } from '../config/auth'
 import { useAuth } from '../context/AuthContext'
-
-const googleEnabled = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
 const inputClass =
   'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10'
@@ -193,7 +192,7 @@ const Register = () => {
             {submitting ? 'Creating account...' : 'Create Account'}
           </button>
 
-          {googleEnabled && (
+          {GOOGLE_CLIENT_ID && (
             <>
               <div className="my-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-gray-200" />

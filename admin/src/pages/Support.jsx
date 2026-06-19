@@ -22,6 +22,20 @@ const SUBJECT_LABELS = {
   other: 'Other',
 }
 
+const STATUS_LABELS = {
+  open: 'Open',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+  closed: 'Closed',
+}
+
+const statusStyles = {
+  open: 'bg-amber-50 text-amber-700',
+  in_progress: 'bg-blue-50 text-blue-700',
+  resolved: 'bg-emerald-50 text-emerald-700',
+  closed: 'bg-slate-100 text-slate-600',
+}
+
 const Support = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -157,13 +171,14 @@ const Support = () => {
                 <th className="px-4 py-3">Ticket</th>
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
                     No support requests found.
                   </td>
                 </tr>
@@ -184,6 +199,15 @@ const Support = () => {
                       <p className="text-xs text-slate-500">{request.email}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{request.phone || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                          statusStyles[request.status] || 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {STATUS_LABELS[request.status] || request.status?.replace('_', ' ') || '—'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         to={`/support/${request.id}`}

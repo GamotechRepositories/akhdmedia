@@ -345,7 +345,6 @@ const buildSupportReplyBody = ({
   issueType,
   replyMessage,
   originalMessage,
-  supportUrl,
 }) => `
   <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">Support Team Response</h1>
   <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#4b5563;">Ticket <strong style="color:#111827;">${ticketNumber}</strong></p>
@@ -357,7 +356,7 @@ const buildSupportReplyBody = ({
   ${brandSectionLabel('Your original message')}
   ${brandParagraph(originalMessage)}
   ${brandParagraph(
-    `If you need further assistance, reply to this email or visit our <a href="${supportUrl}" style="color:#111827;text-decoration:underline;">support page</a>.`,
+    'If you need further assistance, reply to this email.',
   )}
   ${brandParagraph(
     `Warm regards,<br><strong>${BRAND_NAME} Support Team</strong>`,
@@ -449,7 +448,6 @@ export const sendSupportReplyEmail = async ({ request, replyMessage }) => {
 
   const currentYear = new Date().getFullYear()
   const issueType = SUPPORT_SUBJECT_LABELS[request.subject] || SUPPORT_SUBJECT_LABELS.other
-  const supportUrl = `${getFrontendUrl()}/support`
 
   const html = wrapBrandEmail({
     title: 'Support reply',
@@ -460,7 +458,6 @@ export const sendSupportReplyEmail = async ({ request, replyMessage }) => {
       issueType: escapeHtml(issueType),
       replyMessage: formatPlainTextAsHtml(replyMessage),
       originalMessage: formatPlainTextAsHtml(request.message),
-      supportUrl: escapeHtml(supportUrl),
     }),
   })
 

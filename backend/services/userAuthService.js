@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
+import { GOOGLE_CLIENT_ID } from '../config/google.js'
 import { PASSWORD_RESET_EXPIRY_MS } from '../config/email.js'
 import { sendPasswordResetEmail } from './emailService.js'
 import User from '../models/User.js'
@@ -189,13 +190,7 @@ export const updateUserProfile = async (userId, { name, phone }) => {
   return user
 }
 
-const getGoogleClientId = () => {
-  const clientId = process.env.GOOGLE_CLIENT_ID?.trim()
-  if (!clientId) {
-    throw new AppError('Google sign-in is not configured', 500)
-  }
-  return clientId
-}
+const getGoogleClientId = () => GOOGLE_CLIENT_ID
 
 const verifyGoogleCredential = async (credential) => {
   const client = new OAuth2Client(getGoogleClientId())

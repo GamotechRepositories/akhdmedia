@@ -46,7 +46,6 @@ const SupportDetail = () => {
     : undefined
   const [request, setRequest] = useState(null)
   const [status, setStatus] = useState('open')
-  const [adminNotes, setAdminNotes] = useState('')
   const [replyMessage, setReplyMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -87,7 +86,6 @@ const SupportDetail = () => {
         const nextRequest = response.data.data?.request
         setRequest(nextRequest)
         setStatus(nextRequest?.status || 'open')
-        setAdminNotes(nextRequest?.adminNotes || '')
 
         if (nextRequest?.orderNumber?.trim()) {
           const ordersResponse = await fetchOrders()
@@ -132,7 +130,7 @@ const SupportDetail = () => {
     setSaving(true)
     setNotice('')
     try {
-      const response = await updateSupportRequest(id, { status, adminNotes })
+      const response = await updateSupportRequest(id, { status })
       const nextRequest = response.data.data?.request
       setRequest(nextRequest)
       setNotice('Support request updated.')
@@ -271,52 +269,38 @@ const SupportDetail = () => {
         </div>
 
         <div className={`${cardClass} p-5`}>
-          <h2 className="text-sm font-semibold text-slate-900">Admin actions</h2>
-          <div className="mt-4 space-y-4">
-            <div>
-              <label htmlFor="status" className="mb-1.5 block text-sm font-medium text-slate-700">
-                Status
-              </label>
-              <select
-                id="status"
-                value={status}
-                onChange={(event) => setStatus(event.target.value)}
-                className={inputClass}
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="adminNotes" className="mb-1.5 block text-sm font-medium text-slate-700">
-                Internal notes
-              </label>
-              <textarea
-                id="adminNotes"
-                value={adminNotes}
-                onChange={(event) => setAdminNotes(event.target.value)}
-                rows={5}
-                className={inputClass}
-                placeholder="Notes for your team (not sent to customer)"
-              />
-            </div>
-
-            {notice && <p className="text-sm text-emerald-700">{notice}</p>}
-
-            <button type="button" onClick={handleSave} disabled={saving} className={primaryBtnClass}>
-              {saving ? 'Saving...' : 'Save changes'}
-            </button>
-          </div>
+          <h2 className="text-sm font-semibold text-slate-900">Customer message</h2>
+          <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{request.message}</p>
         </div>
       </div>
 
       <div className={`${cardClass} p-5`}>
-        <h2 className="text-sm font-semibold text-slate-900">Customer message</h2>
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{request.message}</p>
+        <h2 className="text-sm font-semibold text-slate-900">Admin actions</h2>
+        <div className="mt-4 space-y-4">
+          <div>
+            <label htmlFor="status" className="mb-1.5 block text-sm font-medium text-slate-700">
+              Status
+            </label>
+            <select
+              id="status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className={inputClass}
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {notice && <p className="text-sm text-emerald-700">{notice}</p>}
+
+          <button type="button" onClick={handleSave} disabled={saving} className={primaryBtnClass}>
+            {saving ? 'Saving...' : 'Save changes'}
+          </button>
+        </div>
       </div>
 
       <div className={`${cardClass} p-5`}>
