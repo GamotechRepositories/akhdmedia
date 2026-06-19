@@ -29,13 +29,13 @@ const Home = () => {
       <ActorRail
         actors={actors}
         isLoading={loading}
+        title={HOME_SECTIONS.actors.title}
         viewAllLink={HOME_SECTIONS.actors.viewAllLink}
       />
       <CategoryAccordion />
 
       <ProductSection
         title={HOME_SECTIONS.freshDrops.title}
-        subtitle={HOME_SECTIONS.freshDrops.subtitle}
         products={latestProducts}
         viewAllLink={HOME_SECTIONS.freshDrops.viewAllLink}
         isLoading={loading}

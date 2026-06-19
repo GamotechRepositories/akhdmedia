@@ -66,6 +66,8 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     videoInfo: product.videoInfo,
     isActive: product.isActive,
     showInLatest: Boolean(product.showInLatest),
+    actorListingOrder: product.actorListingOrder ?? product.allListingOrder ?? 0,
+    categoryListingOrder: product.categoryListingOrder ?? 0,
     actorId: product.actorId?.toString() || '',
     actorName: product.actorName || '',
     actorSearchKeywords: product.actorSearchKeywords || [],

@@ -340,18 +340,48 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {specItems.length > 0 && (
-              <div className="border-t border-slate-200 bg-slate-100 px-5 py-4 sm:px-6">
-                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-900">
-                  {isVideo ? 'Clip specifications' : 'File details'}
-                </h3>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                  {specItems.map((item) => (
-                    <SpecItem key={item.label} label={item.label} value={item.value} />
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="border-t border-slate-200 bg-slate-100 px-5 py-4 sm:px-6">
+              {specItems.length > 0 && (
+                <>
+                  <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-900">
+                    {isVideo ? 'Clip specifications' : 'File details'}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                    {specItems.map((item) => (
+                      <SpecItem key={item.label} label={item.label} value={item.value} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <p className={`text-[11px] leading-relaxed text-slate-600 sm:text-xs ${specItems.length > 0 ? 'mt-4' : ''}`}>
+                <span className="font-semibold text-slate-700">Note:</span>{' '}
+                Purchase the video with license you will receive the video without Watermark in email
+                which will be completely raw footage with original size. Before purchasing videos,
+                please read our{' '}
+                <Link
+                  to="/license-information-policy"
+                  className="font-medium text-slate-800 underline decoration-slate-400 underline-offset-2 hover:text-gray-900"
+                >
+                  License Information Policy
+                </Link>
+                ,{' '}
+                <Link
+                  to="/editorial-policy"
+                  className="font-medium text-slate-800 underline decoration-slate-400 underline-offset-2 hover:text-gray-900"
+                >
+                  Editorial Policy
+                </Link>{' '}
+                and{' '}
+                <Link
+                  to="/terms-and-conditions"
+                  className="font-medium text-slate-800 underline decoration-slate-400 underline-offset-2 hover:text-gray-900"
+                >
+                  Terms &amp; Conditions
+                </Link>{' '}
+                below.
+              </p>
+            </div>
           </div>
         </div>
 

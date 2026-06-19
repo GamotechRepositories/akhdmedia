@@ -5,6 +5,7 @@ import { PAGE_CONTAINER } from '../../constants/layout';
 const ActorRail = ({
   actors = [],
   isLoading = false,
+  title = 'Trending actors',
   viewAllLink = '/actors',
 }) => {
   if (!isLoading && actors.length === 0) return null;
@@ -12,6 +13,18 @@ const ActorRail = ({
   return (
     <section className="border-b border-gray-100 bg-white pt-4 pb-2 sm:pt-5 sm:pb-3">
       <div className={PAGE_CONTAINER}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-extrabold text-gray-900 sm:text-xl">{title}</h2>
+          {viewAllLink && (
+            <Link
+              to={viewAllLink}
+              className="shrink-0 rounded-full border border-gray-300 bg-gray-900 px-4 py-1.5 text-xs font-semibold text-white sm:px-5 sm:py-2 sm:text-sm"
+            >
+              View All
+            </Link>
+          )}
+        </div>
+
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide sm:gap-6">
           {isLoading
             ? Array.from({ length: 6 }, (_, index) => (
@@ -28,17 +41,6 @@ const ActorRail = ({
                 />
               ))}
         </div>
-
-        {viewAllLink && (
-          <div className="mt-2 flex justify-end">
-            <Link
-              to={viewAllLink}
-              className="shrink-0 rounded-full border border-gray-300 bg-gray-900 px-4 py-1.5 text-xs font-semibold text-white sm:px-5 sm:py-2 sm:text-sm"
-            >
-              View All
-            </Link>
-          </div>
-        )}
       </div>
     </section>
   );

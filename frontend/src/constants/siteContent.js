@@ -17,11 +17,11 @@ export const MOBILE_HERO = {
 
 export const HOME_SECTIONS = {
   actors: {
+    title: 'Trending actors',
     viewAllLink: '/actors',
   },
   freshDrops: {
     title: 'Latest Uploads',
-    subtitle: 'Newly graded footage from our contributor network',
     viewAllLink: '/videos',
   },
 };

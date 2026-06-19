@@ -43,6 +43,12 @@ const ORIENTATION_NOTE_OPTIONS = [
   'This video is square',
 ]
 
+const parseListingOrder = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  if (!digits) return 0
+  return Number.parseInt(digits, 10)
+}
+
 const buildEmptyDeliveryFiles = () =>
   Object.fromEntries(
     RESOLUTION_ORDER.map((tier) => [
@@ -147,6 +153,8 @@ const mapProductToForm = (product) => {
     masterVideoTier: product.masterVideoTier || '',
     isActive: product.isActive ?? true,
     showInLatest: product.showInLatest ?? false,
+    actorListingOrder: String(product.actorListingOrder ?? product.allListingOrder ?? 0),
+    categoryListingOrder: String(product.categoryListingOrder ?? 0),
     videoInfo: {
       quality: product.videoInfo?.quality || '',
       fps: product.videoInfo?.fps || '',
@@ -183,6 +191,8 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   masterVideoTier: '',
   isActive: true,
   showInLatest: false,
+  actorListingOrder: '0',
+  categoryListingOrder: '0',
   videoInfo: {
     quality: '4K UHD (3840×2160)',
     fps: mediaType === MEDIA_TYPES.VIDEO ? '30 fps' : '',
@@ -407,6 +417,8 @@ const ProductForm = () => {
       images: current.images,
       isActive: current.isActive,
       showInLatest: current.showInLatest,
+      actorListingOrder: current.actorListingOrder,
+      categoryListingOrder: current.categoryListingOrder,
       demoVideo: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideo : '',
       deliveryFiles: current.deliveryFiles,
     }))
@@ -507,6 +519,8 @@ const ProductForm = () => {
       price: Number(form.price),
       gstPercentage: Number(form.gstPercentage),
       rating: Number(form.rating),
+      actorListingOrder: parseListingOrder(form.actorListingOrder),
+      categoryListingOrder: parseListingOrder(form.categoryListingOrder),
       availableTiers: derivedAvailableTiers,
       resolutionPricing: Object.fromEntries(
         derivedAvailableTiers.map((tier) => {
@@ -708,6 +722,42 @@ const ProductForm = () => {
                 onChange={(e) => updateField('gstPercentage', e.target.value)}
                 className={inputClass}
               />
+            </label>
+
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Actor page position</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={form.actorListingOrder}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '')
+                  updateField('actorListingOrder', digits)
+                }}
+                className={inputClass}
+                placeholder="e.g. 0"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Position when a customer opens this actor&apos;s footage page. Lower numbers appear first (0, 1, 2…).
+              </p>
+            </label>
+
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Category page position</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={form.categoryListingOrder}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '')
+                  updateField('categoryListingOrder', digits)
+                }}
+                className={inputClass}
+                placeholder="e.g. 0"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Position within this product&apos;s category page. Lower numbers appear first (0, 1, 2…).
+              </p>
             </label>
 
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">

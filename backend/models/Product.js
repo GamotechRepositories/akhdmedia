@@ -76,6 +76,8 @@ const productSchema = new mongoose.Schema(
     videoInfo: { type: videoInfoSchema, default: () => ({}) },
     isActive: { type: Boolean, default: true },
     showInLatest: { type: Boolean, default: false },
+    actorListingOrder: { type: Number, default: 0, min: 0 },
+    categoryListingOrder: { type: Number, default: 0, min: 0 },
     actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Actor', default: null, index: true },
     actorName: { type: String, default: '' },
     actorSearchKeywords: { type: [String], default: [] },

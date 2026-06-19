@@ -23,7 +23,7 @@ const matchesFps = (product, fpsFilters) => {
   return fpsFilters.includes(productFps);
 };
 
-const sortProducts = (products, sortBy) => {
+const sortProducts = (products, sortBy, listingOrderKey = null) => {
   const sorted = [...products];
 
   sorted.sort((a, b) => {
@@ -37,15 +37,21 @@ const sortProducts = (products, sortBy) => {
         return priceB - priceA;
       case 'newest':
         return Number(b.id) - Number(a.id);
-      default:
+      default: {
+        if (listingOrderKey) {
+          const orderDiff =
+            (a[listingOrderKey] ?? 0) - (b[listingOrderKey] ?? 0);
+          if (orderDiff !== 0) return orderDiff;
+        }
         return (b.rating || 0) - (a.rating || 0);
+      }
     }
   });
 
   return sorted;
 };
 
-export const useCatalogFilters = (products, filters) =>
+export const useCatalogFilters = (products, filters, listingOrderKey = null) =>
   useMemo(() => {
     let result = [...products];
 
@@ -57,8 +63,8 @@ export const useCatalogFilters = (products, filters) =>
     result = result.filter((p) => matchesResolutions(p, filters.resolutions));
     result = result.filter((p) => matchesFps(p, filters.fps));
 
-    return sortProducts(result, filters.sortBy);
-  }, [products, filters]);
+    return sortProducts(result, filters.sortBy, listingOrderKey);
+  }, [products, filters, listingOrderKey]);
 
 export const extractCatalogFacets = (products) => {
   const brands = [...new Set(products.map((p) => p.brand).filter(Boolean))].sort();

@@ -106,7 +106,13 @@ const CategoryPage = () => {
     return filterByCategory(products, category, subCategory);
   }, [products, actorId, category, subCategory, searchQuery, filterProducts]);
 
-  const filteredProducts = useCatalogFilters(baseProducts, filters);
+  const listingOrderKey = actorId
+    ? 'actorListingOrder'
+    : category
+      ? 'categoryListingOrder'
+      : null;
+
+  const filteredProducts = useCatalogFilters(baseProducts, filters, listingOrderKey);
   const { brands, resolutions, fps } = useMemo(
     () => extractCatalogFacets(baseProducts),
     [baseProducts]

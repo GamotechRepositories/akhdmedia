@@ -22,6 +22,12 @@ const cleanImages = (images = []) =>
 const cleanKeys = (keys = []) =>
   keys.map((key) => key?.trim()).filter(Boolean)
 
+const parseListingOrder = (value) => {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  if (!digits) return 0
+  return Number.parseInt(digits, 10)
+}
+
 const buildDeliveryFilesMap = (body = {}) => {
   const deliveryFiles = new Map()
   const source = body.deliveryFiles || {}
@@ -112,6 +118,8 @@ export const normalizeProductPayload = (body = {}) => {
     deliveryFiles: buildDeliveryFilesMap(body),
     isActive: body.isActive !== false,
     showInLatest: body.showInLatest === true,
+    actorListingOrder: parseListingOrder(body.actorListingOrder ?? body.allListingOrder),
+    categoryListingOrder: parseListingOrder(body.categoryListingOrder),
   }
 
   if (pricingMode === PRICING_MODES.CUSTOM) {
