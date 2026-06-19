@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
@@ -29,7 +28,6 @@ const fullscreenButtonClass =
   'group/fullscreen flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95 sm:h-10 sm:w-10';
 const videoControlButtonClass =
   'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95';
-const SCROLL_RESUME_MS = 250;
 
 const getBufferedEnd = (video) => {
   if (!video?.buffered?.length) return 0;
@@ -49,6 +47,8 @@ const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
+  const resumeAfterImmersiveRef = useRef(false);
+  const pendingImmersiveRef = useRef(false);
   const { ref: galleryRef, isInView } = useInView('120px 0px 120px 0px');
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
@@ -66,7 +66,8 @@ const ProductMediaGallery = ({ product }) => {
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
   const isImmersive = isLightboxOpen || isFullscreen || isNativeVideoFullscreen;
-  const shouldBufferVideo = isInView || isLightboxOpen;
+  const shouldPlayVideo = isInView || isImmersive;
+  const shouldBufferVideo = shouldPlayVideo;
 
   useEffect(() => {
     if (!isVideoSelected || !selectedItem?.src) return undefined;
@@ -131,73 +132,83 @@ const ProductMediaGallery = ({ product }) => {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isVideoSelected) return;
+    if (!video || !isVideoSelected) return undefined;
+
+    let cancelled = false;
 
     const startPlayback = async () => {
+      if (cancelled || !shouldPlayVideo) return;
+
+      if (!video.paused) {
+        setIsVideoPlaying(true);
+        return;
+      }
+
       try {
         video.muted = isMuted;
         await video.play();
-        setIsVideoPlaying(true);
+        if (!cancelled) setIsVideoPlaying(true);
       } catch {
-        setIsVideoPlaying(false);
+        if (!cancelled) setIsVideoPlaying(false);
       }
     };
 
-    if (isLightboxOpen) {
-      startPlayback();
-      return;
-    }
-
-    if (!isInView) {
-      video.pause();
-      setIsVideoPlaying(false);
-      return;
-    }
-
-    startPlayback();
-  }, [isInView, isLightboxOpen, isVideoSelected, selectedItem?.src, product?.id]);
-
-  useEffect(() => {
-    if (!isVideoSelected || !isInView || isLightboxOpen) return undefined;
-
-    const video = videoRef.current;
-    let resumeTimer;
-
-    const handleScroll = () => {
-      if (!video) return;
+    if (!shouldPlayVideo) {
+      if (pendingImmersiveRef.current) return undefined;
 
       if (!video.paused) {
         video.pause();
         setIsVideoPlaying(false);
       }
+      return undefined;
+    }
 
-      window.clearTimeout(resumeTimer);
-      resumeTimer = window.setTimeout(() => {
-        if (!isInView || isLightboxOpen) return;
-
-        video.play()
-          .then(() => setIsVideoPlaying(true))
-          .catch(() => setIsVideoPlaying(false));
-      }, SCROLL_RESUME_MS);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      startPlayback();
+    } else {
+      video.addEventListener('canplay', startPlayback, { once: true });
+    }
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.clearTimeout(resumeTimer);
+      cancelled = true;
+      video.removeEventListener('canplay', startPlayback);
     };
-  }, [isVideoSelected, isInView, isLightboxOpen, selectedItem?.src]);
+  }, [
+    shouldPlayVideo,
+    isVideoSelected,
+    selectedItem?.src,
+    product?.id,
+    isMuted,
+  ]);
 
-  useEffect(() => {
+  const resumePlaybackIfNeeded = () => {
     const video = videoRef.current;
-    if (!video) return;
+    const frame = frameRef.current;
+    if (!video || !isVideoSelected || !video.paused) return;
+
+    const inDocumentFullscreen = getFullscreenElement() === frame;
+    const shouldResume =
+      isInView || isLightboxOpen || inDocumentFullscreen || isVideoNativeFullscreen(video);
+
+    if (!shouldResume) return;
+
     video.muted = isMuted;
-  }, [isMuted]);
+    video.play()
+      .then(() => setIsVideoPlaying(true))
+      .catch(() => setIsVideoPlaying(false));
+  };
 
   useEffect(() => {
     const syncFullscreen = () => {
-      setIsFullscreen(getFullscreenElement() === frameRef.current);
+      const wasFullscreen = isFullscreen;
+      const nowFullscreen = getFullscreenElement() === frameRef.current;
+      setIsFullscreen(nowFullscreen);
+
+      if (resumeAfterImmersiveRef.current || nowFullscreen !== wasFullscreen) {
+        resumeAfterImmersiveRef.current = false;
+        pendingImmersiveRef.current = false;
+        resumePlaybackIfNeeded();
+      }
     };
 
     document.addEventListener('fullscreenchange', syncFullscreen);
@@ -207,7 +218,23 @@ const ProductMediaGallery = ({ product }) => {
       document.removeEventListener('fullscreenchange', syncFullscreen);
       document.removeEventListener('webkitfullscreenchange', syncFullscreen);
     };
-  }, []);
+  }, [isFullscreen, isInView, isLightboxOpen, isVideoSelected, isMuted]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    if (!isLightboxOpen || !isVideoSelected) return undefined;
+
+    resumeAfterImmersiveRef.current = false;
+    pendingImmersiveRef.current = false;
+    const timer = window.setTimeout(resumePlaybackIfNeeded, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [isLightboxOpen, isVideoSelected, isMuted, isInView]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -215,6 +242,9 @@ const ProductMediaGallery = ({ product }) => {
 
     const syncNativeFullscreen = () => {
       setIsNativeVideoFullscreen(isVideoNativeFullscreen(video));
+      resumeAfterImmersiveRef.current = false;
+      pendingImmersiveRef.current = false;
+      resumePlaybackIfNeeded();
     };
 
     video.addEventListener('webkitbeginfullscreen', syncNativeFullscreen);
@@ -408,6 +438,11 @@ const ProductMediaGallery = ({ product }) => {
   };
 
   const openLightbox = () => {
+    const video = videoRef.current;
+    pendingImmersiveRef.current = true;
+    if (video && !video.paused) {
+      resumeAfterImmersiveRef.current = true;
+    }
     setIsLightboxOpen(true);
   };
 
@@ -441,6 +476,10 @@ const ProductMediaGallery = ({ product }) => {
 
     if (frame && supportsElementFullscreen()) {
       try {
+        if (video && !video.paused) {
+          resumeAfterImmersiveRef.current = true;
+        }
+        pendingImmersiveRef.current = true;
         await requestElementFullscreen(frame);
         return;
       } catch {
@@ -452,6 +491,7 @@ const ProductMediaGallery = ({ product }) => {
   };
 
   const closeLightbox = () => {
+    pendingImmersiveRef.current = false;
     setIsLightboxOpen(false);
   };
 
@@ -590,32 +630,34 @@ const ProductMediaGallery = ({ product }) => {
     </>
   );
 
-  const lightbox = isLightboxOpen
-    ? createPortal(
-        <div className="media-lightbox" role="dialog" aria-modal="true" aria-label="Fullscreen media preview">
-          <ProtectedMediaFrame watermark className="media-lightbox__frame">
-            {renderMediaChrome(false)}
-            <div className="media-lightbox__media">{mediaContent}</div>
-          </ProtectedMediaFrame>
-        </div>,
-        document.body,
-      )
-    : null;
+  const inlineFrameClassName =
+    'aspect-[10/9] w-full min-h-[260px] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[340px] sm:rounded-2xl lg:min-h-[420px] lg:aspect-[4/3]';
 
   return (
     <div ref={galleryRef} className="w-full min-w-0 max-w-full overflow-x-hidden">
-      <ProtectedMediaFrame
-        ref={frameRef}
-        watermark
-        className="aspect-[10/9] w-full min-h-[260px] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[340px] sm:rounded-2xl lg:min-h-[420px] lg:aspect-[4/3]"
+      {isLightboxOpen ? (
+        <div className={`${inlineFrameClassName} pointer-events-none invisible`} aria-hidden />
+      ) : null}
+
+      <div
+        className={isLightboxOpen ? 'media-lightbox' : 'relative w-full'}
+        role={isLightboxOpen ? 'dialog' : undefined}
+        aria-modal={isLightboxOpen ? 'true' : undefined}
+        aria-label={isLightboxOpen ? 'Fullscreen media preview' : undefined}
       >
-        {renderMediaChrome(true)}
-        {!isLightboxOpen ? mediaContent : null}
-      </ProtectedMediaFrame>
+        <ProtectedMediaFrame
+          ref={frameRef}
+          watermark
+          className={isLightboxOpen ? 'media-lightbox__frame' : inlineFrameClassName}
+        >
+          {renderMediaChrome(!isLightboxOpen)}
+          <div className={isLightboxOpen ? 'media-lightbox__media' : 'relative h-full w-full'}>
+            {mediaContent}
+          </div>
+        </ProtectedMediaFrame>
+      </div>
 
       {isVideoSelected && !isLightboxOpen && renderVideoProgressBar('inline')}
-
-      {lightbox}
 
       {mediaItems.length > 1 && (
         <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5 ${isVideoSelected ? 'mt-2' : 'mt-3'}`}>
