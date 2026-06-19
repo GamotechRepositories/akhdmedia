@@ -38,7 +38,14 @@ export const createSupportRequest = async (payload, sessionId = '') => {
 
   try {
     const emailResult = await sendSupportRequestConfirmationEmail(request)
-    if (!emailResult.sent) {
+    if (emailResult.sent) {
+      request.replies.push({
+        kind: 'confirmation',
+        message: '',
+        sentAt: new Date(),
+      })
+      await request.save()
+    } else {
       console.warn(
         `[email] Support confirmation not sent to ${email}:`,
         emailResult.reason,
@@ -102,7 +109,11 @@ export const replyToSupportRequest = async (id, { replyMessage, status }) => {
     )
   }
 
-  request.replies.push({ message, sentAt: new Date() })
+  request.replies.push({
+    kind: 'admin_reply',
+    message,
+    sentAt: new Date(),
+  })
   request.lastReplyAt = new Date()
 
   if (status) {

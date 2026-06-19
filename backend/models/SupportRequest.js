@@ -23,8 +23,13 @@ const supportRequestSchema = new mongoose.Schema(
     adminNotes: { type: String, default: '' },
     replies: [
       {
-        message: { type: String, required: true, trim: true },
+        message: { type: String, default: '', trim: true },
         sentAt: { type: Date, default: Date.now },
+        kind: {
+          type: String,
+          enum: ['confirmation', 'admin_reply'],
+          default: 'admin_reply',
+        },
       },
     ],
     lastReplyAt: { type: Date, default: null },

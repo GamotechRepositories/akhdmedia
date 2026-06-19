@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { fetchOrders, fetchSupportRequest, replySupportRequest, updateSupportRequest } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
+import SupportConfirmationEmailPreview from '../components/SupportConfirmationEmailPreview'
+import SupportReplyEmailPreview from '../components/SupportReplyEmailPreview'
 import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const SUBJECT_LABELS = {
@@ -35,6 +37,31 @@ const formatDate = (value) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+const getEmailHistory = (request) => {
+  const replies = Array.isArray(request?.replies) ? request.replies : []
+  const hasConfirmation = replies.some((entry) => entry.kind === 'confirmation')
+
+  const items = hasConfirmation
+    ? [...replies]
+    : [
+        ...replies,
+        {
+          kind: 'confirmation',
+          message: '',
+          sentAt: request.createdAt,
+        },
+      ]
+
+  return items.sort(
+    (left, right) => new Date(right.sentAt).getTime() - new Date(left.sentAt).getTime(),
+  )
+}
+
+const EMAIL_KIND_LABELS = {
+  confirmation: 'Request received confirmation',
+  admin_reply: 'Support team reply',
 }
 
 const SupportDetail = () => {
@@ -188,6 +215,8 @@ const SupportDetail = () => {
     )
   }
 
+  const emailHistory = getEmailHistory(request)
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-2">
@@ -338,18 +367,42 @@ const SupportDetail = () => {
             {sendingReply ? 'Sending...' : 'Send reply to customer'}
           </button>
         </div>
+      </div>
 
-        {request.replies?.length > 0 && (
-          <div className="mt-6 border-t border-slate-200 pt-5">
-            <h3 className="text-sm font-semibold text-slate-900">Sent replies</h3>
-            <div className="mt-3 space-y-3">
-              {request.replies.map((reply, index) => (
-                <div key={`${reply.sentAt}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-medium text-slate-500">{formatDate(reply.sentAt)}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{reply.message}</p>
+      <div className={`${cardClass} p-5`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Email history</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              All emails sent to the customer for this request.
+            </p>
+          </div>
+          <p className="text-xs font-medium text-slate-500">
+            {emailHistory.length} {emailHistory.length === 1 ? 'email' : 'emails'}
+          </p>
+        </div>
+
+        {emailHistory.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">No emails sent yet.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {emailHistory.map((entry, index) => (
+              <div key={`${entry.kind}-${entry.sentAt}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {EMAIL_KIND_LABELS[entry.kind] || 'Email'} sent to {request.email}
+                    </p>
+                  </div>
+                  <p className="text-xs font-medium text-slate-500">{formatDate(entry.sentAt)}</p>
                 </div>
-              ))}
-            </div>
+                {entry.kind === 'confirmation' ? (
+                  <SupportConfirmationEmailPreview request={request} />
+                ) : (
+                  <SupportReplyEmailPreview request={request} replyMessage={entry.message} />
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
