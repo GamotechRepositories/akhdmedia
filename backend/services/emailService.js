@@ -1,5 +1,12 @@
 import { Resend } from 'resend'
-import { BRAND_NAME, getFrontendUrl, getResendApiKey, getResendFrom, isEmailConfigured } from '../config/email.js'
+import {
+  BRAND_NAME,
+  formatPasswordResetExpiryLabel,
+  getFrontendUrl,
+  getResendApiKey,
+  getResendFrom,
+  isEmailConfigured,
+} from '../config/email.js'
 import { SIGNED_URL_EXPIRY_SECONDS } from '../config/storage.js'
 
 let resendClient = null
@@ -223,7 +230,7 @@ const PASSWORD_RESET_EMAIL_TEMPLATE = `<!DOCTYPE html>
       </a>
     </div>
     <p style="font-size:13px;color:#6b7280;line-height:1.5;">
-      This link expires in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email.
+      This link expires in <strong>{{expiry_label}}</strong>. If you did not request a password reset, you can safely ignore this email.
     </p>
     <hr>
     <p style="font-size:12px;color:#666;text-align:center;">
@@ -245,6 +252,7 @@ export const sendPasswordResetEmail = async ({ email, name, resetToken }) => {
 
   const html = PASSWORD_RESET_EMAIL_TEMPLATE.replace(/{{customer_name}}/g, escapeHtml(name || 'there'))
     .replace(/{{reset_url}}/g, escapeHtml(resetUrl))
+    .replace(/{{expiry_label}}/g, escapeHtml(formatPasswordResetExpiryLabel()))
     .replace(/{{current_year}}/g, String(currentYear))
 
   const { error } = await resend.emails.send({

@@ -13,7 +13,27 @@ export const getFrontendUrl = () => {
   return raw.split(',')[0].trim()
 }
 
-export const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000
+export const PASSWORD_RESET_EXPIRY_MINUTES = Number(
+  process.env.PASSWORD_RESET_EXPIRY_MINUTES || 10,
+)
+
+export const PASSWORD_RESET_EXPIRY_MS = PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000
+
+export const formatPasswordResetExpiryLabel = (
+  minutes = PASSWORD_RESET_EXPIRY_MINUTES,
+) => {
+  const value = Number(minutes) || 10
+
+  if (value === 1) return '1 minute'
+  if (value < 60) return `${value} minutes`
+
+  if (value % 60 === 0) {
+    const hours = value / 60
+    return hours === 1 ? '1 hour' : `${hours} hours`
+  }
+
+  return `${value} minutes`
+}
 
 export const MAX_LICENSE_EMAIL_RESENDS = 2
 
