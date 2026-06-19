@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { getMe, login as loginRequest, logout as logoutRequest, register as registerRequest, updateProfile as updateProfileRequest } from '../services/authApi'
+import { getMe, login as loginRequest, loginWithGoogle as loginWithGoogleRequest, logout as logoutRequest, register as registerRequest, updateProfile as updateProfileRequest } from '../services/authApi'
 
 const AuthContext = createContext(null)
 
@@ -36,6 +36,12 @@ export const AuthProvider = ({ children }) => {
     return response
   }, [])
 
+  const loginWithGoogle = useCallback(async (credential) => {
+    const response = await loginWithGoogleRequest(credential)
+    setUser(response.data?.user || null)
+    return response
+  }, [])
+
   const register = useCallback(async (name, email, phone, password) => {
     const response = await registerRequest(name, email, phone, password)
     setUser(response.data?.user || null)
@@ -62,12 +68,13 @@ export const AuthProvider = ({ children }) => {
       loading,
       isAuthenticated: Boolean(user),
       login,
+      loginWithGoogle,
       register,
       logout,
       updateProfile,
       refreshAuth,
     }),
-    [user, loading, login, register, logout, updateProfile, refreshAuth],
+    [user, loading, login, loginWithGoogle, register, logout, updateProfile, refreshAuth],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

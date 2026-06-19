@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { OAuth2Client } from 'google-auth-library'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 
@@ -52,6 +53,8 @@ export const formatUserResponse = (user) => ({
   email: user.email,
   phone: user.phone,
   role: user.role,
+  hasGoogleAuth: Boolean(user.googleId),
+  needsPhone: normalizePhone(user.phone).length < 10,
 })
 
 export const getUserById = async (userId) => {
@@ -133,6 +136,10 @@ export const authenticateUser = async (email, password) => {
     throw new AppError('Invalid email or password', 401)
   }
 
+  if (!user.password) {
+    throw new AppError('This account uses Google sign-in. Please continue with Google.', 401)
+  }
+
   const isMatch = await bcrypt.compare(password, user.password)
 
   if (!isMatch) {
@@ -174,6 +181,82 @@ export const updateUserProfile = async (userId, { name, phone }) => {
 
   if (!user) {
     throw new AppError('Account not found', 404)
+  }
+
+  return user
+}
+
+const getGoogleClientId = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim()
+  if (!clientId) {
+    throw new AppError('Google sign-in is not configured', 500)
+  }
+  return clientId
+}
+
+const verifyGoogleCredential = async (credential) => {
+  const client = new OAuth2Client(getGoogleClientId())
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: getGoogleClientId(),
+    })
+    return ticket.getPayload()
+  } catch {
+    throw new AppError('Google sign-in failed. Please try again.', 401)
+  }
+}
+
+export const authenticateWithGoogle = async (credential) => {
+  if (!credential?.trim()) {
+    throw new AppError('Google credential is required', 400)
+  }
+
+  const payload = await verifyGoogleCredential(credential.trim())
+  const googleId = payload?.sub
+  const email = payload?.email?.trim().toLowerCase()
+  const name =
+    payload?.name?.trim() ||
+    payload?.given_name?.trim() ||
+    email?.split('@')[0] ||
+    'User'
+
+  if (!googleId) {
+    throw new AppError('Google sign-in failed. Please try again.', 401)
+  }
+
+  if (!email) {
+    throw new AppError('Your Google account does not include an email address', 400)
+  }
+
+  if (payload.email_verified === false) {
+    throw new AppError('Your Google email address is not verified', 400)
+  }
+
+  let user = await User.findOne({ googleId })
+
+  if (!user) {
+    user = await User.findOne({ email })
+
+    if (user) {
+      if (user.googleId && user.googleId !== googleId) {
+        throw new AppError('This email is linked to another Google account', 409)
+      }
+
+      user.googleId = googleId
+      if (!user.name?.trim()) {
+        user.name = name
+      }
+      await user.save()
+    } else {
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        phone: '',
+      })
+    }
   }
 
   return user

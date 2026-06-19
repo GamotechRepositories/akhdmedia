@@ -1,6 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import {
   authenticateUser,
+  authenticateWithGoogle,
   formatUserResponse,
   getUserById,
   getUserCookieName,
@@ -32,6 +33,11 @@ export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body
   const user = await authenticateUser(email, password)
   sendAuthResponse(res, user, 'Logged in successfully')
+})
+
+export const googleAuth = asyncHandler(async (req, res) => {
+  const user = await authenticateWithGoogle(req.body.credential)
+  sendAuthResponse(res, user, 'Logged in with Google successfully')
 })
 
 export const logout = asyncHandler(async (req, res) => {
