@@ -2,13 +2,14 @@ import { useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 const AUTH_PATHS = new Set(['/login', '/register', '/forgot-password', '/reset-password'])
+const PROTECTED_PATHS = new Set(['/profile', '/orders'])
 
 export const getAuthClosePath = (location, fallback = '/') => {
   const from = location.state?.from
 
   if (typeof from === 'string' && from.trim()) {
     const path = from.split('?')[0]
-    if (!AUTH_PATHS.has(path)) {
+    if (!AUTH_PATHS.has(path) && !PROTECTED_PATHS.has(path)) {
       return from
     }
   }

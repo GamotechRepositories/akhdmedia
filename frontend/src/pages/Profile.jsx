@@ -40,8 +40,8 @@ const Profile = () => {
   }, [user]);
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/', { replace: true });
+    navigate('/', { replace: true })
+    await logout()
   };
 
   const startEditing = (field) => {
