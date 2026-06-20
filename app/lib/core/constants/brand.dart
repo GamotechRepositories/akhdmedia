@@ -4,6 +4,10 @@ class Brand {
   static const currencySymbol = '₹';
   static const supportEmail = 'akhdmedia@gmail.com';
   static const supportPhone = '+918591443501';
+  static const gstNumber = '27ACNFA2803Q1ZZ';
+  static const companyAddress =
+      'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.';
+  static const estYear = 2026;
   static const announcement =
       'Royalty-Free 4K Footage — Download Link Sent to Your Email';
 

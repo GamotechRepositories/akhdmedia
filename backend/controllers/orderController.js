@@ -21,6 +21,11 @@ import {
 } from '../services/paymentService.js'
 import { sendOrderLicenseEmail } from '../services/emailService.js'
 import {
+  buildLicenseCertificateBuffer,
+  getLicenseCertificateFilename,
+} from '../services/licenseCertificateService.js'
+import { readLicenseAgreementBuffer, LICENSE_AGREEMENT_FILENAME } from '../utils/licenseDocuments.js'
+import {
   LICENSE_EMAIL_RESEND_LIMIT_MESSAGE,
   LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE,
   MAX_LICENSE_EMAIL_RESENDS,
@@ -186,6 +191,38 @@ export const getOrderDownloads = asyncHandler(async (req, res) => {
     success: true,
     data: { downloads },
   })
+})
+
+export const downloadLicenseCertificate = asyncHandler(async (req, res) => {
+  const { order, userEmail } = await resolveOrderForRequest(req, req.params.id)
+  verifyOrderAccess(order, req.sessionId, req.user?.id, userEmail)
+
+  if (!canAccessOrderDownloads(order)) {
+    throw new AppError('Payment is required before license certificate is available', 402)
+  }
+
+  const downloads = await getOrderItemDownloads(order)
+  const buffer = buildLicenseCertificateBuffer(order, downloads)
+  const filename = getLicenseCertificateFilename(order)
+
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+  res.send(buffer)
+})
+
+export const downloadLicenseAgreement = asyncHandler(async (req, res) => {
+  const { order, userEmail } = await resolveOrderForRequest(req, req.params.id)
+  verifyOrderAccess(order, req.sessionId, req.user?.id, userEmail)
+
+  if (!canAccessOrderDownloads(order)) {
+    throw new AppError('Payment is required before license agreement is available', 402)
+  }
+
+  const buffer = await readLicenseAgreementBuffer()
+
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `attachment; filename="${LICENSE_AGREEMENT_FILENAME}"`)
+  res.send(buffer)
 })
 
 export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {

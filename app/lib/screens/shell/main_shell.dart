@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/brand.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../providers/cart_provider.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.navigationShell});
@@ -25,33 +27,56 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: widget.navigationShell,
-      bottomNavigationBar: NavigationBar(
-        height: 60,
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _onTap,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.video_library_outlined),
-            selectedIcon: Icon(Icons.video_library_rounded),
-            label: 'Videos',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shopping_cart_outlined),
-            selectedIcon: Icon(Icons.shopping_cart_rounded),
-            label: 'Cart',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Account',
-          ),
-        ],
+      bottomNavigationBar: Consumer<CartProvider>(
+        builder: (context, cart, _) {
+          final count = cart.cart.itemCount;
+          return NavigationBar(
+            height: 60,
+            selectedIndex: widget.navigationShell.currentIndex,
+            onDestinationSelected: _onTap,
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.video_library_outlined),
+                selectedIcon: Icon(Icons.video_library_rounded),
+                label: 'Videos',
+              ),
+              NavigationDestination(
+                icon: _CartNavIcon(count: count, selected: false),
+                selectedIcon: _CartNavIcon(count: count, selected: true),
+                label: 'Cart',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: 'Account',
+              ),
+            ],
+          );
+        },
       ),
+    );
+  }
+}
+
+class _CartNavIcon extends StatelessWidget {
+  const _CartNavIcon({required this.count, required this.selected});
+
+  final int count;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(selected ? Icons.shopping_cart_rounded : Icons.shopping_cart_outlined);
+    if (count <= 0) return icon;
+
+    return Badge(
+      label: Text('$count'),
+      child: icon,
     );
   }
 }

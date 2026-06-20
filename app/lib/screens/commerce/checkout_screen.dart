@@ -166,7 +166,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       await cartProvider.clearCart();
 
       if (mounted) {
-        context.go('/order-success?orderId=${result.order.id}');
+        context.go('/orders/${result.order.id}');
       }
     } catch (e) {
       if (mounted) {

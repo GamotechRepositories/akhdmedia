@@ -76,6 +76,20 @@ export const orderAPI = {
     const { data } = await api.post(`/orders/${orderId}/resend-email`)
     return data
   },
+
+  downloadLicenseCertificate: async (orderId) => {
+    const { data } = await api.get(`/orders/${orderId}/license-certificate`, {
+      responseType: 'blob',
+    })
+    return data
+  },
+
+  downloadLicenseAgreement: async (orderId) => {
+    const { data } = await api.get(`/orders/${orderId}/license-agreement`, {
+      responseType: 'blob',
+    })
+    return data
+  },
 }
 
 export const supportAPI = {

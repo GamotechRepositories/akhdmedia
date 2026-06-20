@@ -1,12 +1,140 @@
 import { jsPDF } from 'jspdf';
+import { BRAND } from '../config/brand';
+import { CERT } from './licenseCertificateTheme';
+import { appendLicensePolicyPages } from './licenseCertificatePolicy';
 
-const ensureSpace = (doc, y, margin, needed = 12) => {
-  const pageHeight = doc.internal.pageSize.getHeight();
-  if (y + needed > pageHeight - margin) {
-    doc.addPage();
-    return margin;
+const writeAt = (doc, text, x, yPos, { size = 10, style = 'normal', color = CERT.body, align = 'left', font = 'helvetica' } = {}) => {
+  doc.setFont(font, style);
+  doc.setFontSize(size);
+  doc.setTextColor(...color);
+  doc.text(String(text), x, yPos, { align });
+};
+
+const drawGoldFrame = (doc, pageWidth, pageHeight) => {
+  doc.setDrawColor(...CERT.gold);
+  doc.setLineWidth(0.8);
+  doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+  doc.setFillColor(...CERT.gold);
+  doc.rect(10, 10, pageWidth - 20, 1.2, 'F');
+};
+
+const drawNavyHeader = (doc, margin, y, contentWidth, pageWidth, brandName) => {
+  const headerH = 24;
+
+  doc.setFillColor(...CERT.navy);
+  doc.rect(margin, y, contentWidth, headerH, 'F');
+
+  doc.setFillColor(...CERT.gold);
+  doc.rect(margin, y + headerH - 1.4, contentWidth, 1.4, 'F');
+
+  doc.setDrawColor(...CERT.goldLight);
+  doc.setLineWidth(0.2);
+  doc.line(margin + 8, y + 4, pageWidth - margin - 8, y + 4);
+
+  writeAt(doc, brandName, pageWidth / 2, y + 10.5, {
+    size: 12,
+    style: 'bold',
+    color: CERT.white,
+    align: 'center',
+  });
+  writeAt(doc, `GSTIN: ${BRAND.gstNumber}`, pageWidth / 2, y + 16.5, {
+    size: 7.5,
+    color: [200, 210, 225],
+    align: 'center',
+  });
+
+  const badgeW = 34;
+  const badgeH = 8;
+  const badgeX = pageWidth - margin - badgeW - 2;
+  const badgeY = y + 3;
+  doc.setFillColor(...CERT.navyDark);
+  doc.setDrawColor(...CERT.gold);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.5, 1.5, 'FD');
+  writeAt(doc, 'OFFICIAL LICENSE', badgeX + badgeW / 2, badgeY + 5.2, {
+    size: 6.2,
+    style: 'bold',
+    color: CERT.gold,
+    align: 'center',
+  });
+
+  return y + headerH + 8;
+};
+
+const drawTitleDivider = (doc, centerX, y) => {
+  doc.setDrawColor(...CERT.gold);
+  doc.setLineWidth(0.35);
+  doc.line(centerX - 22, y, centerX - 3, y);
+  doc.line(centerX + 3, y, centerX + 22, y);
+  doc.setFillColor(...CERT.gold);
+  const s = 1.6;
+  doc.rect(centerX - s / 2, y - s / 2, s, s, 'F');
+};
+
+const drawMetaIcon = (doc, x, y, type) => {
+  const size = 8;
+  const left = x - size / 2;
+  const top = y - size / 2;
+
+  doc.setFillColor(248, 245, 238);
+  doc.setDrawColor(...CERT.gold);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(left, top, size, size, 1.6, 1.6, 'FD');
+
+  doc.setDrawColor(...CERT.navy);
+  doc.setLineWidth(0.38);
+  doc.setFillColor(...CERT.navy);
+
+  const cx = x;
+  const cy = y;
+
+  if (type === 'calendar') {
+    doc.setFillColor(...CERT.navy);
+    doc.rect(cx - 1.1, cy - 3.1, 0.9, 1.3, 'F');
+    doc.rect(cx + 0.2, cy - 3.1, 0.9, 1.3, 'F');
+    doc.setDrawColor(...CERT.navy);
+    doc.setLineWidth(0.38);
+    doc.roundedRect(cx - 2.8, cy - 2.2, 5.6, 4.8, 0.6, 0.6);
+    doc.line(cx - 2.8, cy - 0.4, cx + 2.8, cy - 0.4);
+    doc.setFillColor(...CERT.white);
+    doc.circle(cx - 1.2, cy + 0.9, 0.35, 'F');
+    doc.circle(cx + 1.2, cy + 0.9, 0.35, 'F');
+    doc.circle(cx, cy + 0.9, 0.35, 'F');
+  } else if (type === 'currency') {
+    doc.setDrawColor(...CERT.navy);
+    doc.setLineWidth(0.38);
+    doc.roundedRect(cx - 3, cy - 2.2, 6, 4.4, 0.5, 0.5);
+    doc.circle(cx, cy, 1.3);
+    writeAt(doc, 'Rs', cx, cy + 0.6, { size: 3.8, style: 'bold', color: CERT.navy, align: 'center' });
+  } else {
+    doc.setFillColor(...CERT.navy);
+    doc.setDrawColor(...CERT.navy);
+    doc.roundedRect(cx - 2.6, cy - 0.2, 4.8, 2.8, 0.4, 0.4, 'F');
+    doc.setFillColor(220, 228, 240);
+    doc.roundedRect(cx - 2.2, cy - 1.4, 4.8, 2.8, 0.4, 0.4, 'F');
+    doc.setFillColor(...CERT.white);
+    doc.setDrawColor(...CERT.navy);
+    doc.roundedRect(cx - 1.8, cy - 2.5, 4.8, 2.8, 0.4, 0.4, 'FD');
   }
-  return y;
+};
+
+const drawPartyAccent = (doc, x, y, height) => {
+  doc.setFillColor(...CERT.gold);
+  doc.rect(x, y, 1.8, height, 'F');
+};
+
+const drawVerifiedCheckBadge = (doc, cx, cy, radius = 3) => {
+  doc.setFillColor(...CERT.greenText);
+  doc.circle(cx, cy, radius, 'F');
+
+  doc.setDrawColor(...CERT.white);
+  doc.setLineWidth(0.65);
+  doc.setLineCap('round');
+  doc.setLineJoin('round');
+
+  const scale = radius / 3;
+  doc.line(cx - 1.15 * scale, cy + 0.05 * scale, cx - 0.25 * scale, cy + 0.95 * scale);
+  doc.line(cx - 0.25 * scale, cy + 0.95 * scale, cx + 1.25 * scale, cy - 0.85 * scale);
 };
 
 export const downloadLicenseCertificatePdf = ({
@@ -18,246 +146,165 @@ export const downloadLicenseCertificatePdf = ({
   subtotalLabel,
   gstLabel,
   orderTotalLabel,
+  gstPercent = 18,
   orderItems = [],
 }) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
+  const margin = 16;
   const contentWidth = pageWidth - margin * 2;
-  let y = 25;
+  const centerX = pageWidth / 2;
 
-  const writeLines = (text, { size = 11, style = 'normal', color = [33, 37, 41], lineGap = 6 } = {}) => {
-    doc.setFont('helvetica', style);
-    doc.setFontSize(size);
-    doc.setTextColor(...color);
-    const lines = doc.splitTextToSize(String(text), contentWidth);
-    lines.forEach((line) => {
-      y = ensureSpace(doc, y, margin, lineGap);
-      doc.text(line, margin, y);
-      y += lineGap;
-    });
-  };
+  drawGoldFrame(doc, pageWidth, doc.internal.pageSize.getHeight());
+  let y = drawNavyHeader(doc, margin, 16, contentWidth, pageWidth, brandName);
 
-  const writeHeading = (text, { size = 12, lineGap = 8 } = {}) => {
-    y += 2;
-    writeLines(text, { size, style: 'bold', lineGap });
-  };
+  writeAt(doc, 'LICENSE CERTIFICATE', centerX, y, {
+    size: 22,
+    style: 'bold',
+    color: CERT.navy,
+    align: 'center',
+    font: 'times',
+  });
+  y += 8;
+  drawTitleDivider(doc, centerX, y);
+  y += 5;
+  writeAt(doc, 'Editorial & News Media License', centerX, y, { size: 9.5, color: CERT.muted, align: 'center' });
+  y += 8;
 
-  const writeSubheading = (text, { size = 10, lineGap = 6 } = {}) => {
-    writeLines(text, { size, style: 'bold', color: [55, 65, 81], lineGap });
-  };
+  const refW = 78;
+  doc.setFillColor(...CERT.panel);
+  doc.setDrawColor(...CERT.border);
+  doc.roundedRect(centerX - refW / 2, y - 3.5, refW, 10, 2.5, 2.5, 'FD');
+  writeAt(doc, 'Certificate Ref:', centerX - 14, y + 2.5, { size: 8.5, color: CERT.body, align: 'right' });
+  writeAt(doc, orderNumber, centerX - 12, y + 2.5, { size: 9.5, style: 'bold', color: CERT.gold, align: 'left' });
+  y += 14;
 
-  const writeParagraph = (text, options = {}) => {
-    writeLines(text, { size: 10, color: [55, 65, 81], lineGap: 5, ...options });
-  };
+  const metaY = y;
+  const colW = contentWidth / 3;
+  const metaItems = [
+    ['Issue date', orderDateLabel, 'calendar'],
+    ['Order total', orderTotalLabel, 'currency'],
+    ['Assets licensed', String(orderItems.length), 'layers'],
+  ];
+  metaItems.forEach(([label, value, icon], index) => {
+    const x = margin + index * colW;
+    doc.setFillColor(...CERT.white);
+    doc.setDrawColor(...CERT.border);
+    doc.roundedRect(x + 1.5, metaY, colW - 3, 18, 2.5, 2.5, 'FD');
+    drawMetaIcon(doc, x + 7.5, metaY + 9, icon);
+    writeAt(doc, label.toUpperCase(), x + 13.5, metaY + 6.5, { size: 6.2, style: 'bold', color: CERT.muted });
+    writeAt(doc, value, x + 13.5, metaY + 12.5, { size: 9.5, style: 'bold', color: CERT.navy });
+  });
+  y += 22;
 
-  const writeBullets = (items, { size = 10, lineGap = 5 } = {}) => {
-    items.forEach((item) => {
-      const lines = doc.splitTextToSize(`• ${item}`, contentWidth - 4);
-      lines.forEach((line, index) => {
-        y = ensureSpace(doc, y, margin, lineGap);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(size);
-        doc.setTextColor(55, 65, 81);
-        doc.text(line, margin + (index === 0 ? 0 : 4), y);
-        y += lineGap;
-      });
-    });
-  };
+  const boxH = 38;
+  const halfW = (contentWidth - 5) / 2;
+  doc.setFillColor(...CERT.white);
+  doc.setDrawColor(...CERT.border);
+  doc.roundedRect(margin, y, halfW, boxH, 2.5, 2.5, 'FD');
+  doc.roundedRect(margin + halfW + 5, y, halfW, boxH, 2.5, 2.5, 'FD');
 
-  const writeLicensePolicy = () => {
-    doc.addPage();
-    y = margin;
-
-    const policy = {
-      title: { size: 10, lineGap: 6 },
-      heading: { size: 8.5, lineGap: 4.5 },
-      sub: { size: 7.5, lineGap: 3.5 },
-      body: { size: 7, lineGap: 3.5 },
-      bullet: { size: 7, lineGap: 3.2 },
-    };
-
-    writeHeading('License and editorial policy — read carefully before use', {
-      size: policy.title.size,
-      lineGap: policy.title.lineGap,
-    });
-
-    writeHeading('1) Personal-Use Rights', policy.heading);
-    writeParagraph('The buyer may use the content only for personal viewing or personal projects.', policy.body);
-
-    writeSubheading('Allowed:', policy.sub);
-    writeBullets(
-      ['Download and watch the video.', 'Save the photos for personal collections.'],
-      policy.bullet,
-    );
-
-    writeSubheading('Not allowed:', policy.sub);
-    writeBullets(
-      [
-        'Re-sell the content.',
-        'Upload it to YouTube, Instagram, or commercial websites.',
-        'Use it in advertisements or business promotions.',
-      ],
-      policy.bullet,
-    );
-
-    writeHeading('2) Editorial / News-Use Rights', policy.heading);
-    writeParagraph(
-      'This is common for celebrity, paparazzi, and red-carpet content.',
-      policy.body,
-    );
-
-    writeSubheading('Allowed:', policy.sub);
-    writeBullets(
-      [
-        'Use in newspapers, magazines, blogs, news websites, and TV news.',
-        'Use in articles discussing celebrities, events, entertainment, or current affairs.',
-      ],
-      policy.bullet,
-    );
-
-    writeSubheading('Not allowed:', policy.sub);
-    writeBullets(
-      [
-        'Use in advertisements.',
-        'Suggest that a celebrity endorses a product or service.',
-        'Use for commercial marketing campaigns.',
-      ],
-      policy.bullet,
-    );
-
-    writeHeading('Use rights', policy.heading);
-    writeParagraph(
-      'The purchased photos and videos may be used for editorial, news-reporting, informational, commentary, entertainment-news, and media-publication purposes, including:',
-      policy.body,
-    );
-    writeBullets(
-      [
-        'Newspapers',
-        'Magazines',
-        'News websites',
-        'Entertainment websites',
-        'Blogs',
-        'Digital media platforms',
-        'Social media channels',
-        'YouTube news and commentary videos',
-        'Television news broadcasts',
-      ],
-      policy.bullet,
-    );
-
-    writeSubheading('The content may not be used:', policy.sub);
-    writeBullets(
-      [
-        'In advertisements or promotional campaigns.',
-        'To endorse, promote, or market any product, service, company, brand, or organization.',
-        'In a manner that suggests sponsorship, approval, endorsement, or affiliation by the celebrity featured in the content.',
-        'On product packaging, merchandise, or commercial products.',
-        'In paid advertising, sponsored content, or influencer marketing campaigns.',
-        'In any unlawful, defamatory, misleading, or deceptive manner.',
-      ],
-      policy.bullet,
-    );
-
-    writeParagraph(
-      `All copyright and ownership rights remain with ${brandName}. The purchaser receives a non-exclusive, non-transferable license to use the content solely for editorial and informational purposes.`,
-      policy.body,
-    );
-    writeParagraph(
-      'Any commercial advertising, brand endorsement, promotional, or merchandising use requires separate written permission and may require additional rights and clearances from the individuals depicted in the content.',
-      policy.body,
-    );
-    writeParagraph(
-      'Important: Celebrity images and videos may involve publicity and personality rights. Even if you own the copyright in the footage, commercial use may require additional permission from the celebrity or their representatives under Indian law.',
-      { ...policy.body, style: 'bold' },
-    );
-
-    writeSubheading('What buyers can do:', policy.sub);
-    writeBullets(
-      [
-        'Publish on news websites.',
-        'Use in newspapers and magazines.',
-        'Post on entertainment blogs.',
-        'Use in editorial YouTube videos.',
-        'Publish on social media pages for news, commentary, and entertainment reporting.',
-        'Include in articles about celebrities, events, fashion, films, and public appearances.',
-      ],
-      policy.bullet,
-    );
-
-    writeSubheading('What buyers cannot do:', policy.sub);
-    writeBullets(
-      [
-        'Use the content in advertisements.',
-        'Promote a brand, product, or service.',
-        'Claim celebrity endorsement.',
-        'Use on product packaging or merchandise.',
-        'Resell the original files.',
-        'Transfer the license to another party without permission.',
-      ],
-      policy.bullet,
-    );
-
-    writeHeading('Copyright ownership', policy.heading);
-    writeParagraph(
-      `All copyrights and intellectual property rights in the content remain the property of ${brandName}. The purchaser receives only a limited license to use the content in accordance with this agreement.`,
-      policy.body,
-    );
-  };
-
-  doc.setFillColor(17, 24, 39);
-  doc.rect(0, 0, pageWidth, 42, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text(brandName, margin, 18);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.text('LICENSE CERTIFICATE', margin, 30);
-
-  y = 58;
-  writeLines('License Issued', { size: 18, style: 'bold', lineGap: 9 });
-  writeLines(`Order #${orderNumber}`, { size: 12, color: [75, 85, 99], lineGap: 10 });
-
-  writeLines('PURCHASE DETAILS', { size: 10, style: 'bold', color: [107, 114, 128], lineGap: 7 });
-  writeLines(`Date: ${orderDateLabel}`);
-  writeLines(`Licensed to: ${customerName || '—'}`);
-  writeLines(`Email: ${customerEmail || '—'}`);
-  writeLines(`Subtotal: ${subtotalLabel}`);
-  writeLines(`GST: ${gstLabel}`);
-  writeLines(`Total paid: ${orderTotalLabel}`);
-  y += 4;
-
-  writeLines('LICENSED CONTENT', { size: 10, style: 'bold', color: [107, 114, 128], lineGap: 7 });
-
-  orderItems.forEach((item, index) => {
-    y += 2;
-    writeLines(`${index + 1}. ${item.name}`, { style: 'bold', lineGap: 6 });
-    writeLines(`Clip ID: ${item.clipId || '—'}`, { size: 10, lineGap: 5 });
-    writeLines(`License tier: ${item.imageSize || 'Standard'}`, { size: 10, lineGap: 5 });
-    writeLines(`License No: ${item.licenseNumber || '—'}`, { size: 10, lineGap: 8 });
+  drawPartyAccent(doc, margin, y, boxH);
+  writeAt(doc, 'LICENSOR', margin + 6, y + 7.5, { size: 7, style: 'bold', color: CERT.muted });
+  writeAt(doc, brandName, margin + 6, y + 14, { size: 9.5, style: 'bold', color: CERT.navy });
+  writeAt(doc, `GSTIN: ${BRAND.gstNumber}`, margin + 6, y + 19, { size: 7.5, color: CERT.body });
+  doc.splitTextToSize(BRAND.companyAddress, halfW - 10).slice(0, 3).forEach((line, i) => {
+    writeAt(doc, line, margin + 6, y + 24 + i * 4.2, { size: 7, color: CERT.body });
   });
 
-  y += 4;
-  writeLines(
-    'This certificate confirms your purchase and license rights. Video download links are sent to your email only.',
-    { size: 10, color: [75, 85, 99], lineGap: 6 },
-  );
+  drawPartyAccent(doc, margin + halfW + 5, y, boxH);
+  writeAt(doc, 'LICENSEE', margin + halfW + 11, y + 7.5, { size: 7, style: 'bold', color: CERT.muted });
+  writeAt(doc, customerName || '—', margin + halfW + 11, y + 14, { size: 9.5, style: 'bold', color: CERT.navy });
+  writeAt(doc, customerEmail || '—', margin + halfW + 11, y + 20, { size: 8, color: CERT.body });
+  writeAt(doc, 'Non-transferable editorial license', margin + halfW + 11, y + 26, { size: 7.5, color: CERT.muted });
+  y += boxH + 7;
 
-  writeLicensePolicy();
+  doc.setFillColor(...CERT.white);
+  doc.setDrawColor(...CERT.border);
+  doc.roundedRect(margin, y, contentWidth, 20, 2.5, 2.5, 'FD');
+  writeAt(doc, 'PAYMENT SUMMARY', margin + 5, y + 6, { size: 7, style: 'bold', color: CERT.muted });
+  doc.setDrawColor(...CERT.gold);
+  doc.setLineWidth(0.35);
+  doc.line(margin + 5, y + 8.5, margin + contentWidth - 5, y + 8.5);
+  const payY = y + 15;
+  const third = contentWidth / 3;
+  writeAt(doc, 'Subtotal', margin + 5, payY - 3, { size: 7, color: CERT.muted });
+  writeAt(doc, subtotalLabel, margin + 5, payY + 1.5, { size: 9.5, style: 'bold', color: CERT.navy });
+  doc.setDrawColor(...CERT.border);
+  doc.line(margin + third, y + 10, margin + third, y + 19);
+  writeAt(doc, `GST (${gstPercent}%)`, margin + third + 5, payY - 3, { size: 7, color: CERT.muted });
+  writeAt(doc, gstLabel, margin + third + 5, payY + 1.5, { size: 9.5, style: 'bold', color: CERT.navy });
+  doc.line(margin + third * 2, y + 10, margin + third * 2, y + 19);
+  writeAt(doc, 'TOTAL PAID', margin + third * 2 + 5, payY - 3, { size: 7, color: CERT.muted });
+  writeAt(doc, orderTotalLabel, margin + third * 2 + 5, payY + 1.5, { size: 10.5, style: 'bold', color: CERT.navy });
+  y += 24;
 
-  const footerY = doc.internal.pageSize.getHeight() - 10;
-  const pageCount = doc.getNumberOfPages();
-  for (let page = 1; page <= pageCount; page += 1) {
-    doc.setPage(page);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(156, 163, 175);
-    doc.text(`© ${new Date().getFullYear()} ${brandName}. All rights reserved.`, margin, footerY);
-    if (pageCount > 1) {
-      doc.text(`Page ${page} of ${pageCount}`, pageWidth - margin, footerY, { align: 'right' });
+  writeAt(doc, 'LICENSED ASSETS', margin, y, { size: 8, style: 'bold', color: CERT.navyDark });
+  y += 5;
+  const tableTop = y;
+  const rowH = 9.5;
+  const cols = [8, 58, 28, 22, 38];
+  const headers = ['#', 'Asset title', 'Clip ID', 'Tier', 'License No.'];
+  doc.setFillColor(...CERT.navy);
+  doc.roundedRect(margin, tableTop, contentWidth, rowH, 1.5, 1.5, 'F');
+  let colX = margin + 2;
+  headers.forEach((header, i) => {
+    writeAt(doc, header.toUpperCase(), colX, tableTop + 6.5, { size: 6.2, style: 'bold', color: CERT.white });
+    colX += cols[i];
+  });
+  y = tableTop + rowH;
+
+  orderItems.forEach((item, index) => {
+    if (index % 2 === 1) {
+      doc.setFillColor(...CERT.panel);
+      doc.rect(margin, y, contentWidth, rowH, 'F');
     }
-  }
+    doc.setDrawColor(...CERT.border);
+    doc.line(margin, y + rowH, margin + contentWidth, y + rowH);
+    colX = margin + 2;
+    const cells = [
+      String(index + 1),
+      item.name || '—',
+      item.clipId || '—',
+      item.imageSize || 'Standard',
+      item.licenseNumber || '—',
+    ];
+    cells.forEach((cell, i) => {
+      const truncated = doc.splitTextToSize(String(cell), cols[i] - 3)[0] || '—';
+      writeAt(doc, truncated, colX, y + 6.5, {
+        size: 7.5,
+        style: i === 4 ? 'bold' : 'normal',
+        color: CERT.body,
+      });
+      colX += cols[i];
+    });
+    y += rowH;
+  });
+  y += 7;
+
+  doc.setFillColor(...CERT.greenBg);
+  doc.setDrawColor(...CERT.greenBorder);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(margin, y, contentWidth, 16, 2.5, 2.5, 'FD');
+  drawVerifiedCheckBadge(doc, margin + 6, y + 8, 3);
+  writeAt(doc, 'License verified — download links delivered to your registered email only.', margin + 11, y + 7, {
+    size: 8.5,
+    style: 'bold',
+    color: CERT.greenText,
+  });
+  writeAt(doc, 'Retain this certificate as proof of purchase and permitted editorial use.', margin + 11, y + 12, {
+    size: 7.5,
+    color: [4, 120, 87],
+  });
+  y += 22;
+
+  const disclaimer =
+    'This document certifies a limited, non-exclusive, non-transferable editorial license. Full master files are not embedded in this certificate. Unauthorized redistribution, resale, or commercial promotional use is prohibited unless separately agreed in writing.';
+  doc.splitTextToSize(disclaimer, contentWidth).forEach((line, i) => {
+    writeAt(doc, line, margin, y + i * 4, { size: 7.5, color: CERT.footer });
+  });
+
+  appendLicensePolicyPages(doc, brandName);
 
   doc.save(`license-${orderNumber}.pdf`);
 };

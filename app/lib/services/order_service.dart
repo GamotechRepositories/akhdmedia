@@ -90,6 +90,14 @@ class OrderService {
     await _api.postJson('/orders/$orderId/resend-email');
   }
 
+  Future<List<int>> downloadLicenseCertificate(String orderId) async {
+    return _api.getBytes('/orders/$orderId/license-certificate');
+  }
+
+  Future<List<int>> downloadLicenseAgreement(String orderId) async {
+    return _api.getBytes('/orders/$orderId/license-agreement');
+  }
+
   Future<List<Order>> getUserOrders() async {
     final response = await _api.getJson('/user/orders');
     final ordersJson = response['data']?['orders'] as List<dynamic>? ?? [];

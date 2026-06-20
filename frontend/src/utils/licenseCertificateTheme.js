@@ -1,0 +1,17 @@
+export const CERT = {
+  navy: [27, 42, 74],
+  navyDark: [18, 32, 58],
+  gold: [181, 154, 104],
+  goldLight: [210, 185, 140],
+  goldDark: [154, 125, 72],
+  white: [255, 255, 255],
+  muted: [120, 130, 145],
+  body: [55, 65, 81],
+  border: [220, 224, 230],
+  panel: [248, 249, 251],
+  greenBg: [232, 246, 239],
+  greenBorder: [134, 197, 166],
+  greenText: [6, 95, 70],
+  footer: [156, 163, 175],
+  estYear: 2026,
+};

@@ -1,9 +1,14 @@
 import 'package:go_router/go_router.dart';
 
+import '../../screens/account/login_screen.dart';
+import '../../screens/account/orders_screen.dart';
 import '../../screens/account/profile_hub_screen.dart';
+import '../../screens/account/profile_screen.dart';
+import '../../screens/account/register_screen.dart';
 import '../../screens/catalog/catalog_screen.dart';
 import '../../screens/commerce/cart_screen.dart';
 import '../../screens/commerce/checkout_screen.dart';
+import '../../screens/commerce/order_detail_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/info/info_screens.dart';
 import '../../screens/product/product_detail_screen.dart';
@@ -69,15 +74,32 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/order-success',
-      builder: (context, state) => const OrderSuccessScreen(),
+      builder: (context, state) {
+        return OrderSuccessScreen(
+          orderId: state.uri.queryParameters['orderId'],
+        );
+      },
+    ),
+    GoRoute(
+      path: '/orders/:id',
+      builder: (context, state) {
+        return OrderDetailScreen(
+          orderId: state.pathParameters['id']!,
+          fromOrders: state.uri.queryParameters['fromOrders'] == '1',
+        );
+      },
     ),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      builder: (context, state) {
+        return LoginScreen(redirectTo: state.uri.queryParameters['redirect']);
+      },
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterScreen(),
+      builder: (context, state) {
+        return RegisterScreen(redirectTo: state.uri.queryParameters['redirect']);
+      },
     ),
     GoRoute(
       path: '/profile',
@@ -85,7 +107,9 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/orders',
-      builder: (context, state) => const OrdersScreen(),
+      builder: (context, state) => OrdersScreen(
+        focusOrderId: state.uri.queryParameters['focus'],
+      ),
     ),
     GoRoute(
       path: '/support',
@@ -97,24 +121,38 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/privacy-policy',
-      builder: (context, state) => const PolicyScreen(title: 'Privacy policy'),
+      builder: (context, state) => const PolicyScreen(
+        title: 'Privacy policy',
+        policySlug: 'privacy-policy',
+      ),
     ),
     GoRoute(
       path: '/terms-and-conditions',
-      builder: (context, state) => const PolicyScreen(title: 'Terms & conditions'),
+      builder: (context, state) => const PolicyScreen(
+        title: 'Terms & conditions',
+        policySlug: 'terms-and-conditions',
+      ),
     ),
     GoRoute(
       path: '/refund-policy',
-      builder: (context, state) => const PolicyScreen(title: 'Refund policy'),
+      builder: (context, state) => const PolicyScreen(
+        title: 'Refund policy',
+        policySlug: 'refund-policy',
+      ),
     ),
     GoRoute(
       path: '/editorial-policy',
-      builder: (context, state) => const PolicyScreen(title: 'Editorial policy'),
+      builder: (context, state) => const PolicyScreen(
+        title: 'Editorial policy',
+        policySlug: 'editorial-policy',
+      ),
     ),
     GoRoute(
       path: '/license-information-policy',
-      builder: (context, state) =>
-          const PolicyScreen(title: 'License information'),
+      builder: (context, state) => const PolicyScreen(
+        title: 'License information',
+        policySlug: 'license-information-policy',
+      ),
     ),
   ],
 );

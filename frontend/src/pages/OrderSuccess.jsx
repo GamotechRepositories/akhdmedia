@@ -10,9 +10,17 @@ import {
   MAX_LICENSE_EMAIL_RESENDS,
   formatResendWindowLabel,
 } from '../constants/email';
-import { formatCurrency, formatCurrencyForPdf } from '../utils/formatters';
-import { downloadLicenseCertificatePdf } from '../utils/licenseCertificatePdf';
+import { formatCurrency } from '../utils/formatters';
 import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
+
+const saveBlobDownload = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
+};
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
@@ -33,6 +41,7 @@ const OrderSuccess = () => {
   const [emailNotice, setEmailNotice] = useState('');
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [resendWindowRemainingMs, setResendWindowRemainingMs] = useState(0);
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false);
   const [resumingPayment, setResumingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
 
@@ -63,18 +72,18 @@ const OrderSuccess = () => {
     { day: 'numeric', month: 'short', year: 'numeric' },
   );
 
-  const handleDownloadLicense = () => {
-    downloadLicenseCertificatePdf({
-      brandName: BRAND.name,
-      orderNumber,
-      orderDateLabel,
-      customerName: order?.billingAddress?.name || '',
-      customerEmail,
-      subtotalLabel: formatCurrencyForPdf(orderSubtotal),
-      gstLabel: formatCurrencyForPdf(orderGst),
-      orderTotalLabel: formatCurrencyForPdf(orderPayableTotal),
-      orderItems,
-    });
+  const handleDownloadLicense = async () => {
+    if (!orderId || downloadingCertificate) return;
+
+    setDownloadingCertificate(true);
+    try {
+      const blob = await orderAPI.downloadLicenseCertificate(orderId);
+      saveBlobDownload(blob, `license-${orderNumber}.pdf`);
+    } catch (error) {
+      console.error('Failed to download license certificate:', error);
+    } finally {
+      setDownloadingCertificate(false);
+    }
   };
 
   const openSupportModal = () => setShowSupportModal(true);
@@ -378,12 +387,13 @@ const OrderSuccess = () => {
             <button
               type="button"
               onClick={handleDownloadLicense}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-900 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              disabled={downloadingCertificate}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-900 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
               </svg>
-              Download license certificate
+              {downloadingCertificate ? 'Downloading…' : 'Download license certificate'}
             </button>
           </div>
         )}
@@ -391,7 +401,7 @@ const OrderSuccess = () => {
         <div className="border-t border-blue-200 bg-blue-50 px-6 py-4 text-sm text-blue-950">
           <p className="font-semibold">License email</p>
           <p className="mt-1 leading-relaxed text-blue-900">
-            License details and your video download link were sent to{' '}
+            License details, your video download link, and your license certificate (including usage terms) were sent to{' '}
             <span className="font-medium">{customerEmail || 'your email'}</span>.
             Please check your inbox and spam folder.
           </p>
@@ -416,6 +426,13 @@ const OrderSuccess = () => {
               {resendingEmail ? 'Sending...' : 'Resend license email'}
             </button>
           )}
+        </div>
+
+        <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 text-sm">
+          <p className="font-semibold text-gray-900">Seller details</p>
+          <p className="mt-2 font-medium text-gray-900">{BRAND.name}</p>
+          <p className="mt-1 text-xs text-gray-600">GSTIN: {BRAND.gstNumber}</p>
+          <p className="mt-1 text-xs leading-relaxed text-gray-600">{BRAND.companyAddress}</p>
         </div>
 
         <div className="space-y-2 border-t border-gray-200 bg-stone-100 px-6 py-4 text-sm">

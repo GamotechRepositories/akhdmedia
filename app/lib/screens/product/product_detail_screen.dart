@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/auth_gate.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/product.dart';
+import '../../providers/cart_provider.dart';
 import '../../providers/catalog_provider.dart';
 import '../../widgets/cards/tight_product_card.dart';
 import '../../widgets/common/error_view.dart';
@@ -22,6 +24,8 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  bool _cartBusy = false;
+
   @override
   void initState() {
     super.initState();
@@ -87,16 +91,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => context.push('/cart'),
-                      child: const Text('Add to cart'),
+                      onPressed: _cartBusy || !product.isPurchasable
+                          ? null
+                          : () => _addToCart(context, product),
+                      child: Text(_cartBusy ? 'Adding…' : 'Add to cart'),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: FilledButton(
-                      onPressed: product.isPurchasable
-                          ? () => context.push('/checkout')
-                          : null,
+                      onPressed: _cartBusy || !product.isPurchasable
+                          ? null
+                          : () => _buyNow(context, product),
                       child: const Text('Buy now'),
                     ),
                   ),
@@ -128,6 +134,48 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _addToCart(BuildContext context, Product product) async {
+    final ok = await ensureAuthenticated(context, redirectTo: '/product/${product.id}');
+    if (!ok || !mounted) return;
+
+    setState(() => _cartBusy = true);
+    try {
+      await context.read<CartProvider>().addToCart(product.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to cart')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cartBusy = false);
+    }
+  }
+
+  Future<void> _buyNow(BuildContext context, Product product) async {
+    final ok = await ensureAuthenticated(context, redirectTo: '/product/${product.id}');
+    if (!ok || !mounted) return;
+
+    setState(() => _cartBusy = true);
+    try {
+      await context.read<CartProvider>().buyNow(product.id);
+      if (mounted) context.push('/checkout');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cartBusy = false);
+    }
   }
 }
 

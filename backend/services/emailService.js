@@ -8,6 +8,10 @@ import {
   isEmailConfigured,
 } from '../config/email.js'
 import { SIGNED_URL_EXPIRY_SECONDS } from '../config/storage.js'
+import {
+  buildLicenseCertificateBuffer,
+  getLicenseCertificateFilename,
+} from './licenseCertificateService.js'
 
 let resendClient = null
 
@@ -86,38 +90,61 @@ const formatLinkExpiry = (fromDate = new Date()) => {
   })
 }
 
+const brandDownloadButton = (href, label = 'Download Your Licensed Video') => `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+    <tr>
+      <td align="center" style="border-radius:8px;background:#2563eb;">
+        <a
+          href="${escapeHtml(href)}"
+          style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:8px;background:#2563eb;"
+        >
+          ${escapeHtml(label)}
+        </a>
+      </td>
+    </tr>
+  </table>`
+
 const buildDownloadSection = (downloadUrl, linkExpiry) => `
   ${brandSectionLabel('Download your video')}
-  ${brandParagraph(
-    `<a href="${escapeHtml(downloadUrl)}" style="color:#111827;font-weight:600;text-decoration:underline;">Download your licensed video</a>`,
-  )}
+  ${brandDownloadButton(downloadUrl)}
   ${brandParagraph(
     `This download link is valid until <strong>${escapeHtml(linkExpiry)}</strong> (IST).`,
   )}
 `
 
+const buildOrderItemsSection = (orderItems, linkExpiry) =>
+  orderItems
+    .map(
+      ({ item, downloadUrl }) => `
+  ${brandParagraph(`<strong>${escapeHtml(item.name)}</strong>`)}
+  ${brandParagraph(
+    `Clip ID: ${escapeHtml(item.clipId || '—')} · License number: ${escapeHtml(item.licenseNumber || '—')}`,
+  )}
+  ${buildDownloadSection(downloadUrl, linkExpiry)}
+`,
+    )
+    .join('')
+
 const buildLicenseEmailBody = ({
   customerName,
-  videoTitle,
-  clipId,
-  licenseNumber,
   purchaseDate,
-  downloadUrl,
+  orderItems,
   linkExpiry,
 }) => `
   <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">Thank You For Your Purchase</h1>
   ${brandParagraph(`Hi ${customerName},`)}
   ${brandParagraph(
-    `Your payment has been successfully processed and your licensed video is now ready for download.`,
+    `Your payment has been successfully processed and your licensed video${orderItems.length > 1 ? 's are' : ' is'} now ready for download.`,
   )}
   ${brandSectionLabel('Purchase details')}
-  ${brandParagraph(`<strong>Video title:</strong> ${videoTitle}`)}
-  ${brandParagraph(`<strong>Clip ID:</strong> ${clipId}`)}
-  ${brandParagraph(`<strong>License number:</strong> ${licenseNumber}`)}
   ${brandParagraph(`<strong>Purchase date:</strong> ${purchaseDate}`)}
-  ${buildDownloadSection(downloadUrl, linkExpiry)}
+  ${buildOrderItemsSection(orderItems, linkExpiry)}
+  ${brandSectionLabel('Attached document')}
   ${brandParagraph(
-    `Please keep this email for your records. Your license number serves as proof of purchase.`,
+    '<strong>License Certificate</strong> — proof of purchase, license details, and editorial usage terms.',
+  )}
+  ${brandParagraph(
+    `Please keep this email and the attached certificate for your records.`,
   )}
   ${brandParagraph(`If you have any questions, simply reply to this email.`)}
   ${brandParagraph(`Warm regards,<br><strong>${BRAND_NAME} Team</strong>`)}
@@ -125,11 +152,8 @@ const buildLicenseEmailBody = ({
 
 const buildLicenseEmailHtml = ({
   customerName,
-  videoTitle,
-  clipId,
-  licenseNumber,
   purchaseDate,
-  downloadUrl,
+  orderItems,
   linkExpiry,
   currentYear,
 }) =>
@@ -138,11 +162,11 @@ const buildLicenseEmailHtml = ({
     currentYear,
     bodyHtml: buildLicenseEmailBody({
       customerName: escapeHtml(customerName),
-      videoTitle: escapeHtml(videoTitle),
-      clipId: escapeHtml(clipId),
-      licenseNumber: escapeHtml(licenseNumber),
       purchaseDate: escapeHtml(purchaseDate),
-      downloadUrl,
+      orderItems: orderItems.map(({ item, downloadUrl }) => ({
+        item,
+        downloadUrl,
+      })),
       linkExpiry,
     }),
   })
@@ -177,7 +201,7 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
     return { sent: false, reason: 'no_order_items' }
   }
 
-  let sentCount = 0
+  const orderItems = []
 
   for (const item of downloads) {
     const downloadFile = getPrimaryDownloadFile(item)
@@ -186,59 +210,75 @@ export const sendOrderLicenseEmail = async ({ order, downloads }) => {
       continue
     }
 
-    const sentAt = new Date()
-    const linkExpiry = formatLinkExpiry(sentAt)
-
-    const html = buildLicenseEmailHtml({
-      customerName,
-      videoTitle: item.name,
-      clipId: item.clipId || '—',
-      licenseNumber: item.licenseNumber || '—',
-      purchaseDate,
-      downloadUrl: downloadFile.url,
-      linkExpiry,
-      currentYear,
-    })
-
-    const text = [
-      `Hi ${customerName},`,
-      '',
-      `Your payment has been successfully processed and your licensed video is now ready for download.`,
-      '',
-      `Video title: ${item.name}`,
-      `Clip ID: ${item.clipId || '—'}`,
-      `License number: ${item.licenseNumber || '—'}`,
-      `Purchase date: ${purchaseDate}`,
-      '',
-      `Download link: ${downloadFile.url}`,
-      `Link valid until: ${linkExpiry} (IST)`,
-      '',
-      `${BRAND_NAME} Team`,
-    ].join('\n')
-
-    const { error } = await resend.emails.send({
-      from: getResendFrom(),
-      to: customerEmail,
-      subject: 'Your Video License & Download Link',
-      html,
-      text,
-    })
-
-    if (error) {
-      console.error('[email] Resend API error:', error)
-      throw new Error(error.message || 'Resend API error')
-    }
-
-    sentCount += 1
+    orderItems.push({ item, downloadUrl: downloadFile.url })
   }
 
-  if (sentCount === 0) {
+  if (orderItems.length === 0) {
     console.warn('[email] No license emails sent — no downloadable files on order')
     return { sent: false, reason: 'no_download_files' }
   }
 
-  console.log(`[email] License email sent to ${customerEmail} (${sentCount} item(s))`)
-  return { sent: true, count: sentCount }
+  const sentAt = new Date()
+  const linkExpiry = formatLinkExpiry(sentAt)
+  const certificateBuffer = buildLicenseCertificateBuffer(order, downloads)
+  const certificateFilename = getLicenseCertificateFilename(order)
+
+  const html = buildLicenseEmailHtml({
+    customerName,
+    purchaseDate,
+    orderItems,
+    linkExpiry,
+    currentYear,
+  })
+
+  const textSections = orderItems.flatMap(({ item, downloadUrl }) => [
+    '',
+    `Video title: ${item.name}`,
+    `Clip ID: ${item.clipId || '—'}`,
+    `License number: ${item.licenseNumber || '—'}`,
+    `Download link: ${downloadUrl}`,
+    `Link valid until: ${linkExpiry} (IST)`,
+  ])
+
+  const text = [
+    `Hi ${customerName},`,
+    '',
+    `Your payment has been successfully processed and your licensed video${orderItems.length > 1 ? 's are' : ' is'} now ready for download.`,
+    '',
+    `Purchase date: ${purchaseDate}`,
+    ...textSections,
+    '',
+    'Attached document:',
+    certificateFilename,
+    '',
+    `${BRAND_NAME} Team`,
+  ].join('\n')
+
+  const attachments = [
+    {
+      filename: certificateFilename,
+      content: certificateBuffer.toString('base64'),
+    },
+  ]
+
+  const { error } = await resend.emails.send({
+    from: getResendFrom(),
+    to: customerEmail,
+    subject: 'Your Video License & Download Link',
+    html,
+    text,
+    attachments,
+  })
+
+  if (error) {
+    console.error('[email] Resend API error:', error)
+    throw new Error(error.message || 'Resend API error')
+  }
+
+  console.log(
+    `[email] License email sent to ${customerEmail} (${orderItems.length} item(s), license certificate attached)`,
+  )
+  return { sent: true, count: 1, items: orderItems.length }
 }
 
 const PASSWORD_RESET_EMAIL_TEMPLATE = `<!DOCTYPE html>

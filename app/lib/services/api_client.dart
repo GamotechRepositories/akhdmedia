@@ -34,17 +34,14 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onError: (error, handler) {
-          if (error is DioException) {
-            return handler.reject(
-              DioException(
-                requestOptions: error.requestOptions,
-                response: error.response,
-                type: error.type,
-                error: ApiException.fromDio(error),
-              ),
-            );
-          }
-          handler.next(error);
+          handler.reject(
+            DioException(
+              requestOptions: error.requestOptions,
+              response: error.response,
+              type: error.type,
+              error: ApiException.fromDio(error),
+            ),
+          );
         },
       ),
     );
@@ -77,6 +74,20 @@ class ApiClient {
 
   Future<Map<String, dynamic>> deleteJson(String path) async {
     return _unwrap(await _dio.delete<Map<String, dynamic>>(path));
+  }
+
+  Future<List<int>> getBytes(String path) async {
+    final response = await _dio.get<List<int>>(
+      path,
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    final status = response.statusCode ?? 0;
+    if (status >= 200 && status < 300) {
+      return response.data ?? [];
+    }
+
+    throw ApiException('Request failed ($status)', statusCode: status);
   }
 
   Map<String, dynamic> _unwrap(Response<Map<String, dynamic>> response) {

@@ -9,9 +9,10 @@ class CatalogService {
 
   Future<({List<CatalogCategory> categories, List<Product> products})>
       fetchCatalog() async {
+    final dio = _api.dio;
     final results = await Future.wait([
-      _api.get<List<dynamic>>('/categories'),
-      _api.get<List<dynamic>>('/products'),
+      dio.get<List<dynamic>>('/categories'),
+      dio.get<List<dynamic>>('/products'),
     ]);
 
     final categories = (results[0].data ?? [])
@@ -28,7 +29,7 @@ class CatalogService {
   }
 
   Future<Product?> fetchProductById(String id) async {
-    final response = await _api.get<Map<String, dynamic>>('/products/$id');
+    final response = await _api.dio.get<Map<String, dynamic>>('/products/$id');
     final data = response.data;
     if (data == null) return null;
     return Product.fromJson(data);

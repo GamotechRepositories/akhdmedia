@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/brand.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../widgets/common/coming_soon_view.dart';
+import '../../providers/auth_provider.dart';
 import '../shell/main_shell.dart';
 
 class ProfileHubScreen extends StatelessWidget {
@@ -11,6 +12,8 @@ class ProfileHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     return Scaffold(
       appBar: const StoreAppBar(title: 'Account'),
       body: ListView(
@@ -22,13 +25,13 @@ class ProfileHubScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Welcome',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  Text(
+                    auth.isAuthenticated ? 'Hello, ${auth.user!.name}' : 'Welcome',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    Brand.tagline,
+                    auth.isAuthenticated ? auth.user!.email : Brand.tagline,
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
@@ -36,28 +39,37 @@ class ProfileHubScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          _MenuTile(
-            icon: Icons.login_rounded,
-            title: 'Login',
-            subtitle: 'Phase 3',
-            onTap: () => context.push('/login'),
-          ),
-          _MenuTile(
-            icon: Icons.person_add_alt_1_rounded,
-            title: 'Register',
-            subtitle: 'Phase 3',
-            onTap: () => context.push('/register'),
-          ),
-          _MenuTile(
-            icon: Icons.receipt_long_outlined,
-            title: 'My orders',
-            subtitle: 'Phase 3',
-            onTap: () => context.push('/orders'),
-          ),
+          if (auth.isAuthenticated) ...[
+            _MenuTile(
+              icon: Icons.person_outline_rounded,
+              title: 'Profile',
+              onTap: () => context.push('/profile'),
+            ),
+            _MenuTile(
+              icon: Icons.receipt_long_outlined,
+              title: 'My orders',
+              onTap: () => context.push('/orders'),
+            ),
+            _MenuTile(
+              icon: Icons.logout_rounded,
+              title: 'Sign out',
+              onTap: () => context.read<AuthProvider>().logout(),
+            ),
+          ] else ...[
+            _MenuTile(
+              icon: Icons.login_rounded,
+              title: 'Login',
+              onTap: () => context.push('/login'),
+            ),
+            _MenuTile(
+              icon: Icons.person_add_alt_1_rounded,
+              title: 'Register',
+              onTap: () => context.push('/register'),
+            ),
+          ],
           _MenuTile(
             icon: Icons.support_agent_outlined,
             title: 'Support',
-            subtitle: 'Phase 4',
             onTap: () => context.push('/support'),
           ),
           _MenuTile(
@@ -75,6 +87,11 @@ class ProfileHubScreen extends StatelessWidget {
             title: 'Terms & conditions',
             onTap: () => context.push('/terms-and-conditions'),
           ),
+          _MenuTile(
+            icon: Icons.assignment_return_outlined,
+            title: 'Refund policy',
+            onTap: () => context.push('/refund-policy'),
+          ),
         ],
       ),
     );
@@ -85,13 +102,11 @@ class _MenuTile extends StatelessWidget {
   const _MenuTile({
     required this.icon,
     required this.title,
-    this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
-  final String? subtitle;
   final VoidCallback onTap;
 
   @override
@@ -102,66 +117,9 @@ class _MenuTile extends StatelessWidget {
         dense: true,
         leading: Icon(icon, size: 20),
         title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        subtitle: subtitle != null
-            ? Text(subtitle!, style: const TextStyle(fontSize: 10))
-            : null,
         trailing: const Icon(Icons.chevron_right_rounded, size: 18),
         onTap: onTap,
       ),
-    );
-  }
-}
-
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: const ComingSoonView(
-        title: 'Login',
-        phase: 'Phase 3 — Account',
-      ),
-    );
-  }
-}
-
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: const ComingSoonView(
-        title: 'Register',
-        phase: 'Phase 3 — Account',
-      ),
-    );
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: const ComingSoonView(title: 'Profile', phase: 'Phase 3 — Account'),
-    );
-  }
-}
-
-class OrdersScreen extends StatelessWidget {
-  const OrdersScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Orders')),
-      body: const ComingSoonView(title: 'Orders', phase: 'Phase 3 — Account'),
     );
   }
 }

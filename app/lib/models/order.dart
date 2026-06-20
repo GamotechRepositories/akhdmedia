@@ -1,4 +1,5 @@
 import 'billing_address.dart';
+import 'order_item.dart';
 
 class Order {
   const Order({
@@ -10,24 +11,31 @@ class Order {
     required this.paymentStatus,
     required this.totalAmount,
     required this.status,
+    this.subtotalAmount = 0,
+    this.gstAmount = 0,
     this.razorpayOrderId = '',
     this.razorpayPaymentId = '',
     this.licenseEmailResendCount = 0,
-    this.maxLicenseEmailResends = 3,
-    this.licenseEmailResendsRemaining = 3,
+    this.maxLicenseEmailResends = 2,
+    this.licenseEmailResendsRemaining = 2,
     this.isLicenseEmailResendWindowOpen = false,
     this.canResendLicenseEmail = false,
     this.canResumePayment = true,
+    this.paymentBlockReason = '',
+    this.unavailableItems = const [],
+    this.licenseEmailResendWindowEndsAt,
     this.createdAt,
   });
 
   final String id;
   final String orderNumber;
-  final List<Map<String, dynamic>> items;
+  final List<OrderItem> items;
   final BillingAddress billingAddress;
   final String paymentMethod;
   final String paymentStatus;
   final num totalAmount;
+  final num subtotalAmount;
+  final num gstAmount;
   final String status;
   final String razorpayOrderId;
   final String razorpayPaymentId;
@@ -37,11 +45,18 @@ class Order {
   final bool isLicenseEmailResendWindowOpen;
   final bool canResendLicenseEmail;
   final bool canResumePayment;
+  final String paymentBlockReason;
+  final List<UnavailableOrderItem> unavailableItems;
+  final DateTime? licenseEmailResendWindowEndsAt;
   final DateTime? createdAt;
 
   bool get isPaid => paymentStatus == 'paid';
   bool get isPaymentPending =>
       paymentMethod == 'online' && paymentStatus == 'pending' && status == 'pending';
+
+  int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
+
+  OrderItem? get firstItem => items.isEmpty ? null : items.first;
 
   String get shortOrderNumber {
     if (orderNumber.length <= 8) return orderNumber.toUpperCase();
@@ -51,12 +66,16 @@ class Order {
   factory Order.fromJson(Map<String, dynamic> json) {
     final billing = json['billingAddress'];
     final createdAtRaw = json['createdAt']?.toString();
+    final windowEndsRaw = json['licenseEmailResendWindowEndsAt']?.toString();
+    final itemsJson = json['items'] as List<dynamic>? ?? [];
+    final unavailableJson = json['unavailableItems'] as List<dynamic>? ?? [];
 
     return Order(
       id: json['id']?.toString() ?? '',
       orderNumber: json['orderNumber']?.toString() ?? '',
-      items: (json['items'] as List<dynamic>? ?? [])
+      items: itemsJson
           .whereType<Map<String, dynamic>>()
+          .map(OrderItem.fromJson)
           .toList(),
       billingAddress: billing is Map<String, dynamic>
           ? BillingAddress.fromJson(billing)
@@ -64,6 +83,8 @@ class Order {
       paymentMethod: json['paymentMethod']?.toString() ?? '',
       paymentStatus: json['paymentStatus']?.toString() ?? '',
       totalAmount: json['totalAmount'] is num ? json['totalAmount'] as num : 0,
+      subtotalAmount: json['subtotalAmount'] is num ? json['subtotalAmount'] as num : 0,
+      gstAmount: json['gstAmount'] is num ? json['gstAmount'] as num : 0,
       status: json['status']?.toString() ?? '',
       razorpayOrderId: json['razorpayOrderId']?.toString() ?? '',
       razorpayPaymentId: json['razorpayPaymentId']?.toString() ?? '',
@@ -72,14 +93,21 @@ class Order {
           : 0,
       maxLicenseEmailResends: json['maxLicenseEmailResends'] is int
           ? json['maxLicenseEmailResends'] as int
-          : 3,
+          : 2,
       licenseEmailResendsRemaining: json['licenseEmailResendsRemaining'] is int
           ? json['licenseEmailResendsRemaining'] as int
-          : 3,
+          : 2,
       isLicenseEmailResendWindowOpen:
           json['isLicenseEmailResendWindowOpen'] == true,
       canResendLicenseEmail: json['canResendLicenseEmail'] == true,
       canResumePayment: json['canResumePayment'] != false,
+      paymentBlockReason: json['paymentBlockReason']?.toString() ?? '',
+      unavailableItems: unavailableJson
+          .whereType<Map<String, dynamic>>()
+          .map(UnavailableOrderItem.fromJson)
+          .toList(),
+      licenseEmailResendWindowEndsAt:
+          windowEndsRaw != null ? DateTime.tryParse(windowEndsRaw) : null,
       createdAt: createdAtRaw != null ? DateTime.tryParse(createdAtRaw) : null,
     );
   }

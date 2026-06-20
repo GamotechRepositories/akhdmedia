@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import {
   createOrder,
+  downloadLicenseAgreement,
+  downloadLicenseCertificate,
   getOrder,
   getOrderDownloads,
   getProfile,
@@ -21,6 +23,8 @@ router.put('/profile', updateProfile)
 router.post('/', requireUser, createOrder)
 router.post('/:id/payment', requireUser, resumeOrderPayment)
 router.get('/:id/downloads', optionalUser, getOrderDownloads)
+router.get('/:id/license-certificate', optionalUser, downloadLicenseCertificate)
+router.get('/:id/license-agreement', optionalUser, downloadLicenseAgreement)
 router.post('/:id/resend-email', optionalUser, resendOrderLicenseEmail)
 router.get('/:id', optionalUser, getOrder)
 
