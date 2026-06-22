@@ -17,7 +17,10 @@ router.get('/', requireAdminQueryPermission(ADMIN_PERMISSIONS.PRODUCTS_READ), ge
 router.get(
   '/reserve-clip-id',
   requireAdmin,
-  requirePermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE),
+  requirePermission(
+    ADMIN_PERMISSIONS.PRODUCTS_READ,
+    ADMIN_PERMISSIONS.PRODUCTS_WRITE,
+  ),
   reserveClipId,
 )
 router.get('/:id', requireAdminQueryPermission(ADMIN_PERMISSIONS.PRODUCTS_READ), getProductById)

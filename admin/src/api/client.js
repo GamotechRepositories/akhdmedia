@@ -121,7 +121,17 @@ export const fetchProduct = (id) =>
 
 export const reserveClipId = async () => {
   const { data } = await api.get('/products/reserve-clip-id')
-  return data
+  const clipId =
+    (typeof data === 'string' ? data : '') ||
+    data?.clipId ||
+    data?.data?.clipId ||
+    ''
+
+  if (!clipId) {
+    throw new Error('Could not generate clip ID')
+  }
+
+  return { clipId }
 }
 
 const uploadMediaViaProxy = (file, type, onProgress, options = {}) => {

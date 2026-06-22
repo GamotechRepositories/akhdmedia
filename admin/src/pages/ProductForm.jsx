@@ -214,6 +214,7 @@ const ProductForm = () => {
   const [actors, setActors] = useState([])
   const [form, setForm] = useState(emptyForm())
   const [loading, setLoading] = useState(true)
+  const [clipIdLoading, setClipIdLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showCreateSuccess, setShowCreateSuccess] = useState(false)
@@ -225,19 +226,50 @@ const ProductForm = () => {
     return () => window.clearTimeout(timer)
   }, [showCreateSuccess])
 
+  const loadClipId = async () => {
+    setClipIdLoading(true)
+    try {
+      const { clipId } = await reserveClipId()
+      setForm((current) => ({ ...current, clipId }))
+      return clipId
+    } catch (err) {
+      setError(err.message || 'Could not generate clip ID')
+      return ''
+    } finally {
+      setClipIdLoading(false)
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true)
+      setError('')
       try {
-        const [categoriesRes, actorsRes] = await Promise.all([fetchCategories(), fetchActors()])
+        const requests = [fetchCategories(), fetchActors()]
+        if (!isEdit) {
+          requests.push(reserveClipId())
+        }
+
+        const results = await Promise.all(requests)
+        const categoriesRes = results[0]
+        const actorsRes = results[1]
+
         setCategories(categoriesRes.data)
         setActors(actorsRes.data || [])
 
         if (isEdit) {
           const productRes = await fetchProduct(id)
           setForm(mapProductToForm(productRes.data))
+        } else {
+          const clipRes = results[2]
+          const clipId = clipRes?.clipId || ''
+          if (!clipId) {
+            throw new Error('Could not generate clip ID')
+          }
+          setForm((current) => ({ ...current, clipId }))
         }
       } catch (err) {
-        setError(err.message)
+        setError(err.message || 'Could not load product form')
       } finally {
         setLoading(false)
       }
@@ -245,25 +277,6 @@ const ProductForm = () => {
 
     loadData()
   }, [id, isEdit])
-
-  useEffect(() => {
-    if (isEdit) return undefined
-
-    let active = true
-    reserveClipId()
-      .then((data) => {
-        if (active) {
-          setForm((current) => ({ ...current, clipId: data.clipId }))
-        }
-      })
-      .catch((err) => {
-        if (active) setError(err.message)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [isEdit])
 
   const isVideo = form.mediaType === MEDIA_TYPES.VIDEO
   const isUniformPricing = form.pricingMode === PRICING_MODES.UNIFORM
@@ -399,6 +412,7 @@ const ProductForm = () => {
     setForm((current) => ({
       ...emptyForm(mediaType),
       mediaType,
+      clipId: current.clipId,
       name: current.name,
       categorySlug: current.categorySlug,
       subCategorySlug: current.subCategorySlug,
@@ -646,11 +660,26 @@ const ProductForm = () => {
 
             <label className="block text-sm">
               <span className="font-medium text-slate-700">Clip ID</span>
-              <input
-                readOnly
-                value={form.clipId || 'Generating...'}
-                className={`${inputClass} bg-slate-50 font-mono text-xs text-slate-700`}
-              />
+              <div className="mt-1 flex gap-2">
+                <input
+                  readOnly
+                  value={
+                    clipIdLoading
+                      ? 'Generating...'
+                      : form.clipId || (isEdit ? '' : 'Not generated')
+                  }
+                  className={`${inputClass} mt-0 flex-1 bg-slate-50 font-mono text-xs text-slate-700`}
+                />
+                {!isEdit && !clipIdLoading && !form.clipId ? (
+                  <button
+                    type="button"
+                    onClick={loadClipId}
+                    className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Retry
+                  </button>
+                ) : null}
+              </div>
               <p className="mt-1 text-[11px] text-slate-500">
                 AWS folder: products/{form.clipId || 'AKHD-XXXXX'}/...
               </p>
