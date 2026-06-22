@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchOrders } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
-import { cardClass, inputClass } from '../components/ui/adminUi'
+import { cardClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
+import { downloadOrdersExcel } from '../utils/exportOrdersExcel'
 
 const PAGE_SIZE = 50
 const PURCHASE_REASON_LABELS = {
@@ -156,6 +157,7 @@ const Orders = () => {
   const [dateTo, setDateTo] = useState(restore?.dateTo || '')
   const [highlightedId, setHighlightedId] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [exporting, setExporting] = useState(false)
   useEffect(() => {
     const loadOrders = async () => {
       setLoading(true)
@@ -258,6 +260,22 @@ const Orders = () => {
     setDateTo('')
   }
 
+  const handleExportExcel = () => {
+    if (!orders.length) {
+      setError('No orders to export')
+      return
+    }
+
+    setExporting(true)
+    try {
+      downloadOrdersExcel(orders, { scope: 'all' })
+    } catch (exportError) {
+      setError(exportError.message || 'Could not export orders')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {customerEmailFilter && (
@@ -267,7 +285,7 @@ const Orders = () => {
       )}
 
       <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <label className="block flex-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Search orders
@@ -280,15 +298,35 @@ const Orders = () => {
               className={inputClass}
             />
           </label>
-          {hasActiveFilters && (
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={clearFilters}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              onClick={handleExportExcel}
+              disabled={loading || exporting || orders.length === 0}
+              className={`${secondaryBtnClass} shrink-0 disabled:cursor-not-allowed disabled:opacity-50`}
             >
-              Clear filters
+              <span className="inline-flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                {exporting ? 'Exporting...' : 'Download Excel'}
+              </span>
             </button>
-          )}
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -354,7 +392,8 @@ const Orders = () => {
 
         {!loading && (
           <p className="text-xs text-slate-500">
-            Showing {filteredOrders.length} of {orders.length} orders
+            Showing {filteredOrders.length} of {orders.length} orders. Excel has one row per order;
+            multiple products in the same payment appear together in that row.
           </p>
         )}
       </div>

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import AdminAlertModal from '../components/AdminAlertModal'
+import { secondaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
 import { deleteUser, fetchUsers } from '../api/client'
-import { tableWrapClass } from '../components/ui/adminUi'
+import { downloadUsersExcel } from '../utils/exportUsersExcel'
 
 const PAGE_SIZE = 50
 
@@ -23,6 +24,7 @@ const Users = () => {
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingUserId, setDeletingUserId] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   const loadUsers = async () => {
     setLoading(true)
@@ -40,6 +42,22 @@ const Users = () => {
   useEffect(() => {
     loadUsers()
   }, [])
+
+  const handleExportExcel = () => {
+    if (!users.length) {
+      setError('No users to export')
+      return
+    }
+
+    setExporting(true)
+    try {
+      downloadUsersExcel(users, { scope: 'all' })
+    } catch (exportError) {
+      setError(exportError.message || 'Could not export users')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const handleDelete = async (user) => {
     if (user.role === 'admin') return
@@ -104,14 +122,41 @@ const Users = () => {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search users</label>
-        <input
-          type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by name, email, phone"
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <label className="block flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Search users
+            </span>
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by name, email, phone"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={loading || exporting || users.length === 0}
+            className={`${secondaryBtnClass} shrink-0 disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              {exporting ? 'Exporting...' : 'Download Excel'}
+            </span>
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Exports all {users.length} registered users (name, email, phone, role, joined date).
+        </p>
       </div>
 
       <div className={tableWrapClass}>
