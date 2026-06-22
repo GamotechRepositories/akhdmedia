@@ -1,6 +1,20 @@
+import fs from 'fs'
 import multer from 'multer'
+import os from 'os'
+import path from 'path'
 
-const storage = multer.memoryStorage()
+const uploadTempDir = path.join(os.tmpdir(), 'akhdmedia-uploads')
+fs.mkdirSync(uploadTempDir, { recursive: true })
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadTempDir)
+  },
+  filename: (_req, file, cb) => {
+    const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_')
+    cb(null, `${Date.now()}-${safeName}`)
+  },
+})
 
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime']
@@ -13,7 +27,6 @@ const isDeliveryUpload = (type) =>
 
 export const uploadSingle = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const type = req.body?.type || req.query?.type || ''
 

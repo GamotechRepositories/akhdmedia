@@ -1,3 +1,4 @@
+import fs from 'fs'
 import fsPromises from 'fs/promises'
 import path from 'path'
 import {
@@ -6,18 +7,19 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 import {
   getAwsRegion,
   getAwsS3Bucket,
   getAwsS3PublicUrl,
   AWS_S3_PRIVATE_PREFIX,
   isAwsEnabled,
+  isCloudFrontSigningEnabled,
   LOCAL_PRIVATE_DIR,
   LOCAL_PUBLIC_DIR,
   PRESIGNED_UPLOAD_EXPIRY_SECONDS,
   SIGNED_URL_EXPIRY_SECONDS,
 } from '../config/storage.js'
+import { getCloudFrontSignedDownloadUrl } from './cloudfrontSigner.js'
 
 let s3Client = null
 
@@ -79,28 +81,31 @@ const getApiBase = () =>
 const getLocalPublicUrl = (key) =>
   `${getApiBase()}/uploads/public/${key.replace(/^public\//, '')}`
 
-const MAX_DIRECT_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024
+const getUploadBody = (file) => {
+  if (file?.buffer) return file.buffer
+  if (file?.path) return fs.createReadStream(file.path)
+  return null
+}
 
-const createS3PresignedPost = async (s3Key, contentType = '') => {
+const cleanupUploadTempFile = async (file) => {
+  if (!file?.path) return
+  await fsPromises.unlink(file.path).catch(() => {})
+}
+
+const createS3PresignedPut = async (s3Key, contentType = '') => {
   const resolvedContentType = contentType || 'application/octet-stream'
-  const fields = {
-    'Content-Type': resolvedContentType,
-  }
-
-  const { url, fields: postFields } = await createPresignedPost(getS3(), {
+  const command = new PutObjectCommand({
     Bucket: getAwsS3Bucket(),
     Key: s3Key,
-    Conditions: [
-      ['content-length-range', 0, MAX_DIRECT_UPLOAD_BYTES],
-      ['eq', '$Content-Type', resolvedContentType],
-    ],
-    Fields: fields,
-    Expires: PRESIGNED_UPLOAD_EXPIRY_SECONDS,
+    ContentType: resolvedContentType,
+  })
+  const uploadUrl = await getSignedUrl(getS3(), command, {
+    expiresIn: PRESIGNED_UPLOAD_EXPIRY_SECONDS,
   })
 
   return {
-    uploadUrl: url,
-    uploadFields: postFields,
+    uploadUrl,
+    uploadFields: null,
     headers: {
       'Content-Type': resolvedContentType,
     },
@@ -109,51 +114,81 @@ const createS3PresignedPost = async (s3Key, contentType = '') => {
 
 export const uploadPublicFileToTarget = async (file, target) => {
   const { s3Key, key, filename } = target
+  const body = getUploadBody(file)
 
-  if (isAwsEnabled()) {
-    await getS3().send(
-      new PutObjectCommand({
-        Bucket: getAwsS3Bucket(),
-        Key: s3Key,
-        Body: file.buffer,
-        ContentType: file.mimetype || 'application/octet-stream',
-      }),
-    )
-    return { url: `${getPublicBaseUrl()}/${s3Key}`, key: s3Key, filename }
+  if (!body) {
+    throw new Error('No file data')
   }
 
-  const relativeKey = s3Key.replace(/^public\//, '')
-  const filePath = path.join(LOCAL_PUBLIC_DIR, relativeKey)
-  await ensureDir(path.dirname(filePath))
-  await fsPromises.writeFile(filePath, file.buffer)
-  return { url: getLocalPublicUrl(relativeKey), key: relativeKey, filename }
+  try {
+    if (isAwsEnabled()) {
+      await getS3().send(
+        new PutObjectCommand({
+          Bucket: getAwsS3Bucket(),
+          Key: s3Key,
+          Body: body,
+          ContentType: file.mimetype || 'application/octet-stream',
+        }),
+      )
+      return { url: `${getPublicBaseUrl()}/${s3Key}`, key: s3Key, filename }
+    }
+
+    const relativeKey = s3Key.replace(/^public\//, '')
+    const filePath = path.join(LOCAL_PUBLIC_DIR, relativeKey)
+    await ensureDir(path.dirname(filePath))
+
+    if (file.path) {
+      await fsPromises.copyFile(file.path, filePath)
+    } else {
+      await fsPromises.writeFile(filePath, file.buffer)
+    }
+
+    return { url: getLocalPublicUrl(relativeKey), key: relativeKey, filename }
+  } finally {
+    await cleanupUploadTempFile(file)
+  }
 }
 
 export const uploadPrivateFileToTarget = async (file, target) => {
   const { s3Key, key, filename: targetFilename } = target
   const originalFilename = sanitizeFilename(file.originalname) || targetFilename
+  const body = getUploadBody(file)
 
-  if (isAwsEnabled()) {
-    await getS3().send(
-      new PutObjectCommand({
-        Bucket: getAwsS3Bucket(),
-        Key: s3Key,
-        Body: file.buffer,
-        ContentType: file.mimetype || 'application/octet-stream',
-        ContentDisposition: `inline; filename="${originalFilename}"`,
-        Metadata: {
-          originalfilename: originalFilename,
-        },
-      }),
-    )
-    return { key, filename: originalFilename }
+  if (!body) {
+    throw new Error('No file data')
   }
 
-  const relativeKey = key.replace(/^private\//, '')
-  const filePath = path.join(LOCAL_PRIVATE_DIR, relativeKey)
-  await ensureDir(path.dirname(filePath))
-  await fsPromises.writeFile(filePath, file.buffer)
-  return { key, filename: originalFilename }
+  try {
+    if (isAwsEnabled()) {
+      await getS3().send(
+        new PutObjectCommand({
+          Bucket: getAwsS3Bucket(),
+          Key: s3Key,
+          Body: body,
+          ContentType: file.mimetype || 'application/octet-stream',
+          ContentDisposition: `inline; filename="${originalFilename}"`,
+          Metadata: {
+            originalfilename: originalFilename,
+          },
+        }),
+      )
+      return { key, filename: originalFilename }
+    }
+
+    const relativeKey = key.replace(/^private\//, '')
+    const filePath = path.join(LOCAL_PRIVATE_DIR, relativeKey)
+    await ensureDir(path.dirname(filePath))
+
+    if (file.path) {
+      await fsPromises.copyFile(file.path, filePath)
+    } else {
+      await fsPromises.writeFile(filePath, file.buffer)
+    }
+
+    return { key, filename: originalFilename }
+  } finally {
+    await cleanupUploadTempFile(file)
+  }
 }
 
 export const createPresignedUploadForTarget = async (target, contentType = '') => {
@@ -164,7 +199,7 @@ export const createPresignedUploadForTarget = async (target, contentType = '') =
     return { method: 'proxy' }
   }
 
-  const { uploadUrl, uploadFields, headers } = await createS3PresignedPost(
+  const { uploadUrl, uploadFields, headers } = await createS3PresignedPut(
     s3Key,
     resolvedContentType,
   )
@@ -245,6 +280,11 @@ export const getPrivateDownloadUrl = async (key, filename = '', options = {}) =>
     const s3Key = key.startsWith(`${AWS_S3_PRIVATE_PREFIX}/`)
       ? key
       : `${AWS_S3_PRIVATE_PREFIX}/${key.replace(/^private\//, '')}`
+
+    if (isCloudFrontSigningEnabled()) {
+      return getCloudFrontSignedDownloadUrl(s3Key)
+    }
+
     const command = new GetObjectCommand({
       Bucket: getAwsS3Bucket(),
       Key: s3Key,

@@ -6,7 +6,12 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import connectDB from './config/db.js'
 import { isEmailConfigured } from './config/email.js'
-import { isAwsEnabled, LOCAL_PUBLIC_DIR } from './config/storage.js'
+import {
+  isAwsEnabled,
+  isCloudFrontSigningEnabled,
+  getCloudFrontPrivateBaseUrl,
+  LOCAL_PUBLIC_DIR,
+} from './config/storage.js'
 import apiRoutes from './routes/index.js'
 import errorHandler from './middleware/errorHandler.js'
 import seedAdmin from './seed/seedAdmin.js'
@@ -67,6 +72,13 @@ const startServer = async () => {
         ? `Storage: AWS S3 (${process.env.AWS_S3_BUCKET || process.env.AWS_BUCKET_NAME})`
         : 'Storage: local uploads/ (AWS not configured)',
     )
+    if (isAwsEnabled()) {
+      console.log(
+        isCloudFrontSigningEnabled()
+          ? `Private downloads: CloudFront signed URLs (${getCloudFrontPrivateBaseUrl()})`
+          : 'Private downloads: S3 pre-signed URLs (set CLOUDFRONT_KEY_PAIR_ID + CLOUDFRONT_PRIVATE_KEY or CLOUDFRONT_PRIVATE_KEY_PATH)',
+      )
+    }
   })
 }
 

@@ -820,6 +820,11 @@ const ProductForm = () => {
               </p>
             )}
 
+            <p className="text-xs text-slate-500">
+              No file size limit in admin. Upload any size master video or image — large files stream
+              directly to storage without loading into server memory.
+            </p>
+
             {isVideo && form.masterVideoKey && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
                 Master file uploaded. All purchased quality tiers will deliver this same file.

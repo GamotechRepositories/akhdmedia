@@ -31,7 +31,10 @@ const Footer = () => {
         <div>
           <h3 className="mb-4 text-lg font-semibold text-white">Contact</h3>
           <ul className="space-y-2 text-sm text-gray-400">
-            <li>
+            <li className="font-semibold text-white">{BRAND.name}</li>
+            <li>GSTIN: {BRAND.gstNumber}</li>
+            <li className="text-xs leading-relaxed text-gray-500">{BRAND.companyAddress}</li>
+            <li className="pt-2">
               <Link to="/support" className="font-medium text-white transition hover:text-gray-200">
                 Contact Support
               </Link>
@@ -42,8 +45,11 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="mt-10 border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
-        <p>&copy; {new Date().getFullYear()} {BRAND.name}. All footage rights reserved by contributors.</p>
+      <div className="mt-10 border-t border-gray-800 pt-8 text-center text-sm text-gray-500 sm:text-left">
+        <p>
+          &copy; {new Date().getFullYear()} {BRAND.name}. GSTIN {BRAND.gstNumber}. All footage rights
+          reserved by contributors.
+        </p>
       </div>
     </div>
   </footer>
