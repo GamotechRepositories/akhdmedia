@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { GOOGLE_CLIENT_ID } from '../config/google.js'
 import { PASSWORD_RESET_EXPIRY_MS } from '../config/email.js'
 import { sendPasswordResetEmail } from './emailService.js'
+import Admin from '../models/Admin.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 
@@ -114,8 +115,11 @@ export const registerUser = async ({ name, email, phone, password }) => {
   const fields = validateUserFields({ name, email, phone })
   validatePassword(password)
 
-  const existing = await User.findOne({ email: fields.email })
-  if (existing) {
+  const [existingUser, existingAdmin] = await Promise.all([
+    User.findOne({ email: fields.email }),
+    Admin.findOne({ email: fields.email }),
+  ])
+  if (existingUser || existingAdmin) {
     throw new AppError('An account with this email already exists', 409)
   }
 
@@ -248,6 +252,11 @@ export const authenticateWithGoogle = async (credential) => {
       }
       await user.save()
     } else {
+      const existingAdmin = await Admin.findOne({ email })
+      if (existingAdmin) {
+        throw new AppError('This email is registered as an admin account', 409)
+      }
+
       user = await User.create({
         name,
         email,

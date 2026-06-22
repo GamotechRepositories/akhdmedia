@@ -17,7 +17,7 @@ export const downloadUsersExcel = (users = [], { scope = 'all' } = {}) => {
     Name: user.name || '',
     Email: user.email || '',
     Phone: user.phone || '',
-    Role: user.role === 'admin' ? 'Admin' : 'Customer',
+    Role: 'Customer',
     Joined: formatExportDate(user.createdAt),
     'Last updated': formatExportDate(user.updatedAt),
   }))

@@ -60,8 +60,6 @@ const Users = () => {
   }
 
   const handleDelete = async (user) => {
-    if (user.role === 'admin') return
-
     if (!window.confirm(`Delete user "${user.name}" (${user.email})?`)) return
 
     setDeletingUserId(user.id)
@@ -197,18 +195,14 @@ const Users = () => {
                     <td className="px-4 py-3 text-slate-700">{user.phone || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-3 text-right">
-                      {user.role === 'admin' ? (
-                        <span className="text-xs font-medium text-slate-400">Admin</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(user)}
-                          disabled={deletingUserId === user.id}
-                          className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
-                        >
-                          {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(user)}
+                        disabled={deletingUserId === user.id}
+                        className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
+                      </button>
                     </td>
                   </tr>
                 ))}

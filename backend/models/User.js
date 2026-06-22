@@ -17,16 +17,7 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: { type: Date, select: false },
     role: {
       type: String,
-      enum: ['user', 'admin'],
       default: 'user',
-    },
-    isSuperAdmin: {
-      type: Boolean,
-      default: false,
-    },
-    permissions: {
-      type: [String],
-      default: [],
     },
   },
   { timestamps: true },

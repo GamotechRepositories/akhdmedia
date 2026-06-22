@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import User from '../models/User.js'
+import Admin from '../models/Admin.js'
 import AppError from '../utils/AppError.js'
 
 const TOKEN_EXPIRY = '7d'
@@ -23,13 +23,13 @@ const getJwtSecret = () => {
   return secret
 }
 
-export const signAdminToken = (user) =>
+export const signAdminToken = (admin) =>
   jwt.sign(
     {
-      id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      role: user.role,
+      id: admin._id.toString(),
+      email: admin.email,
+      name: admin.name,
+      role: 'admin',
     },
     getJwtSecret(),
     { expiresIn: TOKEN_EXPIRY },
@@ -57,36 +57,36 @@ export const authenticateAdmin = async (email, password) => {
     throw new AppError('Email and password are required', 400)
   }
 
-  const user = await User.findOne({ email: normalizedEmail }).select('+password')
+  const admin = await Admin.findOne({ email: normalizedEmail }).select('+password')
 
-  if (!user || user.role !== 'admin') {
+  if (!admin) {
     throw new AppError('Invalid email or password', 401)
   }
 
-  const isMatch = await bcrypt.compare(password, user.password)
+  const isMatch = await bcrypt.compare(password, admin.password)
 
   if (!isMatch) {
     throw new AppError('Invalid email or password', 401)
   }
 
-  return user
+  return admin
 }
 
-export const formatAdminResponse = (user) => ({
-  id: user._id.toString(),
-  email: user.email,
-  name: user.name,
-  role: user.role,
-  isSuperAdmin: Boolean(user.isSuperAdmin),
-  permissions: user.permissions || [],
+export const formatAdminResponse = (admin) => ({
+  id: admin._id.toString(),
+  email: admin.email,
+  name: admin.name,
+  role: 'admin',
+  isSuperAdmin: Boolean(admin.isSuperAdmin),
+  permissions: admin.permissions || [],
 })
 
 export const getAdminById = async (adminId) => {
-  const user = await User.findById(adminId)
+  const admin = await Admin.findById(adminId)
 
-  if (!user || user.role !== 'admin') {
+  if (!admin) {
     throw new AppError('Admin account not found', 401)
   }
 
-  return user
+  return admin
 }

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import asyncHandler from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
+import Admin from '../models/Admin.js'
 import User from '../models/User.js'
 import {
   ADMIN_PERMISSION_GROUPS,
@@ -9,16 +10,32 @@ import {
 
 const SALT_ROUNDS = 10
 
-const formatAdminAccount = (user) => ({
-  id: user._id.toString(),
-  name: user.name,
-  email: user.email,
-  phone: user.phone || '',
-  isSuperAdmin: Boolean(user.isSuperAdmin),
-  permissions: user.permissions || [],
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt,
+const formatAdminAccount = (admin) => ({
+  id: admin._id.toString(),
+  name: admin.name,
+  email: admin.email,
+  phone: admin.phone || '',
+  isSuperAdmin: Boolean(admin.isSuperAdmin),
+  permissions: admin.permissions || [],
+  createdAt: admin.createdAt,
+  updatedAt: admin.updatedAt,
 })
+
+const assertEmailAvailable = async (email, excludeAdminId = '') => {
+  const adminFilter = { email }
+  if (excludeAdminId) {
+    adminFilter._id = { $ne: excludeAdminId }
+  }
+
+  const [existingAdmin, existingUser] = await Promise.all([
+    Admin.findOne(adminFilter),
+    User.findOne({ email }),
+  ])
+
+  if (existingAdmin || existingUser) {
+    throw new AppError('An account with this email already exists', 400)
+  }
+}
 
 export const listPermissionGroups = asyncHandler(async (req, res) => {
   res.json({
@@ -30,7 +47,7 @@ export const listPermissionGroups = asyncHandler(async (req, res) => {
 })
 
 export const listAdmins = asyncHandler(async (req, res) => {
-  const admins = await User.find({ role: 'admin' })
+  const admins = await Admin.find()
     .select('name email phone isSuperAdmin permissions createdAt updatedAt')
     .sort({ createdAt: 1 })
     .lean()
@@ -44,9 +61,9 @@ export const listAdmins = asyncHandler(async (req, res) => {
 })
 
 export const getAdmin = asyncHandler(async (req, res) => {
-  const admin = await User.findById(req.params.id)
+  const admin = await Admin.findById(req.params.id)
 
-  if (!admin || admin.role !== 'admin') {
+  if (!admin) {
     throw new AppError('Admin account not found', 404)
   }
 
@@ -72,19 +89,15 @@ export const createAdmin = asyncHandler(async (req, res) => {
     throw new AppError('Password must be at least 8 characters', 400)
   }
 
-  const existing = await User.findOne({ email })
-  if (existing) {
-    throw new AppError('An account with this email already exists', 400)
-  }
+  await assertEmailAvailable(email)
 
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
 
-  const admin = await User.create({
+  const admin = await Admin.create({
     name,
     email,
     password: hashedPassword,
     phone: req.body.phone?.trim() || '',
-    role: 'admin',
     isSuperAdmin: false,
     permissions,
   })
@@ -99,9 +112,9 @@ export const createAdmin = asyncHandler(async (req, res) => {
 })
 
 export const updateAdmin = asyncHandler(async (req, res) => {
-  const admin = await User.findById(req.params.id)
+  const admin = await Admin.findById(req.params.id)
 
-  if (!admin || admin.role !== 'admin') {
+  if (!admin) {
     throw new AppError('Admin account not found', 404)
   }
 
@@ -148,9 +161,9 @@ export const updateAdmin = asyncHandler(async (req, res) => {
 })
 
 export const deleteAdmin = asyncHandler(async (req, res) => {
-  const admin = await User.findById(req.params.id)
+  const admin = await Admin.findById(req.params.id)
 
-  if (!admin || admin.role !== 'admin') {
+  if (!admin) {
     throw new AppError('Admin account not found', 404)
   }
 
