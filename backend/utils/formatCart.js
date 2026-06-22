@@ -1,5 +1,6 @@
 import Category from '../models/Category.js'
-import { buildPayableTotals } from './money.js'
+import { roundMoney } from './money.js'
+import { buildPromoAdjustedTotals } from './promoTotals.js'
 import formatProduct, { buildCategoryMap } from './formatProduct.js'
 import {
   getLicenseResendWindowEndsAt,
@@ -34,18 +35,24 @@ export const formatCartResponse = (cart, categoryMap) => {
     }
   })
 
-  const subtotal = items.reduce((sum, item) => sum + item.basePrice * item.quantity, 0)
-  const rawGstTotal = items.reduce((sum, item) => sum + item.gstAmount * item.quantity, 0)
-  const { gstTotal, total } = buildPayableTotals({ subtotal, gstTotal: rawGstTotal })
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  const discountAmount = roundMoney(cart.appliedPromo?.discountAmount ?? 0)
+  const totals = buildPromoAdjustedTotals(items, discountAmount)
 
   return {
     id: cart._id?.toString() || '',
     items,
-    subtotal,
-    gstTotal,
-    total,
-    itemCount,
+    subtotal: totals.subtotal,
+    taxableSubtotal: totals.taxableSubtotal,
+    gstTotal: totals.gstTotal,
+    discountAmount: totals.discountAmount,
+    appliedPromo: cart.appliedPromo
+      ? {
+          code: cart.appliedPromo.code,
+          discountAmount: totals.discountAmount,
+        }
+      : null,
+    total: totals.total,
+    itemCount: totals.itemCount,
   }
 }
 
@@ -63,6 +70,8 @@ export const formatOrderResponse = (order) => {
     paymentStatus: order.paymentStatus || '',
     subtotalAmount: order.subtotalAmount ?? 0,
     gstAmount: order.gstAmount ?? 0,
+    promoCode: order.promoCode || '',
+    discountAmount: order.discountAmount ?? 0,
     totalAmount: order.totalAmount,
     status: order.status,
     razorpayOrderId: order.razorpayOrderId || '',

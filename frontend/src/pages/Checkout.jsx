@@ -4,7 +4,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
-import { formatCurrency, formatPayableCurrency } from '../utils/formatters';
+import { formatPayableCurrency } from '../utils/formatters';
+import OrderAmountSummary from '../components/OrderAmountSummary';
 import { BRAND } from '../config/brand';
 
 const STEPS = ['billing', 'summary'];
@@ -88,7 +89,16 @@ const StepIndicator = ({ step }) => (
 );
 
 const Checkout = () => {
-  const { cart, getCartTotal, getCartSubtotal, getCartGstTotal, clearCart, loading: cartLoading } = useCart();
+  const {
+    cart,
+    getCartTotal,
+    getCartSubtotal,
+    getCartGstTotal,
+    appliedPromo,
+    discountAmount,
+    clearCart,
+    loading: cartLoading,
+  } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState('billing');
@@ -478,18 +488,15 @@ const Checkout = () => {
               </div>
 
               <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50 px-3 py-3 text-sm">
-                <div className="flex items-center justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(getCartSubtotal())}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-gray-600">
-                  <span>GST</span>
-                  <span>{formatPayableCurrency(getCartGstTotal())}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
-                  <span>Total payable</span>
-                  <span>{formatPayableCurrency(getCartTotal())}</span>
-                </div>
+                <OrderAmountSummary
+                  order={{
+                    subtotalAmount: getCartSubtotal(),
+                    gstAmount: getCartGstTotal(),
+                    promoCode: appliedPromo?.code || '',
+                    discountAmount,
+                    totalAmount: getCartTotal(),
+                  }}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">

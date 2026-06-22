@@ -1,9 +1,11 @@
 import { Router } from 'express'
 import {
   addToCart,
+  applyPromoCode,
   buyNow,
   clearCart,
   deleteCartItem,
+  deletePromoCode,
   getCart,
   updateCartItem,
 } from '../controllers/cartController.js'
@@ -19,6 +21,8 @@ router.post('/items', requireUser, addToCart)
 router.post('/buy-now', requireUser, buyNow)
 router.patch('/items/:itemId', requireUser, updateCartItem)
 router.delete('/items/:itemId', requireUser, deleteCartItem)
+router.post('/promo', requireUser, applyPromoCode)
+router.delete('/promo', requireUser, deletePromoCode)
 router.delete('/', requireUser, clearCart)
 
 export default router

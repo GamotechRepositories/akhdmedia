@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { fetchTransaction } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts'
+import OrderAmountSummary from '../components/OrderAmountSummary'
+import { getOrderLineAmountBreakdown } from '../utils/orderAmounts'
 import FormStep from '../components/FormStep'
 import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
@@ -107,7 +108,6 @@ const TransactionDetail = () => {
   const reasons = (transaction.purchaseReasons || []).map((reason) =>
     formatPurchaseReason(reason, transaction.purchaseReasonOther),
   )
-  const { subtotal, gst, total } = getOrderAmountBreakdown(transaction)
 
   return (
     <div className="space-y-4">
@@ -135,9 +135,9 @@ const TransactionDetail = () => {
                 {transaction.transactionStatusLabel}
               </div>
             </div>
-            <ReadOnlyField label="Subtotal" value={formatCurrency(subtotal)} />
-            <ReadOnlyField label="GST" value={formatCurrency(gst)} />
-            <ReadOnlyField label="Total" value={formatCurrency(total)} />
+            <div className="sm:col-span-2">
+              <OrderAmountSummary order={transaction} totalLabel="Total" />
+            </div>
             <ReadOnlyField label="Created on" value={formatDate(transaction.createdAt)} />
             <ReadOnlyField label="Last updated" value={formatDate(transaction.updatedAt)} />
           </div>
@@ -201,6 +201,7 @@ const TransactionDetail = () => {
                   <th className="px-4 py-3">License No</th>
                   <th className="px-4 py-3">Qty</th>
                   <th className="px-4 py-3">Subtotal</th>
+                  <th className="px-4 py-3">Promo discount</th>
                   <th className="px-4 py-3">GST</th>
                   <th className="px-4 py-3">Line total</th>
                 </tr>
@@ -217,6 +218,9 @@ const TransactionDetail = () => {
                     <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.licenseNumber || '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{item.quantity}</td>
                     <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.subtotal)}</td>
+                    <td className="px-4 py-3 text-emerald-700">
+                      {lineAmounts.discountAmount > 0 ? `-${formatCurrency(lineAmounts.discountAmount)}` : '—'}
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.gst)}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {formatCurrency(lineAmounts.total)}

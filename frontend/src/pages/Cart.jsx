@@ -6,6 +6,7 @@ import ProductThumbnail from '../components/ui/ProductThumbnail';
 import { preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
 import { getCartItemBasePrice } from '../utils/cartHelpers';
+import OrderAmountSummary from '../components/OrderAmountSummary';
 
 const IconTrash = (props) => (
   <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,10 +35,62 @@ const IconArrowLeft = (props) => (
 );
 
 const Cart = () => {
-  const { cart, removeFromCart, updateQuantity, getCartSubtotal, loading } = useCart();
+  const {
+    cart,
+    removeFromCart,
+    updateQuantity,
+    getCartTotal,
+    getCartSubtotal,
+    getCartGstTotal,
+    applyPromoCode,
+    removePromoCode,
+    appliedPromo,
+    discountAmount,
+    loading,
+  } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [removingId, setRemovingId] = useState(null);
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError('Enter a promo code');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/cart' } });
+      return;
+    }
+
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      await applyPromoCode(code);
+      setPromoInput('');
+    } catch (error) {
+      setPromoError(error.message || 'Could not apply promo code');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = async () => {
+    setPromoLoading(true);
+    setPromoError('');
+    try {
+      await removePromoCode();
+      setPromoInput('');
+    } catch (error) {
+      setPromoError(error.message || 'Could not remove promo code');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const handleRemove = async (itemId) => {
     if (removingId) return;
@@ -68,9 +121,9 @@ const Cart = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Your shopping bag is empty</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h1>
         <p className="text-gray-600 mb-8 text-center max-w-sm text-sm">
-          Add items to your bag to continue shopping.
+          Add items to your cart to continue shopping.
         </p>
         <Link
           to="/"
@@ -91,7 +144,7 @@ const Cart = () => {
           </Link>
 
           <div className="hidden md:flex items-center space-x-2 text-xs font-medium">
-            <span className="text-gray-900">Shopping Bag</span>
+            <span className="text-gray-900">Cart</span>
             <span className="text-gray-300">•</span>
             <span className="text-gray-500">Checkout</span>
             <span className="text-gray-300">•</span>
@@ -107,7 +160,7 @@ const Cart = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">Shopping Bag</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-1">Cart</h1>
           <p className="text-sm text-gray-600">{cart.length} {cart.length === 1 ? 'item' : 'items'}</p>
         </div>
 
@@ -154,7 +207,10 @@ const Cart = () => {
                             {item.imageSize && (
                               <p className="mt-0.5 text-xs text-gray-500">License: {item.imageSize}</p>
                             )}
-                            <p className="mt-1 text-sm font-semibold text-gray-900">{formatCurrency(productPrice)}</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                              {formatCurrency(productPrice)}
+                              <span className="ml-1 text-xs font-normal text-gray-500">excl. GST</span>
+                            </p>
                             <button
                               type="button"
                               onClick={() => handleRemove(itemId)}
@@ -215,15 +271,24 @@ const Cart = () => {
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sticky top-20">
               <h2 className="text-lg font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h2>
 
-              <dl className="space-y-3.5 text-sm">
-                <div className="flex justify-between items-center">
-                  <dt className="text-base font-semibold text-gray-900">Total</dt>
-                  <dd className="text-xl font-semibold text-gray-900">{formatCurrency(getCartSubtotal())}</dd>
-                </div>
-              </dl>
+              <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3 text-sm">
+                <OrderAmountSummary
+                  order={{
+                    subtotalAmount: getCartSubtotal(),
+                    gstAmount: getCartGstTotal(),
+                    promoCode: appliedPromo?.code || '',
+                    discountAmount,
+                    totalAmount: getCartTotal(),
+                  }}
+                  totalLabel="Total payable"
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
+                  License price plus applicable GST. Final amount is rounded to the nearest rupee.
+                </p>
+              </div>
 
               <div className="mt-6 pt-6 border-t border-gray-100">
-                <details className="group">
+                <details className="group" open={Boolean(appliedPromo || promoError)}>
                   <summary className="flex cursor-pointer items-center justify-between text-sm font-medium text-gray-900 hover:text-gray-600 list-none">
                     <span>Do you have a promo code?</span>
                     <span className="transition group-open:rotate-180">
@@ -232,16 +297,48 @@ const Cart = () => {
                       </svg>
                     </span>
                   </summary>
-                  <div className="mt-4 flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter code"
-                      className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                    />
-                    <button type="button" className="px-4 py-2 bg-gray-100 text-gray-900 text-xs font-bold uppercase rounded-lg hover:bg-gray-200 transition-colors">
-                      Apply
-                    </button>
-                  </div>
+                  {appliedPromo ? (
+                    <div className="mt-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-800">{appliedPromo.code} applied</p>
+                        <p className="text-xs text-emerald-700">You save {formatCurrency(discountAmount)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemovePromo}
+                        disabled={promoLoading}
+                        className="text-xs font-semibold uppercase text-emerald-800 hover:text-emerald-900 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-4">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={promoInput}
+                          onChange={(event) => {
+                            setPromoInput(event.target.value.toUpperCase());
+                            if (promoError) setPromoError('');
+                          }}
+                          placeholder="Enter code"
+                          className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyPromo}
+                          disabled={promoLoading}
+                          className="px-4 py-2 bg-gray-100 text-gray-900 text-xs font-bold uppercase rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                        >
+                          {promoLoading ? '...' : 'Apply'}
+                        </button>
+                      </div>
+                      {promoError ? (
+                        <p className="mt-2 text-xs text-red-600">{promoError}</p>
+                      ) : null}
+                    </div>
+                  )}
                 </details>
               </div>
 

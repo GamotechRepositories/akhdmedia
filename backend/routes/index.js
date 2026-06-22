@@ -18,6 +18,7 @@ import siteContentRoutes from './siteContent.js'
 import actorPublicRoutes from './actors.js'
 import adminSiteContentRoutes from './adminSiteContent.js'
 import adminActorRoutes from './adminActors.js'
+import adminPromoCodeRoutes from './adminPromoCodes.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
 
 const router = Router()
@@ -47,6 +48,7 @@ router.use('/site-content', siteContentRoutes)
 router.use('/actors', actorPublicRoutes)
 router.use('/admin/site-content', requireAdmin, adminSiteContentRoutes)
 router.use('/admin/actors', requireAdmin, adminActorRoutes)
+router.use('/admin/promo-codes', requireAdmin, adminPromoCodeRoutes)
 router.use('/upload', requireAdmin, uploadRoutes)
 router.use('/files', fileRoutes)
 

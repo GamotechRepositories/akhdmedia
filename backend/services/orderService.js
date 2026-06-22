@@ -12,6 +12,7 @@ import {
 } from './cartService.js'
 import { applyPayableLineTotals } from '../utils/orderAmounts.js'
 import { assertProductPurchasable, hasDeliverableMasterFile } from '../utils/productDelivery.js'
+import { validatePromoForOrder, incrementPromoUsage } from './promoCodeService.js'
 
 const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
 
@@ -87,7 +88,7 @@ const ensureProductClipId = async (productDoc) => {
   return clipId
 }
 
-const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
+const buildOrderPayloadFromCart = async (sessionId, billingAddress, userId = null) => {
   const normalizedAddress = validateBillingAddress(billingAddress)
   const cart = await fetchPopulatedCart(sessionId)
 
@@ -125,7 +126,25 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
     throw new AppError('No valid items found in cart', 400)
   }
 
-  const orderTotals = getCartTotals(cart.items)
+  const baseTotals = getCartTotals(cart.items)
+  let promoCode = ''
+  let discountAmount = 0
+
+  if (cart.appliedPromo?.code) {
+    const validatedPromo = await validatePromoForOrder(
+      cart.appliedPromo.code,
+      baseTotals.subtotal,
+      userId,
+    )
+    promoCode = validatedPromo.promo.code
+    discountAmount = validatedPromo.discountAmount
+  }
+
+  const orderTotals = getCartTotals(
+    cart.items,
+    promoCode ? { code: promoCode, discountAmount } : null,
+  )
+
   const payableOrderItems = applyPayableLineTotals(orderItems, orderTotals)
 
   return {
@@ -133,15 +152,22 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress) => {
     orderItems: payableOrderItems,
     subtotal: orderTotals.subtotal,
     gstTotal: orderTotals.gstTotal,
+    promoCode,
+    discountAmount: orderTotals.discountAmount,
     total: orderTotals.total,
   }
 }
 
 export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress, userId = null }) => {
-  const { normalizedAddress, orderItems, subtotal, gstTotal, total } = await buildOrderPayloadFromCart(
-    sessionId,
-    billingAddress,
-  )
+  const {
+    normalizedAddress,
+    orderItems,
+    subtotal,
+    gstTotal,
+    promoCode,
+    discountAmount,
+    total,
+  } = await buildOrderPayloadFromCart(sessionId, billingAddress, userId)
 
   const order = await Order.create({
     sessionId,
@@ -152,6 +178,8 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
     paymentMethod: 'online',
     subtotalAmount: subtotal,
     gstAmount: gstTotal,
+    promoCode,
+    discountAmount,
     totalAmount: total,
     paymentStatus: 'pending',
     status: 'pending',
@@ -195,6 +223,10 @@ export const confirmOnlineOrderPayment = async (
   order.markModified('items')
 
   await order.save()
+
+  if (order.promoCode) {
+    await incrementPromoUsage(order.promoCode)
+  }
 
   if (clearCart) {
     await clearCartItems(order.sessionId)

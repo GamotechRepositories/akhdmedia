@@ -10,6 +10,7 @@ import {
   MAX_LICENSE_EMAIL_RESENDS,
   formatResendWindowLabel,
 } from '../constants/email';
+import OrderAmountSummary from '../components/OrderAmountSummary';
 import { formatCurrency } from '../utils/formatters';
 import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
 
@@ -47,7 +48,7 @@ const OrderSuccess = () => {
 
   const orderId = searchParams.get('orderId') || '';
   const orderNumber = order?.orderNumber?.slice(-8).toUpperCase() || '--------';
-  const { subtotal: orderSubtotal, gst: orderGst, total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
+  const { total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
   const customerEmail = order?.billingAddress?.email || '';
   const orderItems = order?.items || [];
   const maxResends = order?.maxLicenseEmailResends ?? MAX_LICENSE_EMAIL_RESENDS;
@@ -274,19 +275,11 @@ const OrderSuccess = () => {
           )}
 
           <div className="space-y-2 border-b border-gray-100 px-6 py-4 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium text-gray-900">{formatCurrency(orderSubtotal)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">GST</span>
-              <span className="font-medium text-gray-900">{formatCurrency(orderGst)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-gray-600">Total due</span>
-              <span className="font-bold text-gray-900">{formatCurrency(orderPayableTotal)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
+            <OrderAmountSummary
+              order={order}
+              totalLabel={paymentPending ? 'Total due' : 'Total paid'}
+            />
+            <div className="flex justify-between gap-4 pt-2">
               <span className="text-gray-600">Date</span>
               <span className="font-medium text-gray-900">{orderDateLabel}</span>
             </div>
@@ -436,19 +429,8 @@ const OrderSuccess = () => {
         </div>
 
         <div className="space-y-2 border-t border-gray-200 bg-stone-100 px-6 py-4 text-sm">
-          <div className="flex justify-between gap-4">
-            <span className="text-gray-600">Subtotal</span>
-            <span className="font-medium text-gray-900">{formatCurrency(orderSubtotal)}</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-gray-600">GST</span>
-            <span className="font-medium text-gray-900">{formatCurrency(orderGst)}</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-gray-600">Total paid</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(orderPayableTotal)}</span>
-          </div>
-          <div className="flex justify-between gap-4">
+          <OrderAmountSummary order={order} totalLabel="Total paid" />
+          <div className="flex justify-between gap-4 pt-2">
             <span className="text-gray-600">Payment</span>
             <span className="font-medium text-gray-900">Online Payment</span>
           </div>

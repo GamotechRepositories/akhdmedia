@@ -16,7 +16,10 @@ export const useCart = () => {
 const emptyCart = {
   items: [],
   subtotal: 0,
+  taxableSubtotal: 0,
   gstTotal: 0,
+  discountAmount: 0,
+  appliedPromo: null,
   total: 0,
   itemCount: 0,
 };
@@ -32,7 +35,10 @@ export const CartProvider = ({ children }) => {
     setCartMeta({
       items: nextCart,
       subtotal: response?.data?.cart?.subtotal ?? 0,
+      taxableSubtotal: response?.data?.cart?.taxableSubtotal ?? 0,
       gstTotal: response?.data?.cart?.gstTotal ?? 0,
+      discountAmount: response?.data?.cart?.discountAmount ?? 0,
+      appliedPromo: response?.data?.cart?.appliedPromo ?? null,
       total: response?.data?.cart?.total ?? 0,
       itemCount: response?.data?.cart?.itemCount ?? 0,
     });
@@ -96,6 +102,18 @@ export const CartProvider = ({ children }) => {
     applyCartResponse(response);
   }, [applyCartResponse]);
 
+  const applyPromoCode = useCallback(async (code) => {
+    const response = await cartAPI.applyPromoCode(code);
+    applyCartResponse(response);
+    return response;
+  }, [applyCartResponse]);
+
+  const removePromoCode = useCallback(async () => {
+    const response = await cartAPI.removePromoCode();
+    applyCartResponse(response);
+    return response;
+  }, [applyCartResponse]);
+
   const getPayableBreakdown = useCallback(() => {
     const subtotal =
       cartMeta.subtotal ||
@@ -108,14 +126,20 @@ export const CartProvider = ({ children }) => {
     return buildPayableTotals({ subtotal, gstTotal: rawGstTotal });
   }, [cart, cartMeta.subtotal]);
 
-  const getCartTotal = useCallback(() => getPayableBreakdown().total, [getPayableBreakdown]);
+  const getCartTotal = useCallback(
+    () => cartMeta.total || getPayableBreakdown().total,
+    [cartMeta.total, getPayableBreakdown],
+  );
 
   const getCartSubtotal = useCallback(
     () => cartMeta.subtotal || cart.reduce((total, item) => total + getCartItemBasePrice(item) * item.quantity, 0),
     [cart, cartMeta.subtotal],
   );
 
-  const getCartGstTotal = useCallback(() => getPayableBreakdown().gstTotal, [getPayableBreakdown]);
+  const getCartGstTotal = useCallback(
+    () => cartMeta.gstTotal || getPayableBreakdown().gstTotal,
+    [cartMeta.gstTotal, getPayableBreakdown],
+  );
 
   const getCartItemsCount = useCallback(
     () => cartMeta.itemCount || cart.reduce((count, item) => count + item.quantity, 0),
@@ -132,10 +156,14 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        applyPromoCode,
+        removePromoCode,
         getCartTotal,
         getCartSubtotal,
         getCartGstTotal,
         getCartItemsCount,
+        appliedPromo: cartMeta.appliedPromo,
+        discountAmount: cartMeta.discountAmount,
         loadCart,
       }}
     >

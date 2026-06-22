@@ -271,4 +271,14 @@ export const fetchSiteContent = () => api.get('/admin/site-content')
 
 export const updateSiteContent = (payload) => api.put('/admin/site-content', payload)
 
+export const fetchPromoCodes = () => api.get('/admin/promo-codes')
+
+export const fetchPromoCode = (id) => api.get(`/admin/promo-codes/${id}`)
+
+export const createPromoCode = (payload) => api.post('/admin/promo-codes', payload)
+
+export const updatePromoCode = (id, payload) => api.put(`/admin/promo-codes/${id}`, payload)
+
+export const deletePromoCode = (id) => api.delete(`/admin/promo-codes/${id}`)
+
 export default api

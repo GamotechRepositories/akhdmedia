@@ -1,4 +1,4 @@
-import { buildPayableTotals } from './money';
+import { buildPayableTotals, roundMoney } from './money';
 
 export const getOrderAmountBreakdown = (order = {}) => {
   const items = order.items || [];
@@ -17,27 +17,33 @@ export const getOrderAmountBreakdown = (order = {}) => {
 
   const subtotal = hasOrderSubtotal ? order.subtotalAmount : subtotalFromItems || order.totalAmount || 0;
   const gst = hasOrderGst ? order.gstAmount : gstFromItems;
-  const total = order.totalAmount ?? order.amount ?? subtotal + gst;
+  const discountAmount = Number(order.discountAmount) || 0;
+  const promoCode = order.promoCode || '';
+  const taxableSubtotal = Math.max(0, roundMoney(subtotal - discountAmount));
+  const total =
+    order.totalAmount ??
+    order.amount ??
+    Math.max(0, taxableSubtotal + gst);
 
-  return { subtotal, gst, total };
+  return { subtotal, taxableSubtotal, gst, promoCode, discountAmount, total };
 };
 
 export const getOrderLineAmountBreakdown = (item, order = {}) => {
   const quantity = item.quantity || 1;
   const lineSubtotal = (Number(item.basePrice) || 0) * quantity;
-  const lineRawGst = (Number(item.gstAmount) || 0) * quantity;
-  const items = order.items || [];
+  const lineGst = (Number(item.gstAmount) || 0) * quantity;
+  const total = item.lineTotal ?? roundMoney(lineSubtotal + lineGst);
 
-  if (items.length === 1) {
-    return getOrderAmountBreakdown(order);
-  }
-
-  const linePayable = buildPayableTotals({ subtotal: lineSubtotal, gstTotal: lineRawGst });
-  const total = item.lineTotal ?? linePayable.total;
+  const orderSubtotal = Number(order.subtotalAmount) || 0;
+  const orderDiscount = Number(order.discountAmount) || 0;
+  const discountAmount =
+    orderSubtotal > 0 ? roundMoney((orderDiscount * lineSubtotal) / orderSubtotal) : 0;
 
   return {
     subtotal: lineSubtotal,
-    gst: total - lineSubtotal,
+    discountAmount,
+    gst: lineGst,
+    promoCode: order.promoCode || '',
     total,
   };
 };

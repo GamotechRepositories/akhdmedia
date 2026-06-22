@@ -145,6 +145,8 @@ export const generateLicenseCertificateBuffer = ({
   customerEmail,
   subtotalLabel,
   gstLabel,
+  promoCodeLabel = '',
+  promoDiscountLabel = '',
   orderTotalLabel,
   gstPercent = 18,
   orderItems = [],
@@ -221,23 +223,44 @@ export const generateLicenseCertificateBuffer = ({
 
   doc.setFillColor(...CERT.white)
   doc.setDrawColor(...CERT.border)
-  doc.roundedRect(margin, y, contentWidth, 20, 2.5, 2.5, 'FD')
+  const hasPromo = Boolean(promoDiscountLabel)
+  const payBoxH = hasPromo ? 30 : 20
+  doc.roundedRect(margin, y, contentWidth, payBoxH, 2.5, 2.5, 'FD')
   writeAt(doc, 'PAYMENT SUMMARY', margin + 5, y + 6, { size: 7, style: 'bold', color: CERT.muted })
   doc.setDrawColor(...CERT.gold)
   doc.setLineWidth(0.35)
   doc.line(margin + 5, y + 8.5, margin + contentWidth - 5, y + 8.5)
-  const payY = y + 15
-  const third = contentWidth / 3
-  writeAt(doc, 'Subtotal', margin + 5, payY - 3, { size: 7, color: CERT.muted })
-  writeAt(doc, subtotalLabel, margin + 5, payY + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
-  doc.setDrawColor(...CERT.border)
-  doc.line(margin + third, y + 10, margin + third, y + 19)
-  writeAt(doc, `GST (${gstPercent}%)`, margin + third + 5, payY - 3, { size: 7, color: CERT.muted })
-  writeAt(doc, gstLabel, margin + third + 5, payY + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
-  doc.line(margin + third * 2, y + 10, margin + third * 2, y + 19)
-  writeAt(doc, 'TOTAL PAID', margin + third * 2 + 5, payY - 3, { size: 7, color: CERT.muted })
-  writeAt(doc, orderTotalLabel, margin + third * 2 + 5, payY + 1.5, { size: 10.5, style: 'bold', color: CERT.navy })
-  y += 24
+
+  if (hasPromo) {
+    const row1Y = y + 15
+    const row2Y = y + 24
+    const half = contentWidth / 2
+    writeAt(doc, 'Subtotal', margin + 5, row1Y - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, subtotalLabel, margin + 5, row1Y + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
+    doc.line(margin + half, y + 10, margin + half, y + 19)
+    writeAt(doc, `Promo (${promoCodeLabel})`, margin + half + 5, row1Y - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, `-${promoDiscountLabel}`, margin + half + 5, row1Y + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
+    doc.line(margin + 5, y + 19, margin + contentWidth - 5, y + 19)
+    writeAt(doc, `GST (${gstPercent}%)`, margin + 5, row2Y - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, gstLabel, margin + 5, row2Y + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
+    doc.line(margin + half, y + 19, margin + half, y + payBoxH)
+    writeAt(doc, 'TOTAL PAID', margin + half + 5, row2Y - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, orderTotalLabel, margin + half + 5, row2Y + 1.5, { size: 10.5, style: 'bold', color: CERT.navy })
+    y += payBoxH + 4
+  } else {
+    const payY = y + 15
+    const third = contentWidth / 3
+    writeAt(doc, 'Subtotal', margin + 5, payY - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, subtotalLabel, margin + 5, payY + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
+    doc.setDrawColor(...CERT.border)
+    doc.line(margin + third, y + 10, margin + third, y + 19)
+    writeAt(doc, `GST (${gstPercent}%)`, margin + third + 5, payY - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, gstLabel, margin + third + 5, payY + 1.5, { size: 9.5, style: 'bold', color: CERT.navy })
+    doc.line(margin + third * 2, y + 10, margin + third * 2, y + 19)
+    writeAt(doc, 'TOTAL PAID', margin + third * 2 + 5, payY - 3, { size: 7, color: CERT.muted })
+    writeAt(doc, orderTotalLabel, margin + third * 2 + 5, payY + 1.5, { size: 10.5, style: 'bold', color: CERT.navy })
+    y += 24
+  }
 
   writeAt(doc, 'LICENSED ASSETS', margin, y, { size: 8, style: 'bold', color: CERT.navyDark })
   y += 5

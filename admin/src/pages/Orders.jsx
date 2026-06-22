@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { fetchOrders } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
+import OrderAmountSummary from '../components/OrderAmountSummary'
 import { cardClass, inputClass } from '../components/ui/adminUi'
-import { getOrderAmountBreakdown } from '../utils/orderAmounts'
 
 const PAGE_SIZE = 50
 const PURCHASE_REASON_LABELS = {
@@ -391,10 +391,7 @@ const Orders = () => {
                 </td>
               </tr>
             ) : (
-              paginatedOrders.map((order) => {
-                const { subtotal, gst, total } = getOrderAmountBreakdown(order)
-
-                return (
+              paginatedOrders.map((order) => (
                 <tr
                   key={order.id}
                   id={`order-row-${order.id}`}
@@ -413,13 +410,7 @@ const Orders = () => {
                     <p className="text-xs text-slate-500">{order.billingAddress?.phone || '—'}</p>
                   </td>
                   <td className="px-4 py-3 text-slate-900">
-                    <p className="text-xs text-slate-500">
-                      Subtotal <span className="font-medium text-slate-800">{formatCurrency(subtotal)}</span>
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      GST <span className="font-medium text-slate-800">{formatCurrency(gst)}</span>
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{formatCurrency(total)}</p>
+                    <OrderAmountSummary order={order} compact />
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-slate-600">Online</p>
@@ -457,8 +448,7 @@ const Orders = () => {
                     </Link>
                   </td>
                 </tr>
-                )
-              })
+              ))
             )}
           </tbody>
         </table>

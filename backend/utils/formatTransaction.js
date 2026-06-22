@@ -48,6 +48,8 @@ export const formatTransactionResponse = (order) => {
     amount: order.totalAmount,
     subtotalAmount: order.subtotalAmount ?? 0,
     gstAmount: order.gstAmount ?? 0,
+    promoCode: order.promoCode || '',
+    discountAmount: order.discountAmount ?? 0,
     totalAmount: order.totalAmount,
     currency: 'INR',
     paymentMethod: order.paymentMethod,

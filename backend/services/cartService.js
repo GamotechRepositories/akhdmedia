@@ -1,11 +1,14 @@
 import Cart from '../models/Cart.js'
 import Product from '../models/Product.js'
-import { buildPayableTotals, roundMoney } from '../utils/money.js'
+import AppError from '../utils/AppError.js'
+import { roundMoney } from '../utils/money.js'
+import { buildPromoAdjustedTotals } from '../utils/promoTotals.js'
 import {
   getListingPrice,
   resolveImageSizes,
 } from '../utils/resolveImageSizes.js'
 import { assertProductPurchasable } from '../utils/productDelivery.js'
+import { validatePromoForOrder } from './promoCodeService.js'
 
 const resolveItemPrice = (product, imageSize = '') => {
   const imageSizes = resolveImageSizes(product)
@@ -153,23 +156,54 @@ export const replaceCartWithItem = async (sessionId, { productId, quantity = 1, 
 export const clearCartItems = async (sessionId) => {
   const cart = await getOrCreateCart(sessionId)
   cart.items = []
+  cart.appliedPromo = null
   await cart.save()
   return cart
 }
 
-export const getCartTotals = (items = []) => {
-  const raw = items.reduce(
-    (acc, item) => {
-      acc.subtotal += (item.basePrice ?? item.price ?? 0) * item.quantity
-      acc.gstTotal += (item.gstAmount ?? 0) * item.quantity
-      acc.itemCount += item.quantity
-      return acc
-    },
-    { subtotal: 0, gstTotal: 0, itemCount: 0 },
-  )
+export const getCartTotals = (items = [], appliedPromo = null) => {
+  const discountAmount = roundMoney(appliedPromo?.discountAmount ?? 0)
+  const adjusted = buildPromoAdjustedTotals(items, discountAmount)
 
   return {
-    ...buildPayableTotals(raw),
-    itemCount: raw.itemCount,
+    subtotal: adjusted.subtotal,
+    taxableSubtotal: adjusted.taxableSubtotal,
+    gstTotal: adjusted.gstTotal,
+    discountAmount: adjusted.discountAmount,
+    total: adjusted.total,
+    itemCount: adjusted.itemCount,
+    appliedPromo: appliedPromo
+      ? {
+          code: appliedPromo.code,
+          discountAmount: adjusted.discountAmount,
+        }
+      : null,
   }
+}
+
+export const applyCartPromoCode = async (sessionId, code, userId = null) => {
+  const cart = await getOrCreateCart(sessionId)
+
+  if (!cart.items.length) {
+    throw new AppError('Add items to your cart before applying a promo code', 400)
+  }
+
+  const totals = getCartTotals(cart.items)
+  const { promo, discountAmount } = await validatePromoForOrder(code, totals.subtotal, userId)
+
+  cart.appliedPromo = {
+    promoId: promo._id,
+    code: promo.code,
+    discountAmount,
+  }
+
+  await cart.save()
+  return fetchPopulatedCart(sessionId)
+}
+
+export const removeCartPromoCode = async (sessionId) => {
+  const cart = await getOrCreateCart(sessionId)
+  cart.appliedPromo = null
+  await cart.save()
+  return fetchPopulatedCart(sessionId)
 }

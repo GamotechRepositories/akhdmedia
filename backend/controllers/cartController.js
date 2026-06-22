@@ -6,9 +6,11 @@ import {
 } from '../utils/formatCart.js'
 import {
   addCartItem,
+  applyCartPromoCode,
   clearCartItems,
   fetchPopulatedCart,
   removeCartItem,
+  removeCartPromoCode,
   replaceCartWithItem,
   updateCartItemQuantity,
 } from '../services/cartService.js'
@@ -101,6 +103,39 @@ export const clearCart = asyncHandler(async (req, res) => {
     success: true,
     data: {
       cart: formatCartResponse({ items: [] }, categoryMap),
+    },
+  })
+})
+
+export const applyPromoCode = asyncHandler(async (req, res) => {
+  const { code } = req.body
+
+  if (!code?.trim()) {
+    res.status(400).json({ success: false, message: 'Promo code is required' })
+    return
+  }
+
+  const cart = await applyCartPromoCode(req.sessionId, code, req.user?.id)
+  const categoryMap = await getCategoryMap()
+
+  res.json({
+    success: true,
+    message: 'Promo code applied',
+    data: {
+      cart: formatCartResponse(cart, categoryMap),
+    },
+  })
+})
+
+export const deletePromoCode = asyncHandler(async (req, res) => {
+  const cart = await removeCartPromoCode(req.sessionId)
+  const categoryMap = await getCategoryMap()
+
+  res.json({
+    success: true,
+    message: 'Promo code removed',
+    data: {
+      cart: formatCartResponse(cart, categoryMap),
     },
   })
 })

@@ -17,10 +17,20 @@ const cartItemSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
+const appliedPromoSchema = new mongoose.Schema(
+  {
+    promoId: { type: mongoose.Schema.Types.ObjectId, ref: 'PromoCode', required: true },
+    code: { type: String, required: true, uppercase: true, trim: true },
+    discountAmount: { type: Number, required: true, min: 0 },
+  },
+  { _id: false },
+)
+
 const cartSchema = new mongoose.Schema(
   {
     sessionId: { type: String, required: true, unique: true, index: true },
     items: { type: [cartItemSchema], default: [] },
+    appliedPromo: { type: appliedPromoSchema, default: null },
   },
   { timestamps: true },
 )

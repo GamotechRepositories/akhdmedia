@@ -17,6 +17,8 @@ import Users from './pages/Users'
 import Support from './pages/Support'
 import SupportDetail from './pages/SupportDetail'
 import HomeContent from './pages/HomeContent'
+import PromoCodes from './pages/PromoCodes'
+import PromoCodeForm from './pages/PromoCodeForm'
 import Login from './pages/Login'
 
 const App = () => (
@@ -35,6 +37,9 @@ const App = () => (
         <Route path="products" element={<Products />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/:id/edit" element={<ProductForm />} />
+        <Route path="promo-codes" element={<PromoCodes />} />
+        <Route path="promo-codes/new" element={<PromoCodeForm />} />
+        <Route path="promo-codes/:id/edit" element={<PromoCodeForm />} />
         <Route path="orders" element={<Orders />} />
         <Route path="orders/:id" element={<OrderDetail />} />
         <Route path="transactions" element={<Transactions />} />

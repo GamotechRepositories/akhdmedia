@@ -22,7 +22,7 @@ export const getLicenseCertificateFilename = (order) => {
 
 export const buildLicenseCertificateBuffer = (order, downloads = null) => {
   const items = downloads ?? order.items ?? []
-  const { subtotal, gst, total } = getOrderAmountBreakdown(order)
+  const { subtotal, gst, total, promoCode, discountAmount } = getOrderAmountBreakdown(order)
   const gstPercent = subtotal > 0 ? Math.round((gst / subtotal) * 100) : 18
   const orderNumber = order.orderNumber?.slice(-8).toUpperCase() || '--------'
   const orderDateLabel = new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN', {
@@ -39,6 +39,8 @@ export const buildLicenseCertificateBuffer = (order, downloads = null) => {
     customerEmail: order.billingAddress?.email || '',
     subtotalLabel: formatCurrencyForPdf(subtotal),
     gstLabel: formatCurrencyForPdf(gst),
+    promoCodeLabel: promoCode || '',
+    promoDiscountLabel: discountAmount > 0 ? formatCurrencyForPdf(discountAmount) : '',
     orderTotalLabel: formatCurrencyForPdf(total),
     gstPercent,
     orderItems: mapOrderItemsForCertificate(items),

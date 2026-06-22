@@ -30,6 +30,16 @@ export const cartAPI = {
     const { data } = await api.delete('/cart')
     return data
   },
+
+  applyPromoCode: async (code) => {
+    const { data } = await api.post('/cart/promo', { code })
+    return data
+  },
+
+  removePromoCode: async () => {
+    const { data } = await api.delete('/cart/promo')
+    return data
+  },
 }
 
 export const checkoutAPI = {
