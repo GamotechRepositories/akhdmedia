@@ -1,5 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { getMe, login as loginRequest, logout as logoutRequest } from '../api/client'
+import {
+  hasAdminPermission as checkPermission,
+  hasAnyAdminPermission as checkAnyPermission,
+} from '../constants/adminPermissions'
 
 const AuthContext = createContext(null)
 
@@ -44,16 +48,29 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
+  const hasPermission = useCallback(
+    (permission) => checkPermission(admin, permission),
+    [admin],
+  )
+
+  const hasAnyPermission = useCallback(
+    (permissions) => checkAnyPermission(admin, permissions),
+    [admin],
+  )
+
   const value = useMemo(
     () => ({
       admin,
       loading,
       isAuthenticated: Boolean(admin),
+      isSuperAdmin: Boolean(admin?.isSuperAdmin),
+      hasPermission,
+      hasAnyPermission,
       login,
       logout,
       refreshAuth,
     }),
-    [admin, loading, login, logout, refreshAuth],
+    [admin, loading, hasPermission, hasAnyPermission, login, logout, refreshAuth],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

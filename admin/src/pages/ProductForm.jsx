@@ -10,6 +10,7 @@ import {
   uploadMedia,
 } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
+import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
 import MediaTypeSelector from '../components/MediaTypeSelector'
 import PricingModeSelector from '../components/PricingModeSelector'
@@ -20,7 +21,6 @@ import SearchableSelect from '../components/SearchableSelect'
 import {
   compactFormClass,
   inputClass,
-  primaryBtnClass,
   secondaryBtnClass,
 } from '../components/ui/adminUi'
 import { MEDIA_TYPES } from '../constants/mediaTypes'
@@ -564,7 +564,7 @@ const ProductForm = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Products</p>
@@ -972,12 +972,12 @@ const ProductForm = () => {
           </div>
         </FormStep>
 
-        <div className="flex gap-3 bg-slate-100 px-5 py-3">
-          <button type="submit" disabled={saving} className={`${primaryBtnClass} disabled:opacity-60`}>
-            {saving ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
-          </button>
-          <Link to="/products" state={backState} className={secondaryBtnClass}>Cancel</Link>
-        </div>
+        <FormStickyActions
+          cancelTo="/products"
+          cancelState={backState}
+          saving={saving}
+          submitLabel={isEdit ? 'Update Product' : 'Create Product'}
+        />
       </form>
     </div>
   )

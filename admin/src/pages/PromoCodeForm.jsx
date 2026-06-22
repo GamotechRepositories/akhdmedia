@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
+import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
 import {
   compactFormClass,
   inputClass,
-  primaryBtnClass,
   secondaryBtnClass,
 } from '../components/ui/adminUi'
 import {
@@ -201,7 +201,7 @@ const PromoCodeForm = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Promo Codes</p>
@@ -404,14 +404,11 @@ const PromoCodeForm = () => {
           </aside>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-100 px-5 py-4">
-          <Link to="/promo-codes" className={secondaryBtnClass}>
-            Cancel
-          </Link>
-          <button type="submit" disabled={saving} className={`${primaryBtnClass} disabled:opacity-60`}>
-            {saving ? 'Saving...' : isEdit ? 'Save changes' : 'Create promo code'}
-          </button>
-        </div>
+        <FormStickyActions
+          cancelTo="/promo-codes"
+          saving={saving}
+          submitLabel={isEdit ? 'Save changes' : 'Create promo code'}
+        />
       </form>
     </div>
   )

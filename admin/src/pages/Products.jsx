@@ -4,6 +4,8 @@ import { deleteProduct, fetchProducts } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
 import { cardClass, inputClass, primaryBtnClass } from '../components/ui/adminUi'
+import { ADMIN_PERMISSIONS } from '../constants/adminPermissions'
+import { useAuth } from '../context/AuthContext'
 
 const PAGE_SIZE = 50
 
@@ -59,6 +61,8 @@ const matchesSearch = (product, query) => {
 const Products = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { hasPermission } = useAuth()
+  const canWrite = hasPermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE)
   const tableContainerRef = useRef(null)
   const restore = location.state?.restore
 
@@ -184,9 +188,11 @@ const Products = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Link to="/products/new" className={primaryBtnClass}>
-          Add Product
-        </Link>
+        {canWrite ? (
+          <Link to="/products/new" className={primaryBtnClass}>
+            Add Product
+          </Link>
+        ) : null}
       </div>
 
       <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-4">
@@ -331,29 +337,35 @@ const Products = () => {
                     <StatusBadge active={product.isActive} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`/products/${product.id}/edit`}
-                      state={{
-                        fromList: {
-                          searchQuery,
-                          typeFilter,
-                          categoryFilter,
-                          statusFilter,
-                          scrollTop: tableContainerRef.current?.scrollTop ?? 0,
-                          productId: product.id,
-                        },
-                      }}
-                      className="mr-3 font-semibold text-slate-900 hover:underline"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(product)}
-                      className="font-semibold text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
+                    {canWrite ? (
+                      <>
+                        <Link
+                          to={`/products/${product.id}/edit`}
+                          state={{
+                            fromList: {
+                              searchQuery,
+                              typeFilter,
+                              categoryFilter,
+                              statusFilter,
+                              scrollTop: tableContainerRef.current?.scrollTop ?? 0,
+                              productId: product.id,
+                            },
+                          }}
+                          className="mr-3 font-semibold text-slate-900 hover:underline"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(product)}
+                          className="font-semibold text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">View only</span>
+                    )}
                   </td>
                 </tr>
               ))

@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createActor, fetchActor, updateActor } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import ActorImageUpload from '../components/ActorImageUpload'
+import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
 import {
   compactFormClass,
   inputClass,
-  primaryBtnClass,
-  secondaryBtnClass,
 } from '../components/ui/adminUi'
 
 const slugify = (value = '') =>
@@ -138,7 +137,7 @@ const ActorForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 pb-24">
       <AdminAlertModal
         open={Boolean(error)}
         title="Could not save actor"
@@ -235,14 +234,11 @@ const ActorForm = () => {
         </FormStep>
       </div>
 
-      <div className="flex justify-end gap-3">
-        <Link to="/actors" className={secondaryBtnClass}>
-          Cancel
-        </Link>
-        <button type="submit" disabled={saving} className={primaryBtnClass}>
-          {saving ? 'Saving...' : isEdit ? 'Update Actor' : 'Create Actor'}
-        </button>
-      </div>
+      <FormStickyActions
+        cancelTo="/actors"
+        saving={saving}
+        submitLabel={isEdit ? 'Update Actor' : 'Create Actor'}
+      />
     </form>
   )
 }

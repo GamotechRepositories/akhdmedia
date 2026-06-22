@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
+import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
 import {
   compactFormClass,
   inputClass,
-  primaryBtnClass,
   secondaryBtnClass,
 } from '../components/ui/adminUi'
 import {
@@ -194,7 +194,7 @@ const CategoryForm = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Categories</p>
@@ -382,18 +382,11 @@ const CategoryForm = () => {
           ) : null}
         </FormStep>
 
-        <div className="flex gap-3 bg-slate-100 px-5 py-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className={`${primaryBtnClass} disabled:opacity-60`}
-          >
-            {saving ? 'Saving...' : isEdit ? 'Update Category' : 'Create Category'}
-          </button>
-          <Link to="/categories" className={secondaryBtnClass}>
-            Cancel
-          </Link>
-        </div>
+        <FormStickyActions
+          cancelTo="/categories"
+          saving={saving}
+          submitLabel={isEdit ? 'Update Category' : 'Create Category'}
+        />
       </form>
     </div>
   )

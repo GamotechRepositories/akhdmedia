@@ -7,15 +7,22 @@ import {
   reserveClipId,
   updateProduct,
 } from '../controllers/productController.js'
-import { requireAdmin, requireAdminForQuery } from '../middleware/requireAdmin.js'
+import { requireAdmin } from '../middleware/requireAdmin.js'
+import { requireAdminQueryPermission, requirePermission } from '../middleware/requirePermission.js'
+import { ADMIN_PERMISSIONS } from '../constants/adminPermissions.js'
 
 const router = Router()
 
-router.get('/', requireAdminForQuery, getProducts)
-router.get('/reserve-clip-id', requireAdmin, reserveClipId)
-router.get('/:id', requireAdminForQuery, getProductById)
-router.post('/', requireAdmin, createProduct)
-router.put('/:id', requireAdmin, updateProduct)
-router.delete('/:id', requireAdmin, deleteProduct)
+router.get('/', requireAdminQueryPermission(ADMIN_PERMISSIONS.PRODUCTS_READ), getProducts)
+router.get(
+  '/reserve-clip-id',
+  requireAdmin,
+  requirePermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE),
+  reserveClipId,
+)
+router.get('/:id', requireAdminQueryPermission(ADMIN_PERMISSIONS.PRODUCTS_READ), getProductById)
+router.post('/', requireAdmin, requirePermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE), createProduct)
+router.put('/:id', requireAdmin, requirePermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE), updateProduct)
+router.delete('/:id', requireAdmin, requirePermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE), deleteProduct)
 
 export default router

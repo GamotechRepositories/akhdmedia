@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
+import { getFirstAllowedPath } from '../constants/adminPermissions'
 import { useAuth } from '../context/AuthContext'
 
 const Login = () => {
@@ -14,8 +15,16 @@ const Login = () => {
 
   const redirectTo = location.state?.from || '/'
 
+  const resolveRedirect = (account) => {
+    if (!account) return '/login'
+    if (redirectTo === '/' || redirectTo === '/access-denied') {
+      return getFirstAllowedPath(account)
+    }
+    return redirectTo
+  }
+
   if (!loading && admin) {
-    return <Navigate to={redirectTo} replace />
+    return <Navigate to={resolveRedirect(admin)} replace />
   }
 
   const handleSubmit = async (event) => {
@@ -24,8 +33,9 @@ const Login = () => {
     setSubmitting(true)
 
     try {
-      await login(email, password)
-      navigate(redirectTo, { replace: true })
+      const response = await login(email, password)
+      const loggedInAdmin = response?.data?.admin
+      navigate(resolveRedirect(loggedInAdmin), { replace: true })
     } catch (submitError) {
       setError(submitError.message || 'Login failed')
     } finally {

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   IconActors,
+  IconAdmins,
   IconCategories,
   IconDashboard,
   IconLogo,
@@ -13,22 +14,24 @@ import {
   IconTransactions,
   IconUsers,
 } from '../components/icons/AdminIcons'
+import { NAV_ITEMS } from '../constants/adminPermissions'
 import { useAuth } from '../context/AuthContext'
 import { BRAND } from '../config/brand'
 
-const navItems = [
-  { to: '/', label: 'Dashboard', end: true, icon: IconDashboard, description: 'Overview & tools' },
-  { to: '/home-content', label: 'Homepage', icon: IconDashboard, description: 'Ticker & browse section' },
-  { to: '/categories', label: 'Categories', icon: IconCategories, description: 'Navbar & subcategories' },
-  { to: '/actors', label: 'Actors', icon: IconActors, description: 'Actor profiles & search' },
-  { to: '/products', label: 'Products', icon: IconProducts, description: 'Videos & images' },
-  { to: '/promo-codes', label: 'Promo Codes', icon: IconPromo, description: 'Discount coupons' },
-  { to: '/orders', label: 'Orders', icon: IconOrders, description: 'Customer purchases' },
-  { to: '/transactions', label: 'Transactions', icon: IconTransactions, description: 'Payments & Razorpay' },
-  { to: '/revenue', label: 'Revenue', icon: IconRevenue, description: 'Monthly records' },
-  { to: '/users', label: 'Users', icon: IconUsers, description: 'Registered customers' },
-  { to: '/support', label: 'Support', icon: IconSupport, description: 'Customer help requests' },
-]
+const NAV_ICONS = {
+  '/': IconDashboard,
+  '/home-content': IconDashboard,
+  '/categories': IconCategories,
+  '/actors': IconActors,
+  '/products': IconProducts,
+  '/promo-codes': IconPromo,
+  '/orders': IconOrders,
+  '/transactions': IconTransactions,
+  '/revenue': IconRevenue,
+  '/users': IconUsers,
+  '/support': IconSupport,
+  '/admins': IconAdmins,
+}
 
 const pageTitles = {
   '/': 'Dashboard',
@@ -46,12 +49,16 @@ const pageTitles = {
   '/revenue': 'Revenue',
   '/users': 'Users',
   '/support': 'Support',
+  '/admins': 'Admin Team',
+  '/admins/new': 'Add Admin',
+  '/access-denied': 'Access Denied',
 }
 
-const getPageTitle = (pathname, pageTitles) => {
-  if (pageTitles[pathname]) return pageTitles[pathname]
+const getPageTitle = (pathname, titles) => {
+  if (titles[pathname]) return titles[pathname]
   if (pathname.startsWith('/transactions/')) return 'Transaction Details'
   if (pathname.startsWith('/support/')) return 'Support Request'
+  if (pathname.startsWith('/admins/')) return 'Admin Account'
   if (pathname.includes('/edit')) return 'Edit'
   return 'Admin'
 }
@@ -59,9 +66,14 @@ const getPageTitle = (pathname, pageTitles) => {
 const AdminLayout = () => {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { admin, logout } = useAuth()
+  const { admin, logout, hasPermission } = useAuth()
   const pageTitle = getPageTitle(pathname, pageTitles)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => hasPermission(item.permission)),
+    [hasPermission],
+  )
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -126,8 +138,8 @@ const AdminLayout = () => {
           <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
             Manage
           </p>
-          {navItems.map((item) => {
-            const Icon = item.icon
+          {visibleNavItems.map((item) => {
+            const Icon = NAV_ICONS[item.to] || IconDashboard
             return (
               <NavLink
                 key={item.to}
@@ -173,10 +185,13 @@ const AdminLayout = () => {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
               Signed in as
             </p>
-            <p className="mt-1 truncate text-sm font-semibold text-white">
-              {BRAND.name}
-            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">{admin?.name || BRAND.name}</p>
             <p className="truncate text-xs text-slate-400">{admin?.email}</p>
+            {admin?.isSuperAdmin ? (
+              <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-violet-300">
+                Super admin
+              </p>
+            ) : null}
           </div>
           <button
             type="button"

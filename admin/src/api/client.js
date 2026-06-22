@@ -63,6 +63,14 @@ api.interceptors.response.use(
       window.location.href = '/login'
     }
 
+    if (
+      error.response?.status === 403 &&
+      !window.location.pathname.startsWith('/access-denied')
+    ) {
+      // Let the current page handle permission errors — avoid trapping users on /access-denied
+      console.warn('API permission denied:', requestUrl, message)
+    }
+
     return Promise.reject(new Error(message))
   },
 )
@@ -94,6 +102,8 @@ export const updateCategory = (id, payload) => api.put(`/categories/${id}`, payl
 export const deleteCategory = (id) => api.delete(`/categories/${id}`)
 
 export const fetchActors = () => api.get('/admin/actors')
+
+export const fetchPublicActors = () => api.get('/actors')
 
 export const fetchActor = (id) => api.get(`/admin/actors/${id}`)
 
@@ -280,5 +290,17 @@ export const createPromoCode = (payload) => api.post('/admin/promo-codes', paylo
 export const updatePromoCode = (id, payload) => api.put(`/admin/promo-codes/${id}`, payload)
 
 export const deletePromoCode = (id) => api.delete(`/admin/promo-codes/${id}`)
+
+export const fetchAdmins = () => api.get('/admin/team')
+
+export const fetchAdminAccount = (id) => api.get(`/admin/team/${id}`)
+
+export const fetchAdminPermissionGroups = () => api.get('/admin/team/permission-groups')
+
+export const createAdminAccount = (payload) => api.post('/admin/team', payload)
+
+export const updateAdminAccount = (id, payload) => api.put(`/admin/team/${id}`, payload)
+
+export const deleteAdminAccount = (id) => api.delete(`/admin/team/${id}`)
 
 export default api

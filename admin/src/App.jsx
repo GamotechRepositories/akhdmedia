@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import PermissionRoute from './components/PermissionRoute'
 import AdminLayout from './layouts/AdminLayout'
 import Dashboard from './pages/Dashboard'
 import Categories from './pages/Categories'
@@ -19,6 +20,9 @@ import SupportDetail from './pages/SupportDetail'
 import HomeContent from './pages/HomeContent'
 import PromoCodes from './pages/PromoCodes'
 import PromoCodeForm from './pages/PromoCodeForm'
+import Admins from './pages/Admins'
+import AdminForm from './pages/AdminForm'
+import AccessDenied from './pages/AccessDenied'
 import Login from './pages/Login'
 
 const App = () => (
@@ -26,28 +30,34 @@ const App = () => (
     <Route path="/login" element={<Login />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<AdminLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="home-content" element={<HomeContent />} />
-        <Route path="categories" element={<Categories />} />
-        <Route path="categories/new" element={<CategoryForm />} />
-        <Route path="categories/:id/edit" element={<CategoryForm />} />
-        <Route path="actors" element={<Actors />} />
-        <Route path="actors/new" element={<ActorForm />} />
-        <Route path="actors/:id/edit" element={<ActorForm />} />
-        <Route path="products" element={<Products />} />
-        <Route path="products/new" element={<ProductForm />} />
-        <Route path="products/:id/edit" element={<ProductForm />} />
-        <Route path="promo-codes" element={<PromoCodes />} />
-        <Route path="promo-codes/new" element={<PromoCodeForm />} />
-        <Route path="promo-codes/:id/edit" element={<PromoCodeForm />} />
-        <Route path="orders" element={<Orders />} />
-        <Route path="orders/:id" element={<OrderDetail />} />
-        <Route path="transactions" element={<Transactions />} />
-        <Route path="transactions/:id" element={<TransactionDetail />} />
-        <Route path="revenue" element={<Revenue />} />
-        <Route path="users" element={<Users />} />
-        <Route path="support" element={<Support />} />
-        <Route path="support/:id" element={<SupportDetail />} />
+        <Route element={<PermissionRoute />}>
+          <Route index element={<Dashboard />} />
+          <Route path="home-content" element={<HomeContent />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="categories/new" element={<CategoryForm />} />
+          <Route path="categories/:id/edit" element={<CategoryForm />} />
+          <Route path="actors" element={<Actors />} />
+          <Route path="actors/new" element={<ActorForm />} />
+          <Route path="actors/:id/edit" element={<ActorForm />} />
+          <Route path="products" element={<Products />} />
+          <Route path="products/new" element={<ProductForm />} />
+          <Route path="products/:id/edit" element={<ProductForm />} />
+          <Route path="promo-codes" element={<PromoCodes />} />
+          <Route path="promo-codes/new" element={<PromoCodeForm />} />
+          <Route path="promo-codes/:id/edit" element={<PromoCodeForm />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="orders/:id" element={<OrderDetail />} />
+          <Route path="transactions" element={<Transactions />} />
+          <Route path="transactions/:id" element={<TransactionDetail />} />
+          <Route path="revenue" element={<Revenue />} />
+          <Route path="users" element={<Users />} />
+          <Route path="support" element={<Support />} />
+          <Route path="support/:id" element={<SupportDetail />} />
+          <Route path="admins" element={<Admins />} />
+          <Route path="admins/new" element={<AdminForm />} />
+          <Route path="admins/:id/edit" element={<AdminForm />} />
+        </Route>
+        <Route path="access-denied" element={<AccessDenied />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Route>

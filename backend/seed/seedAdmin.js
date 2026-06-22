@@ -2,8 +2,8 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 
 const SALT_ROUNDS = 10
-const ADMIN_EMAIL = 'admin@akhdmedia.com'
-const ADMIN_PASSWORD = 'admin@2026'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@akhdmedia.com'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin@2026'
 
 const seedAdmin = async () => {
   const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, SALT_ROUNDS)
@@ -16,6 +16,8 @@ const seedAdmin = async () => {
       name: 'AKHD MEDIA & CO',
       phone: '0000000000',
       role: 'admin',
+      isSuperAdmin: true,
+      permissions: [],
     },
     { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   )

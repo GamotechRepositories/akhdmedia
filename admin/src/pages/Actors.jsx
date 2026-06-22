@@ -3,11 +3,16 @@ import { Link } from 'react-router-dom'
 import { deleteActor, fetchActors, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
+import { ADMIN_PERMISSIONS } from '../constants/adminPermissions'
+import { useAuth } from '../context/AuthContext'
 import { cardClass, inputClass, primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
 
 const PAGE_SIZE = 50
 
 const Actors = () => {
+  const { hasPermission } = useAuth()
+  const canManageHomeContent = hasPermission(ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE)
+  const canWriteActors = hasPermission(ADMIN_PERMISSIONS.ACTORS_WRITE)
   const [actors, setActors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -21,12 +26,13 @@ const Actors = () => {
     setLoading(true)
     setError('')
     try {
-      const [actorsResponse, siteContentResponse] = await Promise.all([
-        fetchActors(),
-        fetchSiteContent(),
-      ])
+      const actorsResponse = await fetchActors()
       setActors(actorsResponse.data)
-      setShowActorsSection(siteContentResponse.data?.showActorsSection !== false)
+
+      if (canManageHomeContent) {
+        const siteContentResponse = await fetchSiteContent()
+        setShowActorsSection(siteContentResponse.data?.showActorsSection !== false)
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -36,7 +42,7 @@ const Actors = () => {
 
   useEffect(() => {
     loadActors()
-  }, [])
+  }, [canManageHomeContent])
 
   const handleDelete = async (actor) => {
     if (!window.confirm(`Delete actor "${actor.name}"?`)) return
@@ -112,29 +118,31 @@ const Actors = () => {
         onClose={() => setError('')}
       />
 
-      <div className={`${cardClass} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
-        <div>
-          <p className="text-sm font-semibold text-slate-900">Show Actors section on homepage</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Turn off to hide the full Actors rail from the storefront home page.
-          </p>
-          {visibilityNotice ? (
-            <p className="mt-2 text-sm font-medium text-emerald-700">{visibilityNotice}</p>
-          ) : null}
+      {canManageHomeContent ? (
+        <div className={`${cardClass} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Show Actors section on homepage</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Turn off to hide the full Actors rail from the storefront home page.
+            </p>
+            {visibilityNotice ? (
+              <p className="mt-2 text-sm font-medium text-emerald-700">{visibilityNotice}</p>
+            ) : null}
+          </div>
+          <label className="inline-flex shrink-0 cursor-pointer items-center gap-3">
+            <span className="text-sm font-medium text-slate-700">
+              {showActorsSection ? 'Visible' : 'Hidden'}
+            </span>
+            <input
+              type="checkbox"
+              checked={showActorsSection}
+              onChange={handleToggleHomepageVisibility}
+              disabled={loading || savingVisibility}
+              className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 disabled:opacity-60"
+            />
+          </label>
         </div>
-        <label className="inline-flex shrink-0 cursor-pointer items-center gap-3">
-          <span className="text-sm font-medium text-slate-700">
-            {showActorsSection ? 'Visible' : 'Hidden'}
-          </span>
-          <input
-            type="checkbox"
-            checked={showActorsSection}
-            onChange={handleToggleHomepageVisibility}
-            disabled={loading || savingVisibility}
-            className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 disabled:opacity-60"
-          />
-        </label>
-      </div>
+      ) : null}
 
       <div className={`${cardClass} p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -145,9 +153,11 @@ const Actors = () => {
             placeholder="Search name or keywords..."
             className={`${inputClass} mt-0 sm:max-w-md`}
           />
-          <Link to="/actors/new" className={primaryBtnClass}>
-            Add Actor
-          </Link>
+          {canWriteActors ? (
+            <Link to="/actors/new" className={primaryBtnClass}>
+              Add Actor
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -201,19 +211,25 @@ const Actors = () => {
                     <StatusBadge active={actor.isActive} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`/actors/${actor._id}/edit`}
-                      className="mr-3 font-semibold text-slate-900 hover:underline"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(actor)}
-                      className="font-semibold text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
+                    {canWriteActors ? (
+                      <>
+                        <Link
+                          to={`/actors/${actor._id}/edit`}
+                          className="mr-3 font-semibold text-slate-900 hover:underline"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(actor)}
+                          className="font-semibold text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">View only</span>
+                    )}
                   </td>
                 </tr>
               ))

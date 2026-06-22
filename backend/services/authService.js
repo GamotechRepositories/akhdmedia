@@ -77,6 +77,8 @@ export const formatAdminResponse = (user) => ({
   email: user.email,
   name: user.name,
   role: user.role,
+  isSuperAdmin: Boolean(user.isSuperAdmin),
+  permissions: user.permissions || [],
 })
 
 export const getAdminById = async (adminId) => {
