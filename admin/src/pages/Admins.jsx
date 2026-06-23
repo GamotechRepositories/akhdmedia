@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPageHeader from '../components/ui/AdminPageHeader'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import { deleteAdminAccount, fetchAdmins } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -105,11 +106,7 @@ const Admins = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={5} className={tableEmptyClass}>
-                Loading admin accounts...
-              </td>
-            </tr>
+            <TableLoader label="Loading admin accounts..." colSpan={5} className={tableEmptyClass} />
           ) : sortedAdmins.length === 0 ? (
             <tr>
               <td colSpan={5} className={tableEmptyClass}>

@@ -5,6 +5,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import SupportConfirmationEmailPreview from '../components/SupportConfirmationEmailPreview'
 import SupportReplyEmailPreview from '../components/SupportReplyEmailPreview'
 import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
+import PageLoader from '../components/ui/PageLoader'
 
 const SUBJECT_LABELS = {
   download: 'Download issue',
@@ -196,7 +197,7 @@ const SupportDetail = () => {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading support request...</p>
+    return <PageLoader label="Loading support request..." />
   }
 
   if (error && !request) {

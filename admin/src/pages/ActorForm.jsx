@@ -5,6 +5,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import ActorImageUpload from '../components/ActorImageUpload'
 import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
+import PageLoader from '../components/ui/PageLoader'
 import {
   compactFormClass,
   inputClass,
@@ -133,7 +134,7 @@ const ActorForm = () => {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading actor...</p>
+    return <PageLoader label="Loading actor..." />
   }
 
   return (

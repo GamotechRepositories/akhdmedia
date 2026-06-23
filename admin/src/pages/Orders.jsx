@@ -5,6 +5,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   actionViewClass,
   filterGridClass,
@@ -402,11 +403,7 @@ const Orders = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={7} className={tableEmptyClass}>
-                Loading orders...
-              </td>
-            </tr>
+            <TableLoader label="Loading orders..." colSpan={7} className={tableEmptyClass} />
           ) : orders.length === 0 ? (
             <tr>
               <td colSpan={7} className={tableEmptyClass}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageLoader from './ui/PageLoader'
 
 const formatCurrency = (amount = 0) =>
   new Intl.NumberFormat('en-IN', {
@@ -75,7 +76,7 @@ const OrdersBarChart = ({ data = [], loading = false }) => {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/80">
-        <p className="text-sm text-slate-500">Loading chart...</p>
+        <PageLoader label="Loading chart..." minHeight="" compact />
       </div>
     )
   }

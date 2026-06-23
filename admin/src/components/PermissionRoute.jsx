@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PageLoader from './ui/PageLoader'
 import {
   getFirstAllowedPath,
   hasAdminPermission,
@@ -11,11 +12,7 @@ const PermissionRoute = () => {
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
-      </div>
-    )
+    return <PageLoader minHeight="min-h-[40vh]" />
   }
 
   const requiredPermission = matchRoutePermission(location.pathname)

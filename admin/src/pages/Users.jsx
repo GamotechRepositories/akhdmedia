@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   actionDeleteClass,
   actionGroupClass,
@@ -236,11 +237,7 @@ const Users = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading && (
-            <tr>
-              <td colSpan={5} className={tableEmptyClass}>
-                Loading users...
-              </td>
-            </tr>
+            <TableLoader label="Loading users..." colSpan={5} className={tableEmptyClass} />
           )}
 
           {!loading && !error && users.length === 0 && (

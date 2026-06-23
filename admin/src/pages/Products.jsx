@@ -5,6 +5,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   actionDeleteClass,
   actionEditClass,
@@ -403,11 +404,7 @@ const Products = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={6} className={tableEmptyClass}>
-                Loading products...
-              </td>
-            </tr>
+            <TableLoader label="Loading products..." colSpan={6} className={tableEmptyClass} />
           ) : products.length === 0 ? (
             <tr>
               <td colSpan={6} className={tableEmptyClass}>

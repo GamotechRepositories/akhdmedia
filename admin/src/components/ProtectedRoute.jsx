@@ -1,16 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PageLoader from './ui/PageLoader'
 
 const ProtectedRoute = () => {
   const { admin, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#eef2f6]">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
-      </div>
-    )
+    return <PageLoader fullScreen />
   }
 
   if (!admin) {

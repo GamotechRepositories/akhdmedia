@@ -6,6 +6,7 @@ import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { formatPayableCurrency } from '../utils/formatters';
 import OrderAmountSummary from '../components/OrderAmountSummary';
+import PageLoader from '../components/ui/PageLoader';
 import { BRAND } from '../config/brand';
 
 const STEPS = ['billing', 'summary'];
@@ -298,8 +299,12 @@ const Checkout = () => {
     }
   };
 
-  if ((!cartLoading && cart.length === 0 && !isPlacingOrder) || cartLoading) {
+  if (!cartLoading && cart.length === 0 && !isPlacingOrder) {
     return null;
+  }
+
+  if (cartLoading) {
+    return <PageLoader fullScreen />;
   }
 
   return (
@@ -562,8 +567,7 @@ const Checkout = () => {
         {isProcessingOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="rounded-xl bg-white px-8 py-6 text-center shadow-xl">
-              <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900" />
-              <p className="text-sm font-medium text-gray-900">Opening secure payment...</p>
+              <PageLoader label="Opening secure payment..." labelClassName="text-sm font-medium text-gray-900" minHeight="" />
             </div>
           </div>
         )}

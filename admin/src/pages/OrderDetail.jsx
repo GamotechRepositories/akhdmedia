@@ -4,6 +4,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import { fetchOrder } from '../api/client'
 import { getOrderLineAmountBreakdown } from '../utils/orderAmounts'
+import PageLoader from '../components/ui/PageLoader'
 import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
@@ -71,7 +72,7 @@ const OrderDetail = () => {
   }, [id])
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading order...</p>
+    return <PageLoader label="Loading order..." />
   }
 
   if (error || !order) {

@@ -3,6 +3,7 @@ import { fetchTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   cardClass,
   inputClass,
@@ -205,11 +206,7 @@ const Revenue = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={7} className={tableEmptyClass}>
-                Loading monthly revenue...
-              </td>
-            </tr>
+            <TableLoader label="Loading monthly revenue..." colSpan={7} className={tableEmptyClass} />
           ) : monthlyRows.length === 0 ? (
             <tr>
               <td colSpan={7} className={tableEmptyClass}>

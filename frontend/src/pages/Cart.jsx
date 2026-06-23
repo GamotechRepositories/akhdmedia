@@ -7,6 +7,7 @@ import { preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
 import { getCartItemBasePrice } from '../utils/cartHelpers';
 import OrderAmountSummary from '../components/OrderAmountSummary';
+import PageLoader from '../components/ui/PageLoader';
 
 const IconTrash = (props) => (
   <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -106,11 +107,7 @@ const Cart = () => {
 
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
-      </div>
-    );
+    return <PageLoader fullScreen />;
   }
 
   if (cart.length === 0) {

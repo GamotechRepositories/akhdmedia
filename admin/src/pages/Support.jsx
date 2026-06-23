@@ -4,6 +4,7 @@ import { fetchAdminSupportRequests } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   actionViewClass,
   cardClass,
@@ -219,11 +220,7 @@ const Support = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={5} className={tableEmptyClass}>
-                Loading support requests...
-              </td>
-            </tr>
+            <TableLoader label="Loading support requests..." colSpan={5} className={tableEmptyClass} />
           ) : requests.length === 0 ? (
             <tr>
               <td colSpan={5} className={tableEmptyClass}>

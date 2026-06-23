@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
+import PageLoader from '../components/ui/PageLoader'
 import {
   compactFormClass,
   inputClass,
@@ -197,7 +198,7 @@ const PromoCodeForm = () => {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading promo code...</p>
+    return <PageLoader label="Loading promo code..." />
   }
 
   return (

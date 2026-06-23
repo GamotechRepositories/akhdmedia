@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
+import PageLoader from '../components/ui/PageLoader'
 import {
   cardClass,
   inputClass,
@@ -201,12 +202,7 @@ const AdminForm = () => {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-500">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
-        <p className="text-sm">Loading admin account...</p>
-      </div>
-    )
+    return <PageLoader label="Loading admin account..." />
   }
 
   return (

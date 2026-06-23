@@ -6,6 +6,7 @@ import OrdersBarChart, {
 } from '../components/OrdersBarChart'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import { cardClass } from '../components/ui/adminUi'
+import PageLoader from '../components/ui/PageLoader'
 import {
   fetchCategories,
   fetchOrders,
@@ -402,7 +403,7 @@ const Dashboard = () => {
 
           <div className="divide-y divide-slate-100">
             {loading ? (
-              <p className="px-6 py-8 text-sm text-slate-500">Loading recent orders...</p>
+              <PageLoader label="Loading recent orders..." minHeight="" compact className="px-6 py-8" />
             ) : recentOrders.length === 0 ? (
               <p className="px-6 py-8 text-sm text-slate-500">No orders yet.</p>
             ) : (

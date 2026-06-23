@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import FormStickyActions from '../components/FormStickyActions'
 import FormStep from '../components/FormStep'
+import PageLoader from '../components/ui/PageLoader'
 import {
   compactFormClass,
   inputClass,
@@ -190,7 +191,7 @@ const CategoryForm = () => {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading category...</p>
+    return <PageLoader label="Loading category..." />
   }
 
   return (

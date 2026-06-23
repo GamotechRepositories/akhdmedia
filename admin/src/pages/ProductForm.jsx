@@ -18,6 +18,7 @@ import ResolutionTierEditor from '../components/ResolutionTierEditor'
 import MediaUpload from '../components/MediaUpload'
 import MasterQualitySelector from '../components/MasterQualitySelector'
 import SearchableSelect from '../components/SearchableSelect'
+import PageLoader from '../components/ui/PageLoader'
 import {
   compactFormClass,
   inputClass,
@@ -574,7 +575,7 @@ const ProductForm = () => {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading product...</p>
+    return <PageLoader label="Loading product..." />
   }
 
   return (

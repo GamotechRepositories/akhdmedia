@@ -4,6 +4,7 @@ import { fetchAdminTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   actionViewClass,
   cardClass,
@@ -286,11 +287,7 @@ const Transactions = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={6} className={tableEmptyClass}>
-                Loading transactions...
-              </td>
-            </tr>
+            <TableLoader label="Loading transactions..." colSpan={6} className={tableEmptyClass} />
           ) : transactions.length === 0 ? (
             <tr>
               <td colSpan={6} className={tableEmptyClass}>

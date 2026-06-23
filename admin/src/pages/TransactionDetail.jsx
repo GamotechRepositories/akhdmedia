@@ -4,6 +4,7 @@ import { fetchTransaction } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import { getOrderLineAmountBreakdown } from '../utils/orderAmounts'
+import PageLoader from '../components/ui/PageLoader'
 import FormStep from '../components/FormStep'
 import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
 
@@ -85,7 +86,7 @@ const TransactionDetail = () => {
   }, [id])
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading transaction...</p>
+    return <PageLoader label="Loading transaction..." />
   }
 
   if (error || !transaction) {

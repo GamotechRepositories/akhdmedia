@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
 import { getUserOrders } from '../services/authApi';
 import OrderAmountSummary from '../components/OrderAmountSummary';
+import PageLoader from '../components/ui/PageLoader';
 
 const formatDate = (value) => {
   if (!value) return '—';
@@ -86,9 +87,7 @@ const Orders = () => {
         </div>
 
         {loading && (
-          <div className="mt-10 flex justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900" />
-          </div>
+          <PageLoader className="mt-10" minHeight="" />
         )}
 
         {!loading && !error && orders.length === 0 && (

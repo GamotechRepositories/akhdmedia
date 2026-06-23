@@ -5,6 +5,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import { ADMIN_PERMISSIONS } from '../constants/adminPermissions'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -234,11 +235,7 @@ const Actors = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={6} className={tableEmptyClass}>
-                Loading actors...
-              </td>
-            </tr>
+            <TableLoader label="Loading actors..." colSpan={6} className={tableEmptyClass} />
           ) : actors.length === 0 ? (
             <tr>
               <td colSpan={6} className={tableEmptyClass}>

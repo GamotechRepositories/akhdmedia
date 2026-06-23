@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge'
 import AdminPageHeader from '../components/ui/AdminPageHeader'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
+import TableLoader from '../components/ui/TableLoader'
 import {
   actionDeleteClass,
   actionEditClass,
@@ -122,11 +123,7 @@ const PromoCodes = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <tr>
-              <td colSpan={7} className={tableEmptyClass}>
-                Loading promo codes...
-              </td>
-            </tr>
+            <TableLoader label="Loading promo codes..." colSpan={7} className={tableEmptyClass} />
           ) : promoCodes.length === 0 ? (
             <tr>
               <td colSpan={7} className={tableEmptyClass}>

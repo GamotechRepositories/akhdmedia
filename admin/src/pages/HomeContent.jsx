@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchCategories, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import MediaUpload from '../components/MediaUpload'
+import PageLoader from '../components/ui/PageLoader'
 import {
   inputClass,
   primaryBtnClass,
@@ -188,7 +189,7 @@ const HomeContent = () => {
   }
 
   if (loading) {
-    return <p className="text-slate-500">Loading homepage content...</p>
+    return <PageLoader label="Loading homepage content..." />
   }
 
   return (
