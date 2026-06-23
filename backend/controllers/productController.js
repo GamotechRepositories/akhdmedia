@@ -12,6 +12,7 @@ import {
   validateProductPayload,
 } from '../utils/normalizeProduct.js'
 import { enrichAdminProduct } from '../utils/enrichAdminProduct.js'
+import { attachMasterVideoSignedUrl } from '../utils/attachMasterVideoSignedUrl.js'
 import { applyActorSelection } from '../utils/applyActorToProduct.js'
 const getCategoryMap = async () => {
   const categories = await Category.find()
@@ -168,6 +169,7 @@ export const createProduct = asyncHandler(async (req, res) => {
   )
   payload.clipId = await resolveClipId(payload.clipId)
   await assertClipIdAvailable(payload.clipId)
+  await attachMasterVideoSignedUrl(payload)
 
   const product = await Product.create(payload)
   const categoryMap = await getCategoryMap()
@@ -197,6 +199,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   )
   payload.clipId = await resolveClipId(payload.clipId, existing.clipId || '')
   await assertClipIdAvailable(payload.clipId, existing._id.toString())
+  await attachMasterVideoSignedUrl(payload)
 
   const product = await Product.findByIdAndUpdate(req.params.id, payload, {
     new: true,

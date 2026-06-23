@@ -73,6 +73,8 @@ const productSchema = new mongoose.Schema(
     masterVideoKey: { type: String, default: '' },
     masterVideoFilename: { type: String, default: '' },
     masterVideoTier: { type: String, default: '' },
+    /** Snapshot signed URL for manual DB lookup only — not used by the app */
+    masterVideoSignedUrl: { type: String, default: '' },
     videoInfo: { type: videoInfoSchema, default: () => ({}) },
     isActive: { type: Boolean, default: true },
     showInLatest: { type: Boolean, default: false },
