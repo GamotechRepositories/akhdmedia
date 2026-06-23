@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
@@ -43,31 +44,25 @@ const getDefaultMediaIndex = (items) => {
   return videoIndex === -1 ? 0 : videoIndex;
 };
 
-const IMMERSIVE_RESUME_DELAYS_MS = [0, 50, 150, 300, 600];
-
-const scheduleImmersiveResume = (callback) => {
-  IMMERSIVE_RESUME_DELAYS_MS.forEach((delay) => {
-    window.setTimeout(callback, delay);
-  });
-};
-
 const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
   const loadedVideoSrcRef = useRef('');
   const isFullscreenRef = useRef(false);
-  const immersiveTransitionRef = useRef(false);
-  const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
-  const userPausedRef = useRef(false);
-  const immersiveUserGestureRef = useRef(false);
+
+  // --- Playback control refs (not state, to avoid stale closures) ---
+  const userPausedRef = useRef(false);      // true when user explicitly paused
+  const inTransitionRef = useRef(false);    // true during fullscreen enter/exit
+  const pendingPlayRef = useRef(null);      // AbortController for in-flight play()
+
   const mediaItems = buildProductMediaItems(product);
+
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
     getDefaultMediaIndex(buildProductMediaItems(product)),
   );
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isVideoBuffering, setIsVideoBuffering] = useState(false);
-  const [isUserPaused, setIsUserPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -88,357 +83,312 @@ const ProductMediaGallery = ({ product }) => {
     ? 'absolute inset-0 z-[105] flex flex-col items-center justify-center pointer-events-none'
     : 'absolute inset-0 z-[15] flex flex-col items-center justify-center pointer-events-none';
 
-  const markVideoBuffering = useCallback(() => {
-    if (!userPausedRef.current) {
-      setIsVideoBuffering(true);
+  // ─── Core play engine ────────────────────────────────────────────────────
+
+  /**
+   * Cancel any in-flight play() promise to avoid AbortError cascade.
+   */
+  const cancelPendingPlay = useCallback(() => {
+    if (pendingPlayRef.current) {
+      pendingPlayRef.current.cancelled = true;
+      pendingPlayRef.current = null;
     }
   }, []);
 
-  const clearVideoBuffering = useCallback(() => {
-    setIsVideoBuffering(false);
-  }, []);
-
-  const capturePlaybackSnapshot = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    playbackSnapshotRef.current = {
-      time: video.currentTime || 0,
-      wasPlaying: !video.paused && !video.ended,
-    };
-  }, []);
-
-  const syncVideoPlayingState = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    setIsVideoPlaying(!video.paused && !video.ended);
-  }, []);
-
-  const restorePlaybackAfterImmersive = useCallback(
-    async ({ fromUserGesture = false } = {}) => {
+  /**
+   * Play the video. Safe to call multiple times — cancels previous attempt.
+   * @param {object} opts
+   * @param {boolean} opts.fromUserGesture - true when triggered directly by user click
+   * @param {number|null} opts.seekTo - seek to this time before playing
+   */
+  const safePlay = useCallback(
+    async ({ fromUserGesture = false, seekTo = null } = {}) => {
       const video = videoRef.current;
-      if (!video || !isVideoSelected || userPausedRef.current) return;
+      if (!video) return;
 
-      const { time, wasPlaying } = playbackSnapshotRef.current;
-      const shouldResume = wasPlaying || fromUserGesture;
-      if (!shouldResume) return;
+      // Cancel any previous in-flight play
+      cancelPendingPlay();
 
-      immersiveTransitionRef.current = true;
+      const token = { cancelled: false };
+      pendingPlayRef.current = token;
+
+      setIsVideoBuffering(true);
+
+      // Seek if requested
+      if (seekTo !== null && Number.isFinite(seekTo) && seekTo >= 0) {
+        const dur = Number.isFinite(video.duration) ? video.duration : 0;
+        const safe = dur > 0 ? Math.min(seekTo, Math.max(0, dur - 0.05)) : seekTo;
+        if (Math.abs(video.currentTime - safe) > 0.2) {
+          video.currentTime = safe;
+        }
+      }
+
+      // Wait for enough data
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        await new Promise((resolve) => {
+          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            resolve();
+            return;
+          }
+          const onReady = () => resolve();
+          video.addEventListener('canplay', onReady, { once: true });
+          window.setTimeout(resolve, 3000); // fallback timeout
+        });
+      }
+
+      if (token.cancelled) return;
 
       try {
-        if (Number.isFinite(time) && time > 0) {
-          const duration = Number.isFinite(video.duration) ? video.duration : 0;
-          const safeTime = duration > 0 ? Math.min(time, Math.max(0, duration - 0.05)) : time;
-          if (Math.abs(video.currentTime - safeTime) > 0.2) {
-            video.currentTime = safeTime;
-          }
-        }
-
-        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-          await Promise.race([
-            new Promise((resolve) => {
-              if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-                resolve();
-                return;
-              }
-              video.addEventListener('canplay', resolve, { once: true });
-            }),
-            new Promise((resolve) => {
-              window.setTimeout(resolve, 2000);
-            }),
-          ]);
-        }
-
         video.muted = isMuted;
         await video.play();
-        setIsVideoPlaying(true);
-        clearVideoBuffering();
-      } catch {
-        if (fromUserGesture) {
+        if (!token.cancelled) {
+          setIsVideoPlaying(true);
+          setIsVideoBuffering(false);
+          pendingPlayRef.current = null;
+        }
+      } catch (err) {
+        if (token.cancelled) return;
+        // Autoplay blocked — try muted fallback on user gesture
+        if (fromUserGesture && !video.muted) {
           try {
             video.muted = true;
             setIsMuted(true);
             await video.play();
-            setIsVideoPlaying(true);
-            clearVideoBuffering();
+            if (!token.cancelled) {
+              setIsVideoPlaying(true);
+              setIsVideoBuffering(false);
+              pendingPlayRef.current = null;
+            }
+            return;
           } catch {
-            syncVideoPlayingState();
-            clearVideoBuffering();
+            // give up
           }
-        } else {
-          syncVideoPlayingState();
-          clearVideoBuffering();
         }
-      } finally {
-        window.setTimeout(() => {
-          immersiveTransitionRef.current = false;
-          syncVideoPlayingState();
-        }, 400);
+        if (!token.cancelled) {
+          setIsVideoPlaying(false);
+          setIsVideoBuffering(false);
+          pendingPlayRef.current = null;
+        }
       }
     },
-    [isVideoSelected, isMuted, clearVideoBuffering, syncVideoPlayingState],
+    [isMuted, cancelPendingPlay],
   );
 
-  const finishImmersiveTransition = useCallback(
-    ({ fromUserGesture = false } = {}) => {
-      const canUseGesture = fromUserGesture || immersiveUserGestureRef.current;
-      if (canUseGesture) {
-        immersiveUserGestureRef.current = false;
-      }
-
-      scheduleImmersiveResume(() => {
-        restorePlaybackAfterImmersive({ fromUserGesture: canUseGesture });
-      });
-    },
-    [restorePlaybackAfterImmersive],
-  );
-
-  const beginImmersiveTransition = useCallback(
-    ({ fromUserGesture = false } = {}) => {
-      capturePlaybackSnapshot();
-      immersiveTransitionRef.current = true;
-      if (fromUserGesture) {
-        immersiveUserGestureRef.current = true;
-      }
-    },
-    [capturePlaybackSnapshot],
-  );
-
-  useEffect(() => {
-    if (!isVideoSelected || !selectedItem?.src) return undefined;
-
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'video';
-    link.href = selectedItem.src;
-    document.head.appendChild(link);
-
-    return () => {
-      link.remove();
-    };
-  }, [isVideoSelected, selectedItem?.src, product?.id]);
-
-  useEffect(() => {
-    loadedVideoSrcRef.current = '';
-    setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
+  /**
+   * Pause the video explicitly (user action).
+   */
+  const safePause = useCallback(() => {
+    cancelPendingPlay();
+    const video = videoRef.current;
+    if (!video) return;
+    video.pause();
     setIsVideoPlaying(false);
     setIsVideoBuffering(false);
-    setIsUserPaused(false);
-    userPausedRef.current = false;
-    setIsMuted(true);
-    setIsLightboxOpen(false);
-    setVideoCurrentTime(0);
-    setVideoDuration(0);
-    setVideoBufferedEnd(0);
-  }, [product?.id]);
+  }, [cancelPendingPlay]);
 
-  useEffect(() => {
+  // ─── Fullscreen / Immersive helpers ─────────────────────────────────────
+
+  /**
+   * Save time + playing state before entering/exiting fullscreen.
+   * Returns the snapshot so callers can use it.
+   */
+  const captureSnapshot = useCallback(() => {
     const video = videoRef.current;
-    const nextSrc = selectedItem?.src || '';
-    if (!video || !isVideoSelected || !nextSrc) return;
-
-    if (loadedVideoSrcRef.current === nextSrc) return;
-
-    loadedVideoSrcRef.current = nextSrc;
-    video.load();
-    setIsVideoPlaying(false);
-    setIsVideoBuffering(true);
-    setVideoCurrentTime(0);
-    setVideoDuration(0);
-    setVideoBufferedEnd(0);
-  }, [product?.id, selectedItem?.src, isVideoSelected]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !isVideoSelected) return undefined;
-
-    const syncProgress = () => {
-      setVideoCurrentTime(video.currentTime || 0);
-      setVideoDuration(Number.isFinite(video.duration) ? video.duration : 0);
-      setVideoBufferedEnd(getBufferedEnd(video));
+    return {
+      time: video?.currentTime ?? 0,
+      wasPlaying: video ? !video.paused && !video.ended : false,
     };
+  }, []);
 
-    syncProgress();
-    video.addEventListener('timeupdate', syncProgress);
-    video.addEventListener('progress', syncProgress);
-    video.addEventListener('loadedmetadata', syncProgress);
-    video.addEventListener('durationchange', syncProgress);
-    video.addEventListener('seeked', syncProgress);
+  /**
+   * After exiting immersive, restore playback to `snapshot`.
+   * Only plays if user hadn't explicitly paused.
+   */
+  const restoreAfterImmersive = useCallback(
+    (snapshot, { fromUserGesture = false } = {}) => {
+      if (userPausedRef.current) return;
+      const { time, wasPlaying } = snapshot ?? { time: 0, wasPlaying: false };
+      if (!wasPlaying && !fromUserGesture) return;
 
-    return () => {
-      video.removeEventListener('timeupdate', syncProgress);
-      video.removeEventListener('progress', syncProgress);
-      video.removeEventListener('loadedmetadata', syncProgress);
-      video.removeEventListener('durationchange', syncProgress);
-      video.removeEventListener('seeked', syncProgress);
-    };
-  }, [isVideoSelected, selectedItem?.src, product?.id]);
+      // Small delays to let the browser settle after fullscreen change
+      const delays = [0, 80, 200, 400];
+      delays.forEach((d) => {
+        window.setTimeout(() => {
+          const video = videoRef.current;
+          if (!video || userPausedRef.current || inTransitionRef.current) return;
+          if (!video.paused) return; // already playing, nothing to do
+          safePlay({ fromUserGesture, seekTo: time });
+        }, d);
+      });
+    },
+    [safePlay],
+  );
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !isVideoSelected) return undefined;
+  // ─── Fullscreen enter/exit ───────────────────────────────────────────────
 
-    const onWaiting = () => markVideoBuffering();
-    const onStalled = () => markVideoBuffering();
-    const onSeeking = () => {
-      if (!video.paused) markVideoBuffering();
-    };
-    const onPlaying = () => clearVideoBuffering();
-    const onPause = () => {
-      if (!immersiveTransitionRef.current) clearVideoBuffering();
-    };
-    const onEnded = () => clearVideoBuffering();
-    const onError = () => clearVideoBuffering();
+  const enterFullscreen = useCallback(
+    async ({ fromUserGesture = true } = {}) => {
+      const frame = frameRef.current;
+      if (!frame) return;
 
-    video.addEventListener('waiting', onWaiting);
-    video.addEventListener('stalled', onStalled);
-    video.addEventListener('seeking', onSeeking);
-    video.addEventListener('playing', onPlaying);
-    video.addEventListener('pause', onPause);
-    video.addEventListener('ended', onEnded);
-    video.addEventListener('error', onError);
+      const snapshot = captureSnapshot();
+      inTransitionRef.current = true;
+      cancelPendingPlay();
 
-    return () => {
-      video.removeEventListener('waiting', onWaiting);
-      video.removeEventListener('stalled', onStalled);
-      video.removeEventListener('seeking', onSeeking);
-      video.removeEventListener('playing', onPlaying);
-      video.removeEventListener('pause', onPause);
-      video.removeEventListener('ended', onEnded);
-      video.removeEventListener('error', onError);
-    };
-  }, [isVideoSelected, selectedItem?.src, product?.id, markVideoBuffering, clearVideoBuffering]);
+      // Hard-reset transition flag after max 1.5s to avoid stuck state
+      window.setTimeout(() => {
+        inTransitionRef.current = false;
+      }, 1500);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !isVideoSelected || userPausedRef.current) return undefined;
-
-    let cancelled = false;
-
-    const startPlayback = async () => {
-      if (cancelled || userPausedRef.current) return;
-
-      if (!video.paused) {
-        setIsVideoPlaying(true);
-        clearVideoBuffering();
+      if (prefersOverlayFullscreen()) {
+        setIsLightboxOpen(true);
+        inTransitionRef.current = false;
+        restoreAfterImmersive(snapshot, { fromUserGesture });
         return;
       }
 
-      markVideoBuffering();
-
-      try {
-        video.muted = isMuted;
-        await video.play();
-        if (!cancelled) {
-          setIsVideoPlaying(true);
-          clearVideoBuffering();
-        }
-      } catch {
-        if (!cancelled) {
-          setIsVideoPlaying(false);
-          clearVideoBuffering();
+      if (supportsElementFullscreen()) {
+        try {
+          await requestElementFullscreen(frame);
+          isFullscreenRef.current = true;
+          setIsFullscreen(true);
+          inTransitionRef.current = false;
+          restoreAfterImmersive(snapshot, { fromUserGesture });
+          return;
+        } catch {
+          inTransitionRef.current = false;
         }
       }
-    };
 
-    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      startPlayback();
-    } else {
-      markVideoBuffering();
-      video.addEventListener('canplay', startPlayback, { once: true });
+      // Fallback: overlay lightbox
+      setIsLightboxOpen(true);
+      inTransitionRef.current = false;
+      restoreAfterImmersive(snapshot, { fromUserGesture });
+    },
+    [captureSnapshot, cancelPendingPlay, restoreAfterImmersive],
+  );
+
+  const exitFullscreen = useCallback(async () => {
+    const snapshot = captureSnapshot();
+    inTransitionRef.current = true;
+    cancelPendingPlay();
+
+    // Hard-reset transition flag
+    window.setTimeout(() => {
+      inTransitionRef.current = false;
+    }, 1500);
+
+    const frame = frameRef.current;
+    const video = videoRef.current;
+
+    if (frame && getFullscreenElement() === frame) {
+      try {
+        await exitDocumentFullscreen();
+      } catch {
+        // ignore
+      }
+    } else if (video && isVideoNativeFullscreen(video)) {
+      exitVideoFullscreen(video);
     }
 
-    return () => {
-      cancelled = true;
-      video.removeEventListener('canplay', startPlayback);
-    };
-  }, [isVideoSelected, selectedItem?.src, product?.id, isMuted, isUserPaused, markVideoBuffering, clearVideoBuffering]);
+    isFullscreenRef.current = false;
+    setIsFullscreen(false);
+    setIsNativeVideoFullscreen(false);
+    setIsLightboxOpen(false);
+    inTransitionRef.current = false;
+    restoreAfterImmersive(snapshot, { fromUserGesture: true });
+  }, [captureSnapshot, cancelPendingPlay, restoreAfterImmersive]);
+
+  const toggleFullscreen = useCallback(
+    async (event) => {
+      event?.stopPropagation?.();
+      const isCurrentlyImmersive =
+        isFullscreen || isLightboxOpen || isNativeVideoFullscreen ||
+        Boolean(frameRef.current && getFullscreenElement() === frameRef.current);
+
+      if (isCurrentlyImmersive) {
+        await exitFullscreen();
+      } else {
+        await enterFullscreen({ fromUserGesture: true });
+      }
+    },
+    [isFullscreen, isLightboxOpen, isNativeVideoFullscreen, exitFullscreen, enterFullscreen],
+  );
+
+  // ─── Browser fullscreenchange sync ──────────────────────────────────────
 
   useEffect(() => {
-    const syncFullscreen = () => {
+    const onFullscreenChange = () => {
+      const frame = frameRef.current;
+      const nowFullscreen = Boolean(frame && getFullscreenElement() === frame);
       const wasFullscreen = isFullscreenRef.current;
-      const nowFullscreen = getFullscreenElement() === frameRef.current;
+
       isFullscreenRef.current = nowFullscreen;
       setIsFullscreen(nowFullscreen);
 
-      if (nowFullscreen !== wasFullscreen) {
-        finishImmersiveTransition();
+      // Browser-initiated exit (e.g. Esc key): restore playback
+      if (wasFullscreen && !nowFullscreen && !inTransitionRef.current) {
+        const snapshot = captureSnapshot();
+        restoreAfterImmersive(snapshot, { fromUserGesture: true });
       }
     };
 
-    document.addEventListener('fullscreenchange', syncFullscreen);
-    document.addEventListener('webkitfullscreenchange', syncFullscreen);
-
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
     return () => {
-      document.removeEventListener('fullscreenchange', syncFullscreen);
-      document.removeEventListener('webkitfullscreenchange', syncFullscreen);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
     };
-  }, [finishImmersiveTransition]);
+  }, [captureSnapshot, restoreAfterImmersive]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = isMuted;
-  }, [isMuted]);
-
-  useEffect(() => {
-    if (!isLightboxOpen || !isVideoSelected) return undefined;
-
-    finishImmersiveTransition();
-
-    return undefined;
-  }, [isLightboxOpen, isVideoSelected, finishImmersiveTransition]);
-
+  // Native iOS video fullscreen
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !isVideoSelected) return undefined;
 
-    const syncNativeFullscreen = () => {
-      const nowNative = isVideoNativeFullscreen(video);
-      setIsNativeVideoFullscreen(nowNative);
-      if (nowNative) {
-        finishImmersiveTransition();
+    const onBegin = () => setIsNativeVideoFullscreen(true);
+    const onEnd = () => {
+      setIsNativeVideoFullscreen(false);
+      if (!userPausedRef.current) {
+        const snapshot = captureSnapshot();
+        restoreAfterImmersive(snapshot, { fromUserGesture: true });
       }
     };
 
-    video.addEventListener('webkitbeginfullscreen', syncNativeFullscreen);
-    video.addEventListener('webkitendfullscreen', syncNativeFullscreen);
-
+    video.addEventListener('webkitbeginfullscreen', onBegin);
+    video.addEventListener('webkitendfullscreen', onEnd);
     return () => {
-      video.removeEventListener('webkitbeginfullscreen', syncNativeFullscreen);
-      video.removeEventListener('webkitendfullscreen', syncNativeFullscreen);
+      video.removeEventListener('webkitbeginfullscreen', onBegin);
+      video.removeEventListener('webkitendfullscreen', onEnd);
     };
-  }, [isVideoSelected, selectedItem?.src, finishImmersiveTransition]);
+  }, [isVideoSelected, selectedItem?.src, captureSnapshot, restoreAfterImmersive]);
+
+  // ─── Lightbox keyboard + scroll lock ─────────────────────────────────────
 
   useEffect(() => {
     if (!isLightboxOpen) return undefined;
 
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsLightboxOpen(false);
-      }
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') exitFullscreen();
     };
 
     const scrollY = window.scrollY;
-    const lockBodyScroll = () => {
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-    };
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
 
-    const updateViewportHeight = () => {
-      const height = window.visualViewport?.height || window.innerHeight;
-      document.documentElement.style.setProperty('--media-lightbox-height', `${height}px`);
+    const updateVH = () => {
+      const h = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty('--media-lightbox-height', `${h}px`);
     };
+    updateVH();
 
-    lockBodyScroll();
-    updateViewportHeight();
     window.addEventListener('keydown', onKeyDown);
-    window.visualViewport?.addEventListener('resize', updateViewportHeight);
-    window.visualViewport?.addEventListener('scroll', updateViewportHeight);
+    window.visualViewport?.addEventListener('resize', updateVH);
+    window.visualViewport?.addEventListener('scroll', updateVH);
 
     return () => {
       document.body.style.position = '';
@@ -449,157 +399,290 @@ const ProductMediaGallery = ({ product }) => {
       document.body.style.overflow = '';
       document.documentElement.style.removeProperty('--media-lightbox-height');
       window.removeEventListener('keydown', onKeyDown);
-      window.visualViewport?.removeEventListener('resize', updateViewportHeight);
-      window.visualViewport?.removeEventListener('scroll', updateViewportHeight);
+      window.visualViewport?.removeEventListener('resize', updateVH);
+      window.visualViewport?.removeEventListener('scroll', updateVH);
       window.scrollTo(0, scrollY);
     };
-  }, [isLightboxOpen]);
+  }, [isLightboxOpen, exitFullscreen]);
 
-  const selectMedia = (index) => {
-    setIsLightboxOpen(false);
-    videoRef.current?.pause();
-    userPausedRef.current = false;
-    setIsUserPaused(false);
-    setSelectedMediaIndex(index);
+  // ─── Video src preload ───────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isVideoSelected || !selectedItem?.src) return undefined;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'video';
+    link.href = selectedItem.src;
+    document.head.appendChild(link);
+    return () => link.remove();
+  }, [isVideoSelected, selectedItem?.src, product?.id]);
+
+  // ─── Reset on product change ─────────────────────────────────────────────
+
+  useEffect(() => {
+    loadedVideoSrcRef.current = '';
+    cancelPendingPlay();
+    inTransitionRef.current = false;
+    setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
     setIsVideoPlaying(false);
-  };
-
-  const handlePrevMedia = () => {
-    selectMedia(selectedMediaIndex === 0 ? mediaItems.length - 1 : selectedMediaIndex - 1);
-  };
-
-  const handleNextMedia = () => {
-    selectMedia(selectedMediaIndex === mediaItems.length - 1 ? 0 : selectedMediaIndex + 1);
-  };
-
-  const playVideo = async ({ fromUserGesture = false } = {}) => {
-    const video = videoRef.current;
-    if (!video) return;
-
+    setIsVideoBuffering(false);
     userPausedRef.current = false;
-    setIsUserPaused(false);
-    markVideoBuffering();
+    setIsMuted(true);
+    setIsLightboxOpen(false);
+    setVideoCurrentTime(0);
+    setVideoDuration(0);
+    setVideoBufferedEnd(0);
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (video.ended) {
-      video.currentTime = 0;
-    }
+  // ─── Load new video src ──────────────────────────────────────────────────
 
-    try {
-      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        await Promise.race([
-          new Promise((resolve) => {
-            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-              resolve();
-              return;
-            }
-            video.addEventListener('canplay', resolve, { once: true });
-          }),
-          new Promise((resolve) => {
-            window.setTimeout(resolve, 2000);
-          }),
-        ]);
-      }
-
-      video.muted = isMuted;
-      await video.play();
-      setIsVideoPlaying(true);
-      clearVideoBuffering();
-    } catch {
-      if (fromUserGesture) {
-        try {
-          video.muted = true;
-          setIsMuted(true);
-          await video.play();
-          setIsVideoPlaying(true);
-          clearVideoBuffering();
-        } catch {
-          setIsVideoPlaying(false);
-          clearVideoBuffering();
-        }
-      } else {
-        setIsVideoPlaying(false);
-        clearVideoBuffering();
-      }
-    }
-  };
-
-  const toggleVideoPlay = async (event) => {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-
+  useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    const nextSrc = selectedItem?.src || '';
+    if (!video || !isVideoSelected || !nextSrc) return;
 
-    if (!video.paused) {
-      userPausedRef.current = true;
-      setIsUserPaused(true);
-      clearVideoBuffering();
-      video.pause();
+    if (loadedVideoSrcRef.current !== nextSrc) {
+      loadedVideoSrcRef.current = nextSrc;
+      cancelPendingPlay();
+      video.load();
+      setIsVideoPlaying(false);
+      setIsVideoBuffering(true);
+      setVideoCurrentTime(0);
+      setVideoDuration(0);
+      setVideoBufferedEnd(0);
       return;
     }
 
-    await playVideo({ fromUserGesture: true });
-  };
-
-  const toggleVideoMute = () => {
-    const video = videoRef.current;
-    const nextMuted = !isMuted;
-    if (video) {
-      video.muted = nextMuted;
+    // Portal remount keeps the same src but creates a fresh video element
+    if (video.readyState === 0) {
+      video.load();
+      setIsVideoBuffering(true);
     }
-    setIsMuted(nextMuted);
-  };
+  }, [product?.id, selectedItem?.src, isVideoSelected, isLightboxOpen, cancelPendingPlay]);
 
-  const handleSeek = (event) => {
+  // ─── Progress tracking ───────────────────────────────────────────────────
+
+  useEffect(() => {
     const video = videoRef.current;
-    const bar = progressBarRef.current;
-    if (!video || !bar || !videoDuration) return;
+    if (!video || !isVideoSelected) return undefined;
 
-    const rect = bar.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    video.currentTime = ratio * videoDuration;
-    setVideoCurrentTime(video.currentTime);
-    setVideoBufferedEnd(getBufferedEnd(video));
-  };
+    const sync = () => {
+      setVideoCurrentTime(video.currentTime || 0);
+      setVideoDuration(Number.isFinite(video.duration) ? video.duration : 0);
+      setVideoBufferedEnd(getBufferedEnd(video));
+    };
+
+    sync();
+    video.addEventListener('timeupdate', sync);
+    video.addEventListener('progress', sync);
+    video.addEventListener('loadedmetadata', sync);
+    video.addEventListener('durationchange', sync);
+    video.addEventListener('seeked', sync);
+
+    return () => {
+      video.removeEventListener('timeupdate', sync);
+      video.removeEventListener('progress', sync);
+      video.removeEventListener('loadedmetadata', sync);
+      video.removeEventListener('durationchange', sync);
+      video.removeEventListener('seeked', sync);
+    };
+  }, [isVideoSelected, selectedItem?.src, product?.id]);
+
+  // ─── Buffering indicators ────────────────────────────────────────────────
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideoSelected) return undefined;
+
+    const onWaiting = () => {
+      if (!userPausedRef.current && !inTransitionRef.current) setIsVideoBuffering(true);
+    };
+    const onStalled = () => {
+      if (!userPausedRef.current && !inTransitionRef.current) setIsVideoBuffering(true);
+    };
+    const onPlaying = () => {
+      setIsVideoPlaying(true);
+      setIsVideoBuffering(false);
+    };
+    const onPause = () => {
+      // Only update state if this is a real pause (not a transition artifact)
+      if (!inTransitionRef.current) {
+        setIsVideoPlaying(false);
+        setIsVideoBuffering(false);
+      }
+    };
+    const onEnded = () => {
+      if (!inTransitionRef.current) {
+        userPausedRef.current = true;
+        setIsVideoPlaying(false);
+        setIsVideoBuffering(false);
+      }
+    };
+    const onError = () => {
+      setIsVideoPlaying(false);
+      setIsVideoBuffering(false);
+    };
+
+    video.addEventListener('waiting', onWaiting);
+    video.addEventListener('stalled', onStalled);
+    video.addEventListener('playing', onPlaying);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('ended', onEnded);
+    video.addEventListener('error', onError);
+
+    return () => {
+      video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('stalled', onStalled);
+      video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('pause', onPause);
+      video.removeEventListener('ended', onEnded);
+      video.removeEventListener('error', onError);
+    };
+  }, [isVideoSelected, selectedItem?.src, product?.id]);
+
+  // ─── Auto-start playback when video is ready ──────────────────────────────
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideoSelected || userPausedRef.current) return undefined;
+
+    let cancelled = false;
+
+    const startAuto = async () => {
+      if (cancelled || userPausedRef.current || inTransitionRef.current) return;
+      if (!video.paused) {
+        setIsVideoPlaying(true);
+        setIsVideoBuffering(false);
+        return;
+      }
+      await safePlay({ fromUserGesture: false });
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      startAuto();
+    } else {
+      setIsVideoBuffering(true);
+      video.addEventListener('canplay', startAuto, { once: true });
+    }
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener('canplay', startAuto);
+    };
+  }, [isVideoSelected, selectedItem?.src, product?.id, safePlay]);
+
+  // ─── Keep muted state in sync ────────────────────────────────────────────
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = isMuted;
+  }, [isMuted]);
+
+  // ─── User interaction handlers ───────────────────────────────────────────
+
+  const toggleVideoPlay = useCallback(
+    async (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (!video.paused && !video.ended) {
+        // Currently playing → pause it
+        userPausedRef.current = true;
+        safePause();
+        return;
+      }
+
+      // Currently paused → play it
+      userPausedRef.current = false;
+      // If ended, restart from beginning
+      if (video.ended) video.currentTime = 0;
+      await safePlay({ fromUserGesture: true });
+    },
+    [safePlay, safePause],
+  );
+
+  const toggleVideoMute = useCallback(() => {
+    const video = videoRef.current;
+    const next = !isMuted;
+    if (video) video.muted = next;
+    setIsMuted(next);
+  }, [isMuted]);
+
+  const handleSeek = useCallback(
+    (event) => {
+      const video = videoRef.current;
+      const bar = progressBarRef.current;
+      if (!video || !bar || !videoDuration) return;
+
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      const targetTime = ratio * videoDuration;
+      video.currentTime = targetTime;
+      setVideoCurrentTime(targetTime);
+      setVideoBufferedEnd(getBufferedEnd(video));
+
+      // If user was paused, seeking should restart playback
+      if (userPausedRef.current) {
+        userPausedRef.current = false;
+        safePlay({ fromUserGesture: true, seekTo: targetTime });
+      }
+    },
+    [videoDuration, safePlay],
+  );
+
+  const selectMedia = useCallback((index) => {
+    setIsLightboxOpen(false);
+    cancelPendingPlay();
+    const video = videoRef.current;
+    if (video) video.pause();
+    userPausedRef.current = false;
+    setSelectedMediaIndex(index);
+    setIsVideoPlaying(false);
+    loadedVideoSrcRef.current = '';
+  }, [cancelPendingPlay]);
+
+  const handlePrevMedia = useCallback(() => {
+    selectMedia(selectedMediaIndex === 0 ? mediaItems.length - 1 : selectedMediaIndex - 1);
+  }, [selectMedia, selectedMediaIndex, mediaItems.length]);
+
+  const handleNextMedia = useCallback(() => {
+    selectMedia(selectedMediaIndex === mediaItems.length - 1 ? 0 : selectedMediaIndex + 1);
+  }, [selectMedia, selectedMediaIndex, mediaItems.length]);
+
+  // ─── Progress bar renderers ───────────────────────────────────────────────
 
   const playedPercent = videoDuration ? Math.min(100, (videoCurrentTime / videoDuration) * 100) : 0;
   const bufferedPercent = videoDuration ? Math.min(100, (videoBufferedEnd / videoDuration) * 100) : 0;
 
   const renderVideoProgressBar = (variant = 'inline') => {
     const isOverlay = variant === 'overlay';
+    const commonProps = {
+      ref: progressBarRef,
+      role: 'slider',
+      'aria-label': 'Video progress',
+      'aria-valuemin': 0,
+      'aria-valuemax': videoDuration || 0,
+      'aria-valuenow': videoCurrentTime,
+      tabIndex: 0,
+      onClick: handleSeek,
+      onKeyDown: (e) => {
+        const video = videoRef.current;
+        if (!video || !videoDuration) return;
+        if (e.key === 'ArrowRight') video.currentTime = Math.min(videoDuration, video.currentTime + 5);
+        if (e.key === 'ArrowLeft') video.currentTime = Math.max(0, video.currentTime - 5);
+      },
+    };
 
     if (isOverlay) {
       return (
         <div className="min-w-[140px] flex-1">
-          <div
-            ref={progressBarRef}
-            role="slider"
-            aria-label="Video progress"
-            aria-valuemin={0}
-            aria-valuemax={videoDuration || 0}
-            aria-valuenow={videoCurrentTime}
-            tabIndex={0}
-            onClick={handleSeek}
-            onKeyDown={(event) => {
-              const video = videoRef.current;
-              if (!video || !videoDuration) return;
-              if (event.key === 'ArrowRight') {
-                video.currentTime = Math.min(videoDuration, video.currentTime + 5);
-              }
-              if (event.key === 'ArrowLeft') {
-                video.currentTime = Math.max(0, video.currentTime - 5);
-              }
-            }}
-            className="relative h-1 w-full cursor-pointer rounded-full bg-white/25"
-          >
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-white/45"
-              style={{ width: `${bufferedPercent}%` }}
-            />
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-white"
-              style={{ width: `${playedPercent}%` }}
-            />
+          <div {...commonProps} className="relative h-1 w-full cursor-pointer rounded-full bg-white/25">
+            <div className="absolute inset-y-0 left-0 rounded-full bg-white/45" style={{ width: `${bufferedPercent}%` }} />
+            <div className="absolute inset-y-0 left-0 rounded-full bg-white" style={{ width: `${playedPercent}%` }} />
           </div>
         </div>
       );
@@ -607,112 +690,15 @@ const ProductMediaGallery = ({ product }) => {
 
     return (
       <div className="mt-2 w-full min-w-0 max-w-full">
-        <div
-          ref={progressBarRef}
-          role="slider"
-          aria-label="Video progress"
-          aria-valuemin={0}
-          aria-valuemax={videoDuration || 0}
-          aria-valuenow={videoCurrentTime}
-          tabIndex={0}
-          onClick={handleSeek}
-          onKeyDown={(event) => {
-            const video = videoRef.current;
-            if (!video || !videoDuration) return;
-            if (event.key === 'ArrowRight') {
-              video.currentTime = Math.min(videoDuration, video.currentTime + 5);
-            }
-            if (event.key === 'ArrowLeft') {
-              video.currentTime = Math.max(0, video.currentTime - 5);
-            }
-          }}
-          className="relative h-1 w-full cursor-pointer rounded-full bg-gray-200"
-        >
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-gray-300"
-            style={{ width: `${bufferedPercent}%` }}
-          />
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-gray-900"
-            style={{ width: `${playedPercent}%` }}
-          />
+        <div {...commonProps} className="relative h-1 w-full cursor-pointer rounded-full bg-gray-200">
+          <div className="absolute inset-y-0 left-0 rounded-full bg-gray-300" style={{ width: `${bufferedPercent}%` }} />
+          <div className="absolute inset-y-0 left-0 rounded-full bg-gray-900" style={{ width: `${playedPercent}%` }} />
         </div>
       </div>
     );
   };
 
-  const openLightbox = ({ fromUserGesture = false } = {}) => {
-    beginImmersiveTransition({ fromUserGesture });
-    setIsLightboxOpen(true);
-    if (fromUserGesture) {
-      void restorePlaybackAfterImmersive({ fromUserGesture: true });
-    }
-  };
-
-  const toggleFullscreen = async (event) => {
-    event?.stopPropagation?.();
-
-    const frame = frameRef.current;
-    const video = videoRef.current;
-    const inDocumentFullscreen = Boolean(frame && getFullscreenElement() === frame);
-    const inNativeVideoFullscreen = Boolean(video && isVideoNativeFullscreen(video));
-
-    if (inDocumentFullscreen) {
-      try {
-        await exitDocumentFullscreen();
-      } catch {
-        // ignore
-      }
-      isFullscreenRef.current = false;
-      setIsFullscreen(false);
-      return;
-    }
-
-    if (isLightboxOpen) {
-      closeLightbox();
-      return;
-    }
-
-    if (inNativeVideoFullscreen) {
-      exitVideoFullscreen(video);
-      setIsNativeVideoFullscreen(false);
-      return;
-    }
-
-    if (isFullscreen || isNativeVideoFullscreen) {
-      isFullscreenRef.current = false;
-      setIsFullscreen(false);
-      setIsNativeVideoFullscreen(false);
-    }
-
-    beginImmersiveTransition({ fromUserGesture: true });
-
-    if (prefersOverlayFullscreen()) {
-      setIsLightboxOpen(true);
-      void restorePlaybackAfterImmersive({ fromUserGesture: true });
-      return;
-    }
-
-    if (frame && supportsElementFullscreen()) {
-      try {
-        await requestElementFullscreen(frame);
-        isFullscreenRef.current = true;
-        setIsFullscreen(true);
-        void restorePlaybackAfterImmersive({ fromUserGesture: true });
-        finishImmersiveTransition({ fromUserGesture: true });
-        return;
-      } catch {
-        immersiveTransitionRef.current = false;
-        immersiveUserGestureRef.current = false;
-      }
-    }
-
-    openLightbox({ fromUserGesture: true });
-  };
-
-  const closeLightbox = () => {
-    setIsLightboxOpen(false);
-  };
+  // ─── JSX ─────────────────────────────────────────────────────────────────
 
   if (!mediaItems.length) return null;
 
@@ -724,36 +710,10 @@ const ProductMediaGallery = ({ product }) => {
             ref={videoRef}
             src={selectedItem.src}
             poster={selectedItem.poster}
-            className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
+            className={`${isImmersive ? 'h-full w-full' : 'max-h-full max-w-full'} object-contain ${PROTECTED_MEDIA_CLASS}`}
             playsInline
             muted={isMuted}
             preload={shouldBufferVideo ? 'auto' : 'none'}
-            onPlay={() => setIsVideoPlaying(true)}
-            onPause={() => {
-              if (immersiveTransitionRef.current) {
-                window.setTimeout(() => {
-                  if (!immersiveTransitionRef.current) {
-                    syncVideoPlayingState();
-                    if (videoRef.current?.paused) {
-                      clearVideoBuffering();
-                    }
-                  }
-                }, 450);
-                return;
-              }
-              setIsVideoPlaying(false);
-              clearVideoBuffering();
-            }}
-            onEnded={() => {
-              if (immersiveTransitionRef.current) return;
-              userPausedRef.current = true;
-              setIsUserPaused(true);
-              setIsVideoPlaying(false);
-            }}
-            onError={() => {
-              setIsVideoPlaying(false);
-              clearVideoBuffering();
-            }}
             {...getProtectedVideoProps()}
           />
 
@@ -876,31 +836,37 @@ const ProductMediaGallery = ({ product }) => {
   );
 
   const inlineFrameClassName =
-    'aspect-[10/9] w-full min-h-[260px] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[340px] sm:rounded-2xl lg:min-h-[420px] lg:aspect-[4/3]';
+    'aspect-video w-full min-h-[220px] max-h-[min(72vw,520px)] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[260px] sm:max-h-[min(68vw,560px)] sm:rounded-2xl xl:min-h-[420px] xl:max-h-none xl:aspect-[4/3]';
+
+  const mediaShell = (
+    <div
+      className={isLightboxOpen ? 'media-lightbox' : 'relative w-full'}
+      role={isLightboxOpen ? 'dialog' : undefined}
+      aria-modal={isLightboxOpen ? 'true' : undefined}
+      aria-label={isLightboxOpen ? 'Fullscreen media preview' : undefined}
+    >
+      <ProtectedMediaFrame
+        ref={frameRef}
+        watermark
+        className={isLightboxOpen ? 'media-lightbox__frame' : inlineFrameClassName}
+      >
+        {renderMediaChrome(!isLightboxOpen)}
+        <div className={isLightboxOpen ? 'media-lightbox__media' : 'relative h-full w-full'}>
+          {mediaContent}
+        </div>
+      </ProtectedMediaFrame>
+    </div>
+  );
 
   return (
-    <div className="w-full min-w-0 max-w-full overflow-x-hidden">
+    <div className="w-full min-w-0 max-w-full">
       {isLightboxOpen ? (
         <div className={`${inlineFrameClassName} pointer-events-none invisible`} aria-hidden />
       ) : null}
 
-      <div
-        className={isLightboxOpen ? 'media-lightbox' : 'relative w-full'}
-        role={isLightboxOpen ? 'dialog' : undefined}
-        aria-modal={isLightboxOpen ? 'true' : undefined}
-        aria-label={isLightboxOpen ? 'Fullscreen media preview' : undefined}
-      >
-        <ProtectedMediaFrame
-          ref={frameRef}
-          watermark
-          className={isLightboxOpen ? 'media-lightbox__frame' : inlineFrameClassName}
-        >
-          {renderMediaChrome(!isLightboxOpen)}
-          <div className={isLightboxOpen ? 'media-lightbox__media' : 'relative h-full w-full'}>
-            {mediaContent}
-          </div>
-        </ProtectedMediaFrame>
-      </div>
+      {isLightboxOpen && typeof document !== 'undefined'
+        ? createPortal(mediaShell, document.body)
+        : mediaShell}
 
       {isVideoSelected && !isLightboxOpen && renderVideoProgressBar('inline')}
 

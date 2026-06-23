@@ -5,7 +5,7 @@ const ProtectedMediaFrame = forwardRef(({ children, className = '', watermark = 
   <div
     ref={ref}
     onContextMenu={preventMediaContextMenu}
-    className={`protected-media-shell relative ${className}`.trim()}
+    className={`protected-media-shell relative overflow-hidden ${className}`.trim()}
   >
     {children}
     {watermark && <div className="protected-media-watermark" aria-hidden />}

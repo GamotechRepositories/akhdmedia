@@ -205,12 +205,12 @@ const ProductDetail = () => {
       </div>
 
       <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <div className="grid w-full min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:gap-8">
-          <div className="min-w-0 w-full lg:sticky lg:top-24 lg:self-start">
+        <div className="grid w-full min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] xl:gap-8">
+          <div className="relative z-10 min-w-0 w-full xl:sticky xl:top-24 xl:self-start">
             <ProductMediaGallery product={product} />
           </div>
 
-          <div className="min-w-0 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="relative z-0 min-w-0 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-5 py-5 text-white sm:px-6">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {product.brand && (

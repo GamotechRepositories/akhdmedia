@@ -23,6 +23,9 @@ export const prefersOverlayFullscreen = () => {
   if (isIOSDevice()) return true;
   if (typeof window === 'undefined') return false;
 
+  // Phone / small tablet — always use overlay (also works in devtools mobile emulation)
+  if (window.matchMedia('(max-width: 1024px)').matches) return true;
+
   const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
   const noHover = window.matchMedia('(hover: none)').matches;
   const touchPoints = navigator.maxTouchPoints > 0;
