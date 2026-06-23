@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
@@ -51,6 +50,7 @@ const ProductMediaGallery = ({ product }) => {
   const progressBarRef = useRef(null);
   const loadedVideoSrcRef = useRef('');
   const isFullscreenRef = useRef(false);
+  const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
 
   // --- Playback control refs (not state, to avoid stale closures) ---
   const userPausedRef = useRef(false);      // true when user explicitly paused
@@ -195,34 +195,90 @@ const ProductMediaGallery = ({ product }) => {
    */
   const captureSnapshot = useCallback(() => {
     const video = videoRef.current;
-    return {
+    const snapshot = {
       time: video?.currentTime ?? 0,
       wasPlaying: video ? !video.paused && !video.ended : false,
     };
+    playbackSnapshotRef.current = snapshot;
+    return snapshot;
   }, []);
 
   /**
-   * After exiting immersive, restore playback to `snapshot`.
-   * Only plays if user hadn't explicitly paused.
+   * Resume playback after fullscreen enter/exit. Retries until playing or attempts exhausted.
    */
-  const restoreAfterImmersive = useCallback(
-    (snapshot, { fromUserGesture = false } = {}) => {
+  const resumePlayback = useCallback(
+    async (snapshot, { fromUserGesture = false } = {}) => {
       if (userPausedRef.current) return;
-      const { time, wasPlaying } = snapshot ?? { time: 0, wasPlaying: false };
-      if (!wasPlaying && !fromUserGesture) return;
 
-      // Small delays to let the browser settle after fullscreen change
-      const delays = [0, 80, 200, 400];
-      delays.forEach((d) => {
-        window.setTimeout(() => {
-          const video = videoRef.current;
-          if (!video || userPausedRef.current || inTransitionRef.current) return;
-          if (!video.paused) return; // already playing, nothing to do
-          safePlay({ fromUserGesture, seekTo: time });
-        }, d);
-      });
+      const { time, wasPlaying } = snapshot ?? playbackSnapshotRef.current;
+      const shouldResume = wasPlaying || fromUserGesture;
+      if (!shouldResume) return;
+
+      const delays = [0, 120, 300, 600, 1000];
+
+      for (const delay of delays) {
+        if (delay > 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, delay));
+        }
+        if (userPausedRef.current) return;
+
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (!video.paused && !video.ended) {
+          setIsVideoPlaying(true);
+          setIsVideoBuffering(false);
+          return;
+        }
+
+        if (Number.isFinite(time) && time > 0) {
+          const duration = Number.isFinite(video.duration) ? video.duration : 0;
+          const safeTime = duration > 0 ? Math.min(time, Math.max(0, duration - 0.05)) : time;
+          if (Math.abs(video.currentTime - safeTime) > 0.25) {
+            video.currentTime = safeTime;
+          }
+        }
+
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          await new Promise((resolve) => {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              resolve();
+              return;
+            }
+            video.addEventListener('canplay', resolve, { once: true });
+            window.setTimeout(resolve, 2000);
+          });
+        }
+
+        try {
+          video.muted = isMuted;
+          await video.play();
+          setIsVideoPlaying(true);
+          setIsVideoBuffering(false);
+          return;
+        } catch {
+          if (fromUserGesture && !video.muted) {
+            try {
+              video.muted = true;
+              setIsMuted(true);
+              await video.play();
+              setIsVideoPlaying(true);
+              setIsVideoBuffering(false);
+              return;
+            } catch {
+              // try next delay
+            }
+          }
+        }
+      }
+
+      const video = videoRef.current;
+      if (video) {
+        setIsVideoPlaying(!video.paused && !video.ended);
+        setIsVideoBuffering(false);
+      }
     },
-    [safePlay],
+    [isMuted],
   );
 
   // ─── Fullscreen enter/exit ───────────────────────────────────────────────
@@ -235,11 +291,10 @@ const ProductMediaGallery = ({ product }) => {
 
       const snapshot = captureSnapshot();
       inTransitionRef.current = true;
-      cancelPendingPlay();
 
       window.setTimeout(() => {
         inTransitionRef.current = false;
-      }, 1500);
+      }, 2000);
 
       // iOS Safari — native video fullscreen hides browser chrome
       if (isIOSDevice() && video && isVideoSelected) {
@@ -247,8 +302,7 @@ const ProductMediaGallery = ({ product }) => {
           const entered = await requestVideoFullscreen(video);
           if (entered) {
             setIsNativeVideoFullscreen(true);
-            inTransitionRef.current = false;
-            restoreAfterImmersive(snapshot, { fromUserGesture });
+            void resumePlayback(snapshot, { fromUserGesture });
             return;
           }
         } catch {
@@ -264,8 +318,7 @@ const ProductMediaGallery = ({ product }) => {
             await requestElementFullscreen(target);
             isFullscreenRef.current = true;
             setIsFullscreen(true);
-            inTransitionRef.current = false;
-            restoreAfterImmersive(snapshot, { fromUserGesture });
+            void resumePlayback(snapshot, { fromUserGesture });
             return;
           } catch {
             // try next target
@@ -275,24 +328,20 @@ const ProductMediaGallery = ({ product }) => {
 
       // Last resort — CSS overlay (browser chrome stays visible)
       setIsLightboxOpen(true);
-      inTransitionRef.current = false;
-      restoreAfterImmersive(snapshot, { fromUserGesture });
+      void resumePlayback(snapshot, { fromUserGesture });
     },
-    [captureSnapshot, cancelPendingPlay, restoreAfterImmersive, isVideoSelected],
+    [captureSnapshot, resumePlayback, isVideoSelected],
   );
 
   const exitFullscreen = useCallback(async () => {
     const snapshot = captureSnapshot();
     inTransitionRef.current = true;
-    cancelPendingPlay();
 
-    // Hard-reset transition flag
     window.setTimeout(() => {
       inTransitionRef.current = false;
-    }, 1500);
+    }, 2000);
 
     const video = videoRef.current;
-
     const fsEl = getFullscreenElement();
 
     if (fsEl) {
@@ -309,9 +358,8 @@ const ProductMediaGallery = ({ product }) => {
     setIsFullscreen(false);
     setIsNativeVideoFullscreen(false);
     setIsLightboxOpen(false);
-    inTransitionRef.current = false;
-    restoreAfterImmersive(snapshot, { fromUserGesture: true });
-  }, [captureSnapshot, cancelPendingPlay, restoreAfterImmersive]);
+    void resumePlayback(snapshot, { fromUserGesture: true });
+  }, [captureSnapshot, resumePlayback]);
 
   const toggleFullscreen = useCallback(
     async (event) => {
@@ -348,10 +396,15 @@ const ProductMediaGallery = ({ product }) => {
       isFullscreenRef.current = nowFullscreen;
       setIsFullscreen(nowFullscreen);
 
+      const snapshot = playbackSnapshotRef.current;
+
+      if (nowFullscreen && !wasFullscreen) {
+        void resumePlayback(snapshot, { fromUserGesture: true });
+      }
+
       // Browser-initiated exit (e.g. Esc key): restore playback
       if (wasFullscreen && !nowFullscreen && !inTransitionRef.current) {
-        const snapshot = captureSnapshot();
-        restoreAfterImmersive(snapshot, { fromUserGesture: true });
+        void resumePlayback(snapshot, { fromUserGesture: true });
       }
     };
 
@@ -361,7 +414,7 @@ const ProductMediaGallery = ({ product }) => {
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
     };
-  }, [captureSnapshot, restoreAfterImmersive]);
+  }, [resumePlayback]);
 
   // Native iOS video fullscreen
   useEffect(() => {
@@ -372,8 +425,7 @@ const ProductMediaGallery = ({ product }) => {
     const onEnd = () => {
       setIsNativeVideoFullscreen(false);
       if (!userPausedRef.current) {
-        const snapshot = captureSnapshot();
-        restoreAfterImmersive(snapshot, { fromUserGesture: true });
+        void resumePlayback(playbackSnapshotRef.current, { fromUserGesture: true });
       }
     };
 
@@ -383,7 +435,21 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('webkitbeginfullscreen', onBegin);
       video.removeEventListener('webkitendfullscreen', onEnd);
     };
-  }, [isVideoSelected, selectedItem?.src, captureSnapshot, restoreAfterImmersive]);
+  }, [isVideoSelected, selectedItem?.src, resumePlayback]);
+
+  // Resume after lightbox / immersive state settles (same video element, no remount)
+  useEffect(() => {
+    if (!isImmersive || userPausedRef.current) return undefined;
+
+    const snapshot = playbackSnapshotRef.current;
+    if (!snapshot.wasPlaying) return undefined;
+
+    const timer = window.setTimeout(() => {
+      void resumePlayback(snapshot, { fromUserGesture: true });
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, [isImmersive, isLightboxOpen, isFullscreen, isNativeVideoFullscreen, resumePlayback]);
 
   // ─── Lightbox keyboard + scroll lock ─────────────────────────────────────
 
@@ -472,15 +538,8 @@ const ProductMediaGallery = ({ product }) => {
       setVideoCurrentTime(0);
       setVideoDuration(0);
       setVideoBufferedEnd(0);
-      return;
     }
-
-    // Portal remount keeps the same src but creates a fresh video element
-    if (video.readyState === 0) {
-      video.load();
-      setIsVideoBuffering(true);
-    }
-  }, [product?.id, selectedItem?.src, isVideoSelected, isLightboxOpen, cancelPendingPlay]);
+  }, [product?.id, selectedItem?.src, isVideoSelected, cancelPendingPlay]);
 
   // ─── Progress tracking ───────────────────────────────────────────────────
 
@@ -887,9 +946,7 @@ const ProductMediaGallery = ({ product }) => {
         <div className={`${inlineFrameClassName} pointer-events-none invisible`} aria-hidden />
       ) : null}
 
-      {isLightboxOpen && typeof document !== 'undefined'
-        ? createPortal(mediaShell, document.body)
-        : mediaShell}
+      {mediaShell}
 
       {isVideoSelected && !isImmersive && renderVideoProgressBar('inline')}
 
