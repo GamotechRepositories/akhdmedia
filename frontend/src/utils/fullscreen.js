@@ -18,6 +18,19 @@ export const isMobileDevice = () => {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 };
 
+/** Touch-first layouts (phones/tablets) — overlay lightbox is more reliable than element fullscreen for video. */
+export const prefersOverlayFullscreen = () => {
+  if (isIOSDevice()) return true;
+  if (typeof window === 'undefined') return false;
+
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const noHover = window.matchMedia('(hover: none)').matches;
+  const touchPoints = navigator.maxTouchPoints > 0;
+  const narrowViewport = window.matchMedia('(max-width: 1280px)').matches;
+
+  return narrowViewport && (coarsePointer || noHover || touchPoints);
+};
+
 export const supportsElementFullscreen = () => {
   if (typeof document === 'undefined') return false;
 

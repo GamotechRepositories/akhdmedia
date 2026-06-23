@@ -8,10 +8,10 @@ import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
   getFullscreenElement,
-  isIOSDevice,
   isVideoNativeFullscreen,
   requestElementFullscreen,
   supportsElementFullscreen,
+  prefersOverlayFullscreen,
 } from '../../utils/fullscreen';
 import {
   IconMaximize,
@@ -60,6 +60,7 @@ const ProductMediaGallery = ({ product }) => {
   const immersiveTransitionRef = useRef(false);
   const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
   const userPausedRef = useRef(false);
+  const immersiveUserGestureRef = useRef(false);
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
     getDefaultMediaIndex(buildProductMediaItems(product)),
@@ -107,6 +108,12 @@ const ProductMediaGallery = ({ product }) => {
     };
   }, []);
 
+  const syncVideoPlayingState = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    setIsVideoPlaying(!video.paused && !video.ended);
+  }, []);
+
   const restorePlaybackAfterImmersive = useCallback(
     async ({ fromUserGesture = false } = {}) => {
       const video = videoRef.current;
@@ -145,28 +152,57 @@ const ProductMediaGallery = ({ product }) => {
         video.muted = isMuted;
         await video.play();
         setIsVideoPlaying(true);
+        clearVideoBuffering();
       } catch {
-        setIsVideoPlaying(!video.paused);
+        if (fromUserGesture) {
+          try {
+            video.muted = true;
+            setIsMuted(true);
+            await video.play();
+            setIsVideoPlaying(true);
+            clearVideoBuffering();
+          } catch {
+            syncVideoPlayingState();
+            clearVideoBuffering();
+          }
+        } else {
+          syncVideoPlayingState();
+          clearVideoBuffering();
+        }
       } finally {
         window.setTimeout(() => {
           immersiveTransitionRef.current = false;
+          syncVideoPlayingState();
         }, 400);
       }
     },
-    [isVideoSelected, isMuted],
+    [isVideoSelected, isMuted, clearVideoBuffering, syncVideoPlayingState],
   );
 
-  const beginImmersiveTransition = useCallback(() => {
-    capturePlaybackSnapshot();
-    immersiveTransitionRef.current = true;
-  }, [capturePlaybackSnapshot]);
+  const finishImmersiveTransition = useCallback(
+    ({ fromUserGesture = false } = {}) => {
+      const canUseGesture = fromUserGesture || immersiveUserGestureRef.current;
+      if (canUseGesture) {
+        immersiveUserGestureRef.current = false;
+      }
 
-  const finishImmersiveTransition = useCallback(() => {
-    immersiveTransitionRef.current = false;
-    scheduleImmersiveResume(() => {
-      restorePlaybackAfterImmersive();
-    });
-  }, [restorePlaybackAfterImmersive]);
+      scheduleImmersiveResume(() => {
+        restorePlaybackAfterImmersive({ fromUserGesture: canUseGesture });
+      });
+    },
+    [restorePlaybackAfterImmersive],
+  );
+
+  const beginImmersiveTransition = useCallback(
+    ({ fromUserGesture = false } = {}) => {
+      capturePlaybackSnapshot();
+      immersiveTransitionRef.current = true;
+      if (fromUserGesture) {
+        immersiveUserGestureRef.current = true;
+      }
+    },
+    [capturePlaybackSnapshot],
+  );
 
   useEffect(() => {
     if (!isVideoSelected || !selectedItem?.src) return undefined;
@@ -605,9 +641,12 @@ const ProductMediaGallery = ({ product }) => {
     );
   };
 
-  const openLightbox = () => {
-    beginImmersiveTransition();
+  const openLightbox = ({ fromUserGesture = false } = {}) => {
+    beginImmersiveTransition({ fromUserGesture });
     setIsLightboxOpen(true);
+    if (fromUserGesture) {
+      void restorePlaybackAfterImmersive({ fromUserGesture: true });
+    }
   };
 
   const toggleFullscreen = async (event) => {
@@ -646,24 +685,29 @@ const ProductMediaGallery = ({ product }) => {
       setIsNativeVideoFullscreen(false);
     }
 
-    beginImmersiveTransition();
+    beginImmersiveTransition({ fromUserGesture: true });
 
-    if (isIOSDevice()) {
-      openLightbox();
+    if (prefersOverlayFullscreen()) {
+      setIsLightboxOpen(true);
+      void restorePlaybackAfterImmersive({ fromUserGesture: true });
       return;
     }
 
     if (frame && supportsElementFullscreen()) {
       try {
         await requestElementFullscreen(frame);
-        finishImmersiveTransition();
+        isFullscreenRef.current = true;
+        setIsFullscreen(true);
+        void restorePlaybackAfterImmersive({ fromUserGesture: true });
+        finishImmersiveTransition({ fromUserGesture: true });
         return;
       } catch {
         immersiveTransitionRef.current = false;
+        immersiveUserGestureRef.current = false;
       }
     }
 
-    openLightbox();
+    openLightbox({ fromUserGesture: true });
   };
 
   const closeLightbox = () => {
@@ -686,8 +730,19 @@ const ProductMediaGallery = ({ product }) => {
             preload={shouldBufferVideo ? 'auto' : 'none'}
             onPlay={() => setIsVideoPlaying(true)}
             onPause={() => {
-              if (immersiveTransitionRef.current) return;
+              if (immersiveTransitionRef.current) {
+                window.setTimeout(() => {
+                  if (!immersiveTransitionRef.current) {
+                    syncVideoPlayingState();
+                    if (videoRef.current?.paused) {
+                      clearVideoBuffering();
+                    }
+                  }
+                }, 450);
+                return;
+              }
               setIsVideoPlaying(false);
+              clearVideoBuffering();
             }}
             onEnded={() => {
               if (immersiveTransitionRef.current) return;
