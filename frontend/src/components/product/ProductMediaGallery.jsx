@@ -29,6 +29,32 @@ const fullscreenButtonClass =
 const videoControlButtonClass =
   'z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95';
 
+const BUFFER_COMFORT_SECONDS = 0.5;
+const LOADER_SHOW_DELAY_MS = 200;
+
+const getBufferedAhead = (video) => {
+  if (!video?.buffered?.length) return 0;
+
+  const currentTime = video.currentTime;
+  for (let index = 0; index < video.buffered.length; index += 1) {
+    const start = video.buffered.start(index);
+    const end = video.buffered.end(index);
+    if (currentTime >= start - 0.05 && currentTime <= end + 0.05) {
+      return Math.max(0, end - currentTime);
+    }
+  }
+
+  return 0;
+};
+
+const hasComfortableBuffer = (video) => getBufferedAhead(video) >= BUFFER_COMFORT_SECONDS;
+
+const isPlaybackStarved = (video) => {
+  if (!video || video.paused || video.ended) return false;
+  if (hasComfortableBuffer(video)) return false;
+  return video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA;
+};
+
 const getBufferedEnd = (video) => {
   if (!video?.buffered?.length) return 0;
   try {
@@ -61,6 +87,8 @@ const ProductMediaGallery = ({ product }) => {
   const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
   const userPausedRef = useRef(false);
   const immersiveUserGestureRef = useRef(false);
+  const shouldBePlayingRef = useRef(false);
+  const bufferingTimerRef = useRef(null);
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
     getDefaultMediaIndex(buildProductMediaItems(product)),
@@ -88,15 +116,99 @@ const ProductMediaGallery = ({ product }) => {
     ? 'absolute inset-0 z-[105] flex flex-col items-center justify-center pointer-events-none'
     : 'absolute inset-0 z-[15] flex flex-col items-center justify-center pointer-events-none';
 
-  const markVideoBuffering = useCallback(() => {
-    if (!userPausedRef.current) {
-      setIsVideoBuffering(true);
+  const clearBufferingTimer = useCallback(() => {
+    if (bufferingTimerRef.current) {
+      window.clearTimeout(bufferingTimerRef.current);
+      bufferingTimerRef.current = null;
     }
   }, []);
 
   const clearVideoBuffering = useCallback(() => {
+    clearBufferingTimer();
     setIsVideoBuffering(false);
+  }, [clearBufferingTimer]);
+
+  const syncVideoPlayingState = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    setIsVideoPlaying(!video.paused && !video.ended);
   }, []);
+
+  const tryResumeBufferedPlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (
+      !video ||
+      userPausedRef.current ||
+      immersiveTransitionRef.current ||
+      !shouldBePlayingRef.current ||
+      !video.paused ||
+      video.ended ||
+      !hasComfortableBuffer(video)
+    ) {
+      return;
+    }
+
+    video.muted = isMuted;
+    void video.play().then(() => {
+      setIsVideoPlaying(true);
+      clearVideoBuffering();
+    }).catch(() => {
+      syncVideoPlayingState();
+    });
+  }, [isMuted, clearVideoBuffering, syncVideoPlayingState]);
+
+  const syncBufferingFromVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || userPausedRef.current) {
+      clearVideoBuffering();
+      return;
+    }
+
+    if (!video.paused && hasComfortableBuffer(video)) {
+      clearVideoBuffering();
+      return;
+    }
+
+    if (!video.paused && !isPlaybackStarved(video)) {
+      clearVideoBuffering();
+    }
+  }, [clearVideoBuffering]);
+
+  const markVideoBuffering = useCallback(() => {
+    if (userPausedRef.current) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (!video.paused && hasComfortableBuffer(video)) {
+      clearVideoBuffering();
+      return;
+    }
+
+    if (!video.paused && !isPlaybackStarved(video)) {
+      return;
+    }
+
+    clearBufferingTimer();
+    bufferingTimerRef.current = window.setTimeout(() => {
+      const currentVideo = videoRef.current;
+      if (!currentVideo || userPausedRef.current) return;
+
+      if (!currentVideo.paused && hasComfortableBuffer(currentVideo)) {
+        clearVideoBuffering();
+        return;
+      }
+
+      const starved =
+        currentVideo.paused && shouldBePlayingRef.current
+          ? !hasComfortableBuffer(currentVideo)
+          : isPlaybackStarved(currentVideo);
+
+      if (starved) {
+        setIsVideoBuffering(true);
+      }
+    }, LOADER_SHOW_DELAY_MS);
+  }, [clearBufferingTimer, clearVideoBuffering]);
 
   const capturePlaybackSnapshot = useCallback(() => {
     const video = videoRef.current;
@@ -106,12 +218,6 @@ const ProductMediaGallery = ({ product }) => {
       time: video.currentTime || 0,
       wasPlaying: !video.paused && !video.ended,
     };
-  }, []);
-
-  const syncVideoPlayingState = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    setIsVideoPlaying(!video.paused && !video.ended);
   }, []);
 
   const restorePlaybackAfterImmersive = useCallback(
@@ -151,6 +257,7 @@ const ProductMediaGallery = ({ product }) => {
 
         video.muted = isMuted;
         await video.play();
+        shouldBePlayingRef.current = true;
         setIsVideoPlaying(true);
         clearVideoBuffering();
       } catch {
@@ -159,6 +266,7 @@ const ProductMediaGallery = ({ product }) => {
             video.muted = true;
             setIsMuted(true);
             await video.play();
+            shouldBePlayingRef.current = true;
             setIsVideoPlaying(true);
             clearVideoBuffering();
           } catch {
@@ -225,6 +333,8 @@ const ProductMediaGallery = ({ product }) => {
     setIsVideoBuffering(false);
     setIsUserPaused(false);
     userPausedRef.current = false;
+    shouldBePlayingRef.current = false;
+    clearVideoBuffering();
     setIsMuted(true);
     setIsLightboxOpen(false);
     setVideoCurrentTime(0);
@@ -256,6 +366,8 @@ const ProductMediaGallery = ({ product }) => {
       setVideoCurrentTime(video.currentTime || 0);
       setVideoDuration(Number.isFinite(video.duration) ? video.duration : 0);
       setVideoBufferedEnd(getBufferedEnd(video));
+      syncBufferingFromVideo();
+      tryResumeBufferedPlayback();
     };
 
     syncProgress();
@@ -272,18 +384,32 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('durationchange', syncProgress);
       video.removeEventListener('seeked', syncProgress);
     };
-  }, [isVideoSelected, selectedItem?.src, product?.id]);
+  }, [isVideoSelected, selectedItem?.src, product?.id, syncBufferingFromVideo, tryResumeBufferedPlayback]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !isVideoSelected) return undefined;
 
     const onWaiting = () => markVideoBuffering();
-    const onStalled = () => markVideoBuffering();
-    const onSeeking = () => {
-      if (!video.paused) markVideoBuffering();
+    const onStalled = () => {
+      if (isPlaybackStarved(video)) {
+        markVideoBuffering();
+      }
     };
-    const onPlaying = () => clearVideoBuffering();
+    const onSeeking = () => {
+      if (!video.paused && !hasComfortableBuffer(video)) {
+        markVideoBuffering();
+      }
+    };
+    const onCanPlay = () => {
+      syncBufferingFromVideo();
+      tryResumeBufferedPlayback();
+    };
+    const onCanPlayThrough = () => clearVideoBuffering();
+    const onPlaying = () => {
+      shouldBePlayingRef.current = true;
+      clearVideoBuffering();
+    };
     const onPause = () => {
       if (!immersiveTransitionRef.current) clearVideoBuffering();
     };
@@ -293,6 +419,8 @@ const ProductMediaGallery = ({ product }) => {
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('stalled', onStalled);
     video.addEventListener('seeking', onSeeking);
+    video.addEventListener('canplay', onCanPlay);
+    video.addEventListener('canplaythrough', onCanPlayThrough);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('pause', onPause);
     video.addEventListener('ended', onEnded);
@@ -302,12 +430,22 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('stalled', onStalled);
       video.removeEventListener('seeking', onSeeking);
+      video.removeEventListener('canplay', onCanPlay);
+      video.removeEventListener('canplaythrough', onCanPlayThrough);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('pause', onPause);
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
     };
-  }, [isVideoSelected, selectedItem?.src, product?.id, markVideoBuffering, clearVideoBuffering]);
+  }, [
+    isVideoSelected,
+    selectedItem?.src,
+    product?.id,
+    markVideoBuffering,
+    clearVideoBuffering,
+    syncBufferingFromVideo,
+    tryResumeBufferedPlayback,
+  ]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -319,12 +457,17 @@ const ProductMediaGallery = ({ product }) => {
       if (cancelled || userPausedRef.current) return;
 
       if (!video.paused) {
+        shouldBePlayingRef.current = true;
         setIsVideoPlaying(true);
         clearVideoBuffering();
         return;
       }
 
-      markVideoBuffering();
+      shouldBePlayingRef.current = true;
+
+      if (!hasComfortableBuffer(video) && video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        markVideoBuffering();
+      }
 
       try {
         video.muted = isMuted;
@@ -335,6 +478,7 @@ const ProductMediaGallery = ({ product }) => {
         }
       } catch {
         if (!cancelled) {
+          shouldBePlayingRef.current = false;
           setIsVideoPlaying(false);
           clearVideoBuffering();
         }
@@ -459,7 +603,9 @@ const ProductMediaGallery = ({ product }) => {
     setIsLightboxOpen(false);
     videoRef.current?.pause();
     userPausedRef.current = false;
+    shouldBePlayingRef.current = false;
     setIsUserPaused(false);
+    clearVideoBuffering();
     setSelectedMediaIndex(index);
     setIsVideoPlaying(false);
   };
@@ -478,7 +624,11 @@ const ProductMediaGallery = ({ product }) => {
 
     userPausedRef.current = false;
     setIsUserPaused(false);
-    markVideoBuffering();
+    shouldBePlayingRef.current = true;
+
+    if (!hasComfortableBuffer(video) && video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+      markVideoBuffering();
+    }
 
     if (video.ended) {
       video.currentTime = 0;
@@ -502,6 +652,7 @@ const ProductMediaGallery = ({ product }) => {
 
       video.muted = isMuted;
       await video.play();
+      shouldBePlayingRef.current = true;
       setIsVideoPlaying(true);
       clearVideoBuffering();
     } catch {
@@ -510,13 +661,16 @@ const ProductMediaGallery = ({ product }) => {
           video.muted = true;
           setIsMuted(true);
           await video.play();
+          shouldBePlayingRef.current = true;
           setIsVideoPlaying(true);
           clearVideoBuffering();
         } catch {
+          shouldBePlayingRef.current = false;
           setIsVideoPlaying(false);
           clearVideoBuffering();
         }
       } else {
+        shouldBePlayingRef.current = false;
         setIsVideoPlaying(false);
         clearVideoBuffering();
       }
@@ -532,6 +686,7 @@ const ProductMediaGallery = ({ product }) => {
 
     if (!video.paused) {
       userPausedRef.current = true;
+      shouldBePlayingRef.current = false;
       setIsUserPaused(true);
       clearVideoBuffering();
       video.pause();
@@ -747,8 +902,10 @@ const ProductMediaGallery = ({ product }) => {
             onEnded={() => {
               if (immersiveTransitionRef.current) return;
               userPausedRef.current = true;
+              shouldBePlayingRef.current = false;
               setIsUserPaused(true);
               setIsVideoPlaying(false);
+              clearVideoBuffering();
             }}
             onError={() => {
               setIsVideoPlaying(false);
@@ -757,7 +914,7 @@ const ProductMediaGallery = ({ product }) => {
             {...getProtectedVideoProps()}
           />
 
-          {isVideoBuffering && (
+          {isVideoBuffering && !(videoRef.current && hasComfortableBuffer(videoRef.current)) && (
             <div className={bufferingOverlayClass} aria-live="polite" aria-busy="true" aria-label="Loading video">
               <FourCircleLoader />
             </div>
