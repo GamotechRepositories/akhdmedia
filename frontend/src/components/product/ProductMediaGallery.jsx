@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
 import VideoThumbnail from '../ui/VideoThumbnail';
-import { useInView } from '../../hooks/useInView';
+import FourCircleLoader from '../ui/FourCircleLoader';
 import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
@@ -43,18 +43,30 @@ const getDefaultMediaIndex = (items) => {
   return videoIndex === -1 ? 0 : videoIndex;
 };
 
+const IMMERSIVE_RESUME_DELAYS_MS = [0, 50, 150, 300, 600];
+
+const scheduleImmersiveResume = (callback) => {
+  IMMERSIVE_RESUME_DELAYS_MS.forEach((delay) => {
+    window.setTimeout(callback, delay);
+  });
+};
+
 const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
-  const resumeAfterImmersiveRef = useRef(false);
-  const pendingImmersiveRef = useRef(false);
-  const { ref: galleryRef, isInView } = useInView('120px 0px 120px 0px');
+  const loadedVideoSrcRef = useRef('');
+  const isFullscreenRef = useRef(false);
+  const immersiveTransitionRef = useRef(false);
+  const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
+  const userPausedRef = useRef(false);
   const mediaItems = buildProductMediaItems(product);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(() =>
     getDefaultMediaIndex(buildProductMediaItems(product)),
   );
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(false);
+  const [isUserPaused, setIsUserPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -66,8 +78,95 @@ const ProductMediaGallery = ({ product }) => {
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
   const isImmersive = isLightboxOpen || isFullscreen || isNativeVideoFullscreen;
-  const shouldPlayVideo = isInView || isImmersive;
-  const shouldBufferVideo = shouldPlayVideo;
+  const shouldBufferVideo = isVideoSelected;
+  const controlButtonClass = `${videoControlButtonClass} ${isImmersive ? '!z-[120]' : ''}`;
+  const playOverlayClass = isImmersive
+    ? 'absolute inset-0 z-[110] flex items-center justify-center bg-black/25 transition-colors hover:bg-black/35 pointer-events-auto'
+    : 'absolute inset-0 z-10 flex items-center justify-center bg-black/25 transition-colors hover:bg-black/35 pointer-events-auto';
+  const bufferingOverlayClass = isImmersive
+    ? 'absolute inset-0 z-[105] flex flex-col items-center justify-center pointer-events-none'
+    : 'absolute inset-0 z-[15] flex flex-col items-center justify-center pointer-events-none';
+
+  const markVideoBuffering = useCallback(() => {
+    if (!userPausedRef.current) {
+      setIsVideoBuffering(true);
+    }
+  }, []);
+
+  const clearVideoBuffering = useCallback(() => {
+    setIsVideoBuffering(false);
+  }, []);
+
+  const capturePlaybackSnapshot = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    playbackSnapshotRef.current = {
+      time: video.currentTime || 0,
+      wasPlaying: !video.paused && !video.ended,
+    };
+  }, []);
+
+  const restorePlaybackAfterImmersive = useCallback(
+    async ({ fromUserGesture = false } = {}) => {
+      const video = videoRef.current;
+      if (!video || !isVideoSelected || userPausedRef.current) return;
+
+      const { time, wasPlaying } = playbackSnapshotRef.current;
+      const shouldResume = wasPlaying || fromUserGesture;
+      if (!shouldResume) return;
+
+      immersiveTransitionRef.current = true;
+
+      try {
+        if (Number.isFinite(time) && time > 0) {
+          const duration = Number.isFinite(video.duration) ? video.duration : 0;
+          const safeTime = duration > 0 ? Math.min(time, Math.max(0, duration - 0.05)) : time;
+          if (Math.abs(video.currentTime - safeTime) > 0.2) {
+            video.currentTime = safeTime;
+          }
+        }
+
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          await Promise.race([
+            new Promise((resolve) => {
+              if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                resolve();
+                return;
+              }
+              video.addEventListener('canplay', resolve, { once: true });
+            }),
+            new Promise((resolve) => {
+              window.setTimeout(resolve, 2000);
+            }),
+          ]);
+        }
+
+        video.muted = isMuted;
+        await video.play();
+        setIsVideoPlaying(true);
+      } catch {
+        setIsVideoPlaying(!video.paused);
+      } finally {
+        window.setTimeout(() => {
+          immersiveTransitionRef.current = false;
+        }, 400);
+      }
+    },
+    [isVideoSelected, isMuted],
+  );
+
+  const beginImmersiveTransition = useCallback(() => {
+    capturePlaybackSnapshot();
+    immersiveTransitionRef.current = true;
+  }, [capturePlaybackSnapshot]);
+
+  const finishImmersiveTransition = useCallback(() => {
+    immersiveTransitionRef.current = false;
+    scheduleImmersiveResume(() => {
+      restorePlaybackAfterImmersive();
+    });
+  }, [restorePlaybackAfterImmersive]);
 
   useEffect(() => {
     if (!isVideoSelected || !selectedItem?.src) return undefined;
@@ -84,8 +183,12 @@ const ProductMediaGallery = ({ product }) => {
   }, [isVideoSelected, selectedItem?.src, product?.id]);
 
   useEffect(() => {
+    loadedVideoSrcRef.current = '';
     setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
     setIsVideoPlaying(false);
+    setIsVideoBuffering(false);
+    setIsUserPaused(false);
+    userPausedRef.current = false;
     setIsMuted(true);
     setIsLightboxOpen(false);
     setVideoCurrentTime(0);
@@ -95,10 +198,15 @@ const ProductMediaGallery = ({ product }) => {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isVideoSelected) return;
+    const nextSrc = selectedItem?.src || '';
+    if (!video || !isVideoSelected || !nextSrc) return;
 
+    if (loadedVideoSrcRef.current === nextSrc) return;
+
+    loadedVideoSrcRef.current = nextSrc;
     video.load();
     setIsVideoPlaying(false);
+    setIsVideoBuffering(true);
     setVideoCurrentTime(0);
     setVideoDuration(0);
     setVideoBufferedEnd(0);
@@ -134,38 +242,73 @@ const ProductMediaGallery = ({ product }) => {
     const video = videoRef.current;
     if (!video || !isVideoSelected) return undefined;
 
+    const onWaiting = () => markVideoBuffering();
+    const onStalled = () => markVideoBuffering();
+    const onSeeking = () => {
+      if (!video.paused) markVideoBuffering();
+    };
+    const onPlaying = () => clearVideoBuffering();
+    const onPause = () => {
+      if (!immersiveTransitionRef.current) clearVideoBuffering();
+    };
+    const onEnded = () => clearVideoBuffering();
+    const onError = () => clearVideoBuffering();
+
+    video.addEventListener('waiting', onWaiting);
+    video.addEventListener('stalled', onStalled);
+    video.addEventListener('seeking', onSeeking);
+    video.addEventListener('playing', onPlaying);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('ended', onEnded);
+    video.addEventListener('error', onError);
+
+    return () => {
+      video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('stalled', onStalled);
+      video.removeEventListener('seeking', onSeeking);
+      video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('pause', onPause);
+      video.removeEventListener('ended', onEnded);
+      video.removeEventListener('error', onError);
+    };
+  }, [isVideoSelected, selectedItem?.src, product?.id, markVideoBuffering, clearVideoBuffering]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideoSelected || userPausedRef.current) return undefined;
+
     let cancelled = false;
 
     const startPlayback = async () => {
-      if (cancelled || !shouldPlayVideo) return;
+      if (cancelled || userPausedRef.current) return;
 
       if (!video.paused) {
         setIsVideoPlaying(true);
+        clearVideoBuffering();
         return;
       }
+
+      markVideoBuffering();
 
       try {
         video.muted = isMuted;
         await video.play();
-        if (!cancelled) setIsVideoPlaying(true);
+        if (!cancelled) {
+          setIsVideoPlaying(true);
+          clearVideoBuffering();
+        }
       } catch {
-        if (!cancelled) setIsVideoPlaying(false);
+        if (!cancelled) {
+          setIsVideoPlaying(false);
+          clearVideoBuffering();
+        }
       }
     };
-
-    if (!shouldPlayVideo) {
-      if (pendingImmersiveRef.current) return undefined;
-
-      if (!video.paused) {
-        video.pause();
-        setIsVideoPlaying(false);
-      }
-      return undefined;
-    }
 
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       startPlayback();
     } else {
+      markVideoBuffering();
       video.addEventListener('canplay', startPlayback, { once: true });
     }
 
@@ -173,41 +316,17 @@ const ProductMediaGallery = ({ product }) => {
       cancelled = true;
       video.removeEventListener('canplay', startPlayback);
     };
-  }, [
-    shouldPlayVideo,
-    isVideoSelected,
-    selectedItem?.src,
-    product?.id,
-    isMuted,
-  ]);
-
-  const resumePlaybackIfNeeded = () => {
-    const video = videoRef.current;
-    const frame = frameRef.current;
-    if (!video || !isVideoSelected || !video.paused) return;
-
-    const inDocumentFullscreen = getFullscreenElement() === frame;
-    const shouldResume =
-      isInView || isLightboxOpen || inDocumentFullscreen || isVideoNativeFullscreen(video);
-
-    if (!shouldResume) return;
-
-    video.muted = isMuted;
-    video.play()
-      .then(() => setIsVideoPlaying(true))
-      .catch(() => setIsVideoPlaying(false));
-  };
+  }, [isVideoSelected, selectedItem?.src, product?.id, isMuted, isUserPaused, markVideoBuffering, clearVideoBuffering]);
 
   useEffect(() => {
     const syncFullscreen = () => {
-      const wasFullscreen = isFullscreen;
+      const wasFullscreen = isFullscreenRef.current;
       const nowFullscreen = getFullscreenElement() === frameRef.current;
+      isFullscreenRef.current = nowFullscreen;
       setIsFullscreen(nowFullscreen);
 
-      if (resumeAfterImmersiveRef.current || nowFullscreen !== wasFullscreen) {
-        resumeAfterImmersiveRef.current = false;
-        pendingImmersiveRef.current = false;
-        resumePlaybackIfNeeded();
+      if (nowFullscreen !== wasFullscreen) {
+        finishImmersiveTransition();
       }
     };
 
@@ -218,7 +337,7 @@ const ProductMediaGallery = ({ product }) => {
       document.removeEventListener('fullscreenchange', syncFullscreen);
       document.removeEventListener('webkitfullscreenchange', syncFullscreen);
     };
-  }, [isFullscreen, isInView, isLightboxOpen, isVideoSelected, isMuted]);
+  }, [finishImmersiveTransition]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -229,22 +348,21 @@ const ProductMediaGallery = ({ product }) => {
   useEffect(() => {
     if (!isLightboxOpen || !isVideoSelected) return undefined;
 
-    resumeAfterImmersiveRef.current = false;
-    pendingImmersiveRef.current = false;
-    const timer = window.setTimeout(resumePlaybackIfNeeded, 0);
+    finishImmersiveTransition();
 
-    return () => window.clearTimeout(timer);
-  }, [isLightboxOpen, isVideoSelected, isMuted, isInView]);
+    return undefined;
+  }, [isLightboxOpen, isVideoSelected, finishImmersiveTransition]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !isVideoSelected) return undefined;
 
     const syncNativeFullscreen = () => {
-      setIsNativeVideoFullscreen(isVideoNativeFullscreen(video));
-      resumeAfterImmersiveRef.current = false;
-      pendingImmersiveRef.current = false;
-      resumePlaybackIfNeeded();
+      const nowNative = isVideoNativeFullscreen(video);
+      setIsNativeVideoFullscreen(nowNative);
+      if (nowNative) {
+        finishImmersiveTransition();
+      }
     };
 
     video.addEventListener('webkitbeginfullscreen', syncNativeFullscreen);
@@ -254,7 +372,7 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('webkitbeginfullscreen', syncNativeFullscreen);
       video.removeEventListener('webkitendfullscreen', syncNativeFullscreen);
     };
-  }, [isVideoSelected, selectedItem?.src]);
+  }, [isVideoSelected, selectedItem?.src, finishImmersiveTransition]);
 
   useEffect(() => {
     if (!isLightboxOpen) return undefined;
@@ -304,6 +422,8 @@ const ProductMediaGallery = ({ product }) => {
   const selectMedia = (index) => {
     setIsLightboxOpen(false);
     videoRef.current?.pause();
+    userPausedRef.current = false;
+    setIsUserPaused(false);
     setSelectedMediaIndex(index);
     setIsVideoPlaying(false);
   };
@@ -316,25 +436,73 @@ const ProductMediaGallery = ({ product }) => {
     selectMedia(selectedMediaIndex === mediaItems.length - 1 ? 0 : selectedMediaIndex + 1);
   };
 
-  const toggleVideoPlay = async () => {
+  const playVideo = async ({ fromUserGesture = false } = {}) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    userPausedRef.current = false;
+    setIsUserPaused(false);
+    markVideoBuffering();
+
+    if (video.ended) {
+      video.currentTime = 0;
+    }
+
+    try {
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        await Promise.race([
+          new Promise((resolve) => {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              resolve();
+              return;
+            }
+            video.addEventListener('canplay', resolve, { once: true });
+          }),
+          new Promise((resolve) => {
+            window.setTimeout(resolve, 2000);
+          }),
+        ]);
+      }
+
+      video.muted = isMuted;
+      await video.play();
+      setIsVideoPlaying(true);
+      clearVideoBuffering();
+    } catch {
+      if (fromUserGesture) {
+        try {
+          video.muted = true;
+          setIsMuted(true);
+          await video.play();
+          setIsVideoPlaying(true);
+          clearVideoBuffering();
+        } catch {
+          setIsVideoPlaying(false);
+          clearVideoBuffering();
+        }
+      } else {
+        setIsVideoPlaying(false);
+        clearVideoBuffering();
+      }
+    }
+  };
+
+  const toggleVideoPlay = async (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
     const video = videoRef.current;
     if (!video) return;
 
     if (!video.paused) {
+      userPausedRef.current = true;
+      setIsUserPaused(true);
+      clearVideoBuffering();
       video.pause();
       return;
     }
 
-    try {
-      await video.play();
-    } catch {
-      try {
-        video.muted = true;
-        await video.play();
-      } catch {
-        setIsVideoPlaying(false);
-      }
-    }
+    await playVideo({ fromUserGesture: true });
   };
 
   const toggleVideoMute = () => {
@@ -438,36 +606,47 @@ const ProductMediaGallery = ({ product }) => {
   };
 
   const openLightbox = () => {
-    const video = videoRef.current;
-    pendingImmersiveRef.current = true;
-    if (video && !video.paused) {
-      resumeAfterImmersiveRef.current = true;
-    }
+    beginImmersiveTransition();
     setIsLightboxOpen(true);
   };
 
-  const toggleFullscreen = async () => {
+  const toggleFullscreen = async (event) => {
+    event?.stopPropagation?.();
+
     const frame = frameRef.current;
     const video = videoRef.current;
+    const inDocumentFullscreen = Boolean(frame && getFullscreenElement() === frame);
+    const inNativeVideoFullscreen = Boolean(video && isVideoNativeFullscreen(video));
 
-    if (isImmersive) {
-      if (isLightboxOpen) {
-        closeLightbox();
-        return;
+    if (inDocumentFullscreen) {
+      try {
+        await exitDocumentFullscreen();
+      } catch {
+        // ignore
       }
-
-      if (getFullscreenElement()) {
-        try {
-          await exitDocumentFullscreen();
-        } catch {
-          // ignore
-        }
-        return;
-      }
-
-      exitVideoFullscreen(video);
+      isFullscreenRef.current = false;
+      setIsFullscreen(false);
       return;
     }
+
+    if (isLightboxOpen) {
+      closeLightbox();
+      return;
+    }
+
+    if (inNativeVideoFullscreen) {
+      exitVideoFullscreen(video);
+      setIsNativeVideoFullscreen(false);
+      return;
+    }
+
+    if (isFullscreen || isNativeVideoFullscreen) {
+      isFullscreenRef.current = false;
+      setIsFullscreen(false);
+      setIsNativeVideoFullscreen(false);
+    }
+
+    beginImmersiveTransition();
 
     if (isIOSDevice()) {
       openLightbox();
@@ -476,14 +655,11 @@ const ProductMediaGallery = ({ product }) => {
 
     if (frame && supportsElementFullscreen()) {
       try {
-        if (video && !video.paused) {
-          resumeAfterImmersiveRef.current = true;
-        }
-        pendingImmersiveRef.current = true;
         await requestElementFullscreen(frame);
+        finishImmersiveTransition();
         return;
       } catch {
-        // fall through to lightbox
+        immersiveTransitionRef.current = false;
       }
     }
 
@@ -491,7 +667,6 @@ const ProductMediaGallery = ({ product }) => {
   };
 
   const closeLightbox = () => {
-    pendingImmersiveRef.current = false;
     setIsLightboxOpen(false);
   };
 
@@ -503,26 +678,41 @@ const ProductMediaGallery = ({ product }) => {
         <div className="relative flex h-full w-full items-center justify-center">
           <video
             ref={videoRef}
-            key={selectedItem.src}
             src={selectedItem.src}
             poster={selectedItem.poster}
             className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
-            loop
             playsInline
             muted={isMuted}
             preload={shouldBufferVideo ? 'auto' : 'none'}
             onPlay={() => setIsVideoPlaying(true)}
-            onPause={() => setIsVideoPlaying(false)}
-            onEnded={() => setIsVideoPlaying(false)}
-            onError={() => setIsVideoPlaying(false)}
+            onPause={() => {
+              if (immersiveTransitionRef.current) return;
+              setIsVideoPlaying(false);
+            }}
+            onEnded={() => {
+              if (immersiveTransitionRef.current) return;
+              userPausedRef.current = true;
+              setIsUserPaused(true);
+              setIsVideoPlaying(false);
+            }}
+            onError={() => {
+              setIsVideoPlaying(false);
+              clearVideoBuffering();
+            }}
             {...getProtectedVideoProps()}
           />
 
-          {!isVideoPlaying && (
+          {isVideoBuffering && (
+            <div className={bufferingOverlayClass} aria-live="polite" aria-busy="true" aria-label="Loading video">
+              <FourCircleLoader />
+            </div>
+          )}
+
+          {!isVideoPlaying && !isVideoBuffering && (
             <button
               type="button"
               onClick={toggleVideoPlay}
-              className="absolute inset-0 z-10 flex items-center justify-center bg-black/25 transition-colors hover:bg-black/35"
+              className={playOverlayClass}
               aria-label="Play demo video"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 shadow-xl sm:h-16 sm:w-16">
@@ -537,7 +727,7 @@ const ProductMediaGallery = ({ product }) => {
             <button
               type="button"
               onClick={toggleVideoPlay}
-              className={videoControlButtonClass}
+              className={controlButtonClass}
               aria-label={isVideoPlaying ? 'Pause demo video' : 'Play demo video'}
               title={isVideoPlaying ? 'Pause' : 'Play'}
             >
@@ -554,7 +744,7 @@ const ProductMediaGallery = ({ product }) => {
             <button
               type="button"
               onClick={toggleVideoMute}
-              className={videoControlButtonClass}
+              className={controlButtonClass}
               aria-label={isMuted ? 'Unmute demo video' : 'Mute demo video'}
               title={isMuted ? 'Unmute' : 'Mute'}
             >
@@ -580,9 +770,9 @@ const ProductMediaGallery = ({ product }) => {
   );
 
   const renderMediaChrome = (compact = false) => (
-    <>
+    <div className="pointer-events-none absolute inset-0 z-30">
       <div
-        className={`absolute z-10 rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ${
+        className={`pointer-events-auto absolute rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ${
           compact ? 'left-3 top-3' : 'left-4 top-4'
         } ${isVideoSelected ? '' : 'uppercase'}`}
       >
@@ -592,7 +782,7 @@ const ProductMediaGallery = ({ product }) => {
       <button
         type="button"
         onClick={toggleFullscreen}
-        className={`absolute z-20 ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass}`}
+        className={`pointer-events-auto absolute ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass} ${isImmersive ? '!z-[120]' : 'z-30'}`}
         aria-label={isImmersive ? 'Exit fullscreen' : 'View fullscreen'}
         title={isImmersive ? 'Exit fullscreen' : 'Fullscreen'}
       >
@@ -604,7 +794,7 @@ const ProductMediaGallery = ({ product }) => {
       </button>
 
       {mediaItems.length > 1 && (
-        <div className={`absolute z-20 flex gap-1.5 ${compact ? 'bottom-3 right-3' : 'bottom-4 right-4'}`}>
+        <div className={`pointer-events-auto absolute flex gap-1.5 ${compact ? 'bottom-3 right-3' : 'bottom-4 right-4'}`}>
           <button
             type="button"
             onClick={handlePrevMedia}
@@ -627,14 +817,14 @@ const ProductMediaGallery = ({ product }) => {
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 
   const inlineFrameClassName =
     'aspect-[10/9] w-full min-h-[260px] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[340px] sm:rounded-2xl lg:min-h-[420px] lg:aspect-[4/3]';
 
   return (
-    <div ref={galleryRef} className="w-full min-w-0 max-w-full overflow-x-hidden">
+    <div className="w-full min-w-0 max-w-full overflow-x-hidden">
       {isLightboxOpen ? (
         <div className={`${inlineFrameClassName} pointer-events-none invisible`} aria-hidden />
       ) : null}
