@@ -11,7 +11,7 @@ const DEFAULT_SITE_CONTENT = {
   tickerItems: TICKER_ITEMS,
   browseSection: {
     eyebrow: 'Shot for post-production',
-    title: 'Browse by Footage Type',
+    title: 'Browse by Editorial Footage Type',
   },
   heroSlides: [],
   showActorsSection: true,

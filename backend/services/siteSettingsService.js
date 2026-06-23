@@ -12,7 +12,7 @@ export const DEFAULT_SITE_SETTINGS = {
   ],
   browseSection: {
     eyebrow: 'Shot for post-production',
-    title: 'Browse by Footage Type',
+    title: 'Browse by Editorial Footage Type',
   },
   heroSlides: [],
   showActorsSection: true,

@@ -158,7 +158,7 @@ const CategoryForm = () => {
     setError('')
 
     if (form.showInBrowseSection && !form.coverImage.trim()) {
-      setError('Cover image is required when showing in Browse by Footage Type.')
+      setError('Cover image is required when showing in Browse by Editorial Footage Type.')
       setSaving(false)
       return
     }
@@ -366,7 +366,7 @@ const CategoryForm = () => {
             />
             <span>
               <span className="block font-semibold text-slate-900">
-                Show in Browse by Footage Type?
+                Show in Browse by Editorial Footage Type?
               </span>
               <span className="mt-1 block text-slate-500">
                 If yes, this category card will appear on the homepage using the nav label from
