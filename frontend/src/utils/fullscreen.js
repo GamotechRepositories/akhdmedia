@@ -51,8 +51,14 @@ export const isVideoNativeFullscreen = (video) =>
 export const requestElementFullscreen = async (element) => {
   if (!element) return;
 
+  const options = { navigationUI: 'hide' };
+
   if (element.requestFullscreen) {
-    await element.requestFullscreen();
+    try {
+      await element.requestFullscreen(options);
+    } catch {
+      await element.requestFullscreen();
+    }
     return;
   }
 

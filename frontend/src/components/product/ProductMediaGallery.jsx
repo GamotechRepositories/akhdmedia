@@ -9,10 +9,11 @@ import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
   getFullscreenElement,
+  isIOSDevice,
   isVideoNativeFullscreen,
   requestElementFullscreen,
+  requestVideoFullscreen,
   supportsElementFullscreen,
-  prefersOverlayFullscreen,
 } from '../../utils/fullscreen';
 import {
   IconMaximize,
@@ -229,43 +230,55 @@ const ProductMediaGallery = ({ product }) => {
   const enterFullscreen = useCallback(
     async ({ fromUserGesture = true } = {}) => {
       const frame = frameRef.current;
+      const video = videoRef.current;
       if (!frame) return;
 
       const snapshot = captureSnapshot();
       inTransitionRef.current = true;
       cancelPendingPlay();
 
-      // Hard-reset transition flag after max 1.5s to avoid stuck state
       window.setTimeout(() => {
         inTransitionRef.current = false;
       }, 1500);
 
-      if (prefersOverlayFullscreen()) {
-        setIsLightboxOpen(true);
-        inTransitionRef.current = false;
-        restoreAfterImmersive(snapshot, { fromUserGesture });
-        return;
-      }
-
-      if (supportsElementFullscreen()) {
+      // iOS Safari — native video fullscreen hides browser chrome
+      if (isIOSDevice() && video && isVideoSelected) {
         try {
-          await requestElementFullscreen(frame);
-          isFullscreenRef.current = true;
-          setIsFullscreen(true);
-          inTransitionRef.current = false;
-          restoreAfterImmersive(snapshot, { fromUserGesture });
-          return;
+          const entered = await requestVideoFullscreen(video);
+          if (entered) {
+            setIsNativeVideoFullscreen(true);
+            inTransitionRef.current = false;
+            restoreAfterImmersive(snapshot, { fromUserGesture });
+            return;
+          }
         } catch {
-          inTransitionRef.current = false;
+          // fall through
         }
       }
 
-      // Fallback: overlay lightbox
+      // Android / desktop — Fullscreen API hides browser navigation bar
+      if (supportsElementFullscreen()) {
+        const targets = [frame, video].filter(Boolean);
+        for (const target of targets) {
+          try {
+            await requestElementFullscreen(target);
+            isFullscreenRef.current = true;
+            setIsFullscreen(true);
+            inTransitionRef.current = false;
+            restoreAfterImmersive(snapshot, { fromUserGesture });
+            return;
+          } catch {
+            // try next target
+          }
+        }
+      }
+
+      // Last resort — CSS overlay (browser chrome stays visible)
       setIsLightboxOpen(true);
       inTransitionRef.current = false;
       restoreAfterImmersive(snapshot, { fromUserGesture });
     },
-    [captureSnapshot, cancelPendingPlay, restoreAfterImmersive],
+    [captureSnapshot, cancelPendingPlay, restoreAfterImmersive, isVideoSelected],
   );
 
   const exitFullscreen = useCallback(async () => {
@@ -278,10 +291,11 @@ const ProductMediaGallery = ({ product }) => {
       inTransitionRef.current = false;
     }, 1500);
 
-    const frame = frameRef.current;
     const video = videoRef.current;
 
-    if (frame && getFullscreenElement() === frame) {
+    const fsEl = getFullscreenElement();
+
+    if (fsEl) {
       try {
         await exitDocumentFullscreen();
       } catch {
@@ -304,7 +318,11 @@ const ProductMediaGallery = ({ product }) => {
       event?.stopPropagation?.();
       const isCurrentlyImmersive =
         isFullscreen || isLightboxOpen || isNativeVideoFullscreen ||
-        Boolean(frameRef.current && getFullscreenElement() === frameRef.current);
+        Boolean(
+          frameRef.current &&
+            (getFullscreenElement() === frameRef.current ||
+              getFullscreenElement() === videoRef.current),
+        );
 
       if (isCurrentlyImmersive) {
         await exitFullscreen();
@@ -320,7 +338,11 @@ const ProductMediaGallery = ({ product }) => {
   useEffect(() => {
     const onFullscreenChange = () => {
       const frame = frameRef.current;
-      const nowFullscreen = Boolean(frame && getFullscreenElement() === frame);
+      const video = videoRef.current;
+      const fsEl = getFullscreenElement();
+      const nowFullscreen = Boolean(
+        (frame && fsEl === frame) || (video && fsEl === video),
+      );
       const wasFullscreen = isFullscreenRef.current;
 
       isFullscreenRef.current = nowFullscreen;
@@ -723,7 +745,7 @@ const ProductMediaGallery = ({ product }) => {
             </div>
           )}
 
-          {!isVideoPlaying && !isVideoBuffering && (
+          {!isVideoPlaying && !isVideoBuffering && !isImmersive && (
             <button
               type="button"
               onClick={toggleVideoPlay}
@@ -738,35 +760,36 @@ const ProductMediaGallery = ({ product }) => {
             </button>
           )}
 
-          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleVideoPlay}
-              className={controlButtonClass}
-              aria-label={isVideoPlaying ? 'Pause demo video' : 'Play demo video'}
-              title={isVideoPlaying ? 'Pause' : 'Play'}
-            >
-              {isVideoPlaying ? (
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              ) : (
-                <svg className="ml-0.5 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={toggleVideoMute}
-              className={controlButtonClass}
-              aria-label={isMuted ? 'Unmute demo video' : 'Mute demo video'}
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <IconVolumeOff className="h-4 w-4" /> : <IconVolumeOn className="h-4 w-4" />}
-            </button>
-            {isLightboxOpen ? renderVideoProgressBar('overlay') : null}
-          </div>
+          {!isImmersive && (
+            <div className="media-controls-bar absolute bottom-3 left-3 z-20 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleVideoPlay}
+                className={controlButtonClass}
+                aria-label={isVideoPlaying ? 'Pause demo video' : 'Play demo video'}
+                title={isVideoPlaying ? 'Pause' : 'Play'}
+              >
+                {isVideoPlaying ? (
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                  </svg>
+                ) : (
+                  <svg className="ml-0.5 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={toggleVideoMute}
+                className={controlButtonClass}
+                aria-label={isMuted ? 'Unmute demo video' : 'Mute demo video'}
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted ? <IconVolumeOff className="h-4 w-4" /> : <IconVolumeOn className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
@@ -808,7 +831,7 @@ const ProductMediaGallery = ({ product }) => {
         )}
       </button>
 
-      {mediaItems.length > 1 && (
+      {mediaItems.length > 1 && !isImmersive && (
         <div className={`pointer-events-auto absolute flex gap-1.5 ${compact ? 'bottom-3 right-3' : 'bottom-4 right-4'}`}>
           <button
             type="button"
@@ -868,7 +891,7 @@ const ProductMediaGallery = ({ product }) => {
         ? createPortal(mediaShell, document.body)
         : mediaShell}
 
-      {isVideoSelected && !isLightboxOpen && renderVideoProgressBar('inline')}
+      {isVideoSelected && !isImmersive && renderVideoProgressBar('inline')}
 
       {mediaItems.length > 1 && (
         <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5 ${isVideoSelected ? 'mt-2' : 'mt-3'}`}>

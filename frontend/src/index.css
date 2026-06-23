@@ -176,6 +176,13 @@ body {
   background-size: clamp(240px, 24vw, 420px) clamp(140px, 14vw, 240px);
 }
 
+/* Hide custom controls in true fullscreen — only exit button stays visible */
+.protected-media-shell:fullscreen .media-controls-bar,
+.protected-media-shell:-webkit-full-screen .media-controls-bar,
+.media-lightbox .media-controls-bar {
+  display: none !important;
+}
+
 .media-lightbox {
   position: fixed;
   inset: 0;
