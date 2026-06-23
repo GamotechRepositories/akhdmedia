@@ -37,6 +37,21 @@ body {
   background: linear-gradient(180deg, rgba(148, 163, 184, 0.9), rgba(100, 116, 139, 1));
 }
 
+.admin-table-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 639px) {
+  .admin-mobile-stack-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-mobile-stack-actions > * {
+    width: 100%;
+  }
+}
+
 .no-number-spinner {
   appearance: textfield;
   -moz-appearance: textfield;

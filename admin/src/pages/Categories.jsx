@@ -3,7 +3,28 @@ import { Link } from 'react-router-dom'
 import { deleteCategory, fetchCategories } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
-import { primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
+import AdminPageHeader from '../components/ui/AdminPageHeader'
+import AdminPagination from '../components/ui/AdminPagination'
+import AdminTable from '../components/ui/AdminTable'
+import {
+  actionDeleteClass,
+  actionEditClass,
+  actionGroupClass,
+  primaryBtnClass,
+  tableBodyClass,
+  tableEmptyClass,
+  tableHeadClass,
+  tableRowClass,
+  tdClass,
+  tdHideMd,
+  tdHideSm,
+  tdPrimaryClass,
+  tdRightClass,
+  thClass,
+  thHideMd,
+  thHideSm,
+  thRightClass,
+} from '../components/ui/adminUi'
 
 const PAGE_SIZE = 50
 
@@ -53,101 +74,78 @@ const Categories = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Link to="/categories/new" className={primaryBtnClass}>
-          Add Category
-        </Link>
-      </div>
+      <AdminPageHeader
+        eyebrow="Catalog"
+        title="Categories"
+        description="Manage navigation groups and subcategories for the storefront."
+        action={
+          <Link to="/categories/new" className={primaryBtnClass}>
+            Add Category
+          </Link>
+        }
+      />
 
-      <div className={tableWrapClass}>
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <AdminTable>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th className={thClass}>Name</th>
+            <th className={thHideSm}>Home browse</th>
+            <th className={thHideMd}>Slug</th>
+            <th className={thHideSm}>Subcategories</th>
+            <th className={thClass}>Status</th>
+            <th className={thRightClass}>Actions</th>
+          </tr>
+        </thead>
+        <tbody className={tableBodyClass}>
+          {loading ? (
             <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Home browse</th>
-              <th className="px-4 py-3">Slug</th>
-              <th className="px-4 py-3">Subcategories</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <td colSpan={6} className={tableEmptyClass}>
+                Loading categories...
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  Loading categories...
+          ) : categories.length === 0 ? (
+            <tr>
+              <td colSpan={6} className={tableEmptyClass}>
+                No categories found.
+              </td>
+            </tr>
+          ) : (
+            paginatedCategories.map((category) => (
+              <tr key={category._id} className={tableRowClass}>
+                <td className={tdPrimaryClass}>
+                  <p>{category.navLabel}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 md:hidden">{category.slug}</p>
                 </td>
-              </tr>
-            ) : categories.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  No categories found.
+                <td className={tdHideSm}>{category.showInBrowseSection ? 'Yes' : 'No'}</td>
+                <td className={`${tdHideMd} text-slate-600`}>{category.slug}</td>
+                <td className={`${tdHideSm} text-slate-600`}>{category.subCategories?.length || 0}</td>
+                <td className={tdClass}>
+                  <StatusBadge active={category.isActive} />
                 </td>
-              </tr>
-            ) : (
-              paginatedCategories.map((category) => (
-                <tr key={category._id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{category.navLabel}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {category.showInBrowseSection ? 'Yes' : 'No'}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{category.slug}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {category.subCategories?.length || 0}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge active={category.isActive} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      to={`/categories/${category._id}/edit`}
-                      className="mr-3 font-semibold text-slate-900 hover:underline"
-                    >
+                <td className={tdRightClass}>
+                  <div className={actionGroupClass}>
+                    <Link to={`/categories/${category._id}/edit`} className={actionEditClass}>
                       Edit
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(category)}
-                      className="font-semibold text-red-600 hover:underline"
-                    >
+                    <button type="button" onClick={() => handleDelete(category)} className={actionDeleteClass}>
                       Delete
                     </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </AdminTable>
 
       {!loading && categories.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-600">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, categories.length)} of{' '}
-            {categories.length} entries
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="text-sm font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={categories.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       <AdminAlertModal

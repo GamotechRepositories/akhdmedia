@@ -1,19 +1,45 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteActor, fetchActors, fetchSiteContent, updateSiteContent } from '../api/client'
+import { deleteActor, fetchAdminActors, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import StatusBadge from '../components/StatusBadge'
+import AdminPagination from '../components/ui/AdminPagination'
+import AdminTable from '../components/ui/AdminTable'
 import { ADMIN_PERMISSIONS } from '../constants/adminPermissions'
 import { useAuth } from '../context/AuthContext'
-import { cardClass, inputClass, primaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
+import {
+  actionDeleteClass,
+  actionEditClass,
+  actionGroupClass,
+  cardClass,
+  inputClass,
+  primaryBtnClass,
+  tableBodyClass,
+  tableEmptyClass,
+  tableHeadClass,
+  tableRowClass,
+  tdClass,
+  tdHideMd,
+  tdPrimaryClass,
+  tdRightClass,
+  thClass,
+  thHideMd,
+  thRightClass,
+} from '../components/ui/adminUi'
+import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
 
 const PAGE_SIZE = 50
+const actorsLoader = createPaginatedLoader()
 
 const Actors = () => {
   const { hasPermission } = useAuth()
   const canManageHomeContent = hasPermission(ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE)
   const canWriteActors = hasPermission(ADMIN_PERMISSIONS.ACTORS_WRITE)
+  const skipSearchResetRef = useRef(true)
+
   const [actors, setActors] = useState([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -21,35 +47,92 @@ const Actors = () => {
   const [savingVisibility, setSavingVisibility] = useState(false)
   const [visibilityNotice, setVisibilityNotice] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  const loadActors = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const actorsResponse = await fetchActors()
-      setActors(actorsResponse.data)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
+    return () => window.clearTimeout(timer)
+  }, [search])
 
-      if (canManageHomeContent) {
+  useEffect(() => {
+    if (skipSearchResetRef.current) {
+      skipSearchResetRef.current = false
+      return
+    }
+    setCurrentPage(1)
+    actorsLoader.clear()
+  }, [debouncedSearch])
+
+  const loadActors = useCallback(
+    async ({ force = false } = {}) => {
+      const cacheKey = buildPageCacheKey('actors', currentPage, { search: debouncedSearch })
+
+      setLoading(true)
+      setError('')
+
+      try {
+        const result = await actorsLoader.load({
+          cacheKey,
+          force,
+          fetchPage: async () => {
+            const response = await fetchAdminActors({
+              page: currentPage,
+              limit: PAGE_SIZE,
+              search: debouncedSearch,
+            })
+            const payload = response.data?.data || {}
+            return {
+              items: payload.actors || [],
+              totalCount: payload.pagination?.total || 0,
+              totalPages: payload.pagination?.totalPages || 1,
+            }
+          },
+        })
+
+        setActors(result.items)
+        setTotalCount(result.totalCount)
+        setTotalPages(result.totalPages)
+      } catch (err) {
+        setError(err.message)
+        setActors([])
+        setTotalCount(0)
+        setTotalPages(1)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [currentPage, debouncedSearch],
+  )
+
+  useEffect(() => {
+    const loadSiteContent = async () => {
+      if (!canManageHomeContent) return
+      try {
         const siteContentResponse = await fetchSiteContent()
         setShowActorsSection(siteContentResponse.data?.showActorsSection !== false)
+      } catch {
+        // non-blocking
       }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
     }
-  }
+
+    loadSiteContent()
+  }, [canManageHomeContent])
 
   useEffect(() => {
     loadActors()
-  }, [canManageHomeContent])
+  }, [loadActors])
 
   const handleDelete = async (actor) => {
     if (!window.confirm(`Delete actor "${actor.name}"?`)) return
 
     try {
       await deleteActor(actor._id)
-      await loadActors()
+      actorsLoader.clear()
+      if (actors.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1)
+      } else {
+        await loadActors({ force: true })
+      }
     } catch (err) {
       window.alert(err.message)
     }
@@ -76,38 +159,8 @@ const Actors = () => {
     }
   }
 
-  const filteredActors = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return actors
-
-    return actors.filter((actor) => {
-      const haystack = [
-        actor.name,
-        ...(actor.searchKeywords || []),
-        String(actor.sortOrder ?? ''),
-        actor.isActive ? 'active' : 'inactive',
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-
-      return haystack.includes(query)
-    })
-  }, [actors, search])
-
-  const totalPages = Math.max(1, Math.ceil(filteredActors.length / PAGE_SIZE))
-  const paginatedActors = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredActors.slice(start, start + PAGE_SIZE)
-  }, [filteredActors, currentPage])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [search])
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages)
-  }, [currentPage, totalPages])
+  const listStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const listEnd = Math.min(currentPage * PAGE_SIZE, totalCount)
 
   return (
     <div className="space-y-4">
@@ -120,7 +173,7 @@ const Actors = () => {
 
       {canManageHomeContent ? (
         <div className={`${cardClass} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900">Show Actors section on homepage</p>
             <p className="mt-1 text-sm text-slate-500">
               Turn off to hide the full Actors rail from the storefront home page.
@@ -145,127 +198,113 @@ const Actors = () => {
       ) : null}
 
       <div className={`${cardClass} p-4`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-row items-center gap-3">
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search name or keywords..."
-            className={`${inputClass} mt-0 sm:max-w-md`}
+            className={`${inputClass} mt-0 min-w-0 flex-1`}
           />
           {canWriteActors ? (
-            <Link to="/actors/new" className={primaryBtnClass}>
+            <Link to="/actors/new" className={`${primaryBtnClass} !w-auto shrink-0`}>
               Add Actor
             </Link>
           ) : null}
         </div>
+        {!loading && (
+          <p className="mt-2 text-xs text-slate-500">
+            {totalCount === 0
+              ? 'No actors match your search.'
+              : `Showing ${listStart}-${listEnd} of ${totalCount} actors`}
+          </p>
+        )}
       </div>
 
-      <div className={tableWrapClass}>
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <AdminTable>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th className={thClass}>Order</th>
+            <th className={thClass}>Image</th>
+            <th className={thClass}>Name</th>
+            <th className={thHideMd}>Keywords</th>
+            <th className={thClass}>Status</th>
+            <th className={thRightClass}>Actions</th>
+          </tr>
+        </thead>
+        <tbody className={tableBodyClass}>
+          {loading ? (
             <tr>
-              <th className="px-4 py-3">Order (0+)</th>
-              <th className="px-4 py-3">Image</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Search keywords</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <td colSpan={6} className={tableEmptyClass}>
+                Loading actors...
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  Loading actors...
+          ) : actors.length === 0 ? (
+            <tr>
+              <td colSpan={6} className={tableEmptyClass}>
+                {search.trim() ? 'No actors match your search.' : 'No actors yet.'}
+              </td>
+            </tr>
+          ) : (
+            actors.map((actor) => (
+              <tr key={actor._id} className={tableRowClass}>
+                <td className={`${tdClass} font-medium`}>{actor.sortOrder ?? 0}</td>
+                <td className={tdClass}>
+                  {actor.image ? (
+                    <img
+                      src={actor.image}
+                      alt={actor.name}
+                      className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200 sm:h-12 sm:w-12"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-400 sm:h-12 sm:w-12">
+                      —
+                    </div>
+                  )}
+                </td>
+                <td className={tdPrimaryClass}>
+                  <p>{actor.name}</p>
+                  {actor.searchKeywords?.length ? (
+                    <p className="mt-0.5 line-clamp-1 text-xs text-slate-500 md:hidden">
+                      {actor.searchKeywords.join(', ')}
+                    </p>
+                  ) : null}
+                </td>
+                <td className={`${tdHideMd} max-w-xs text-slate-600`}>
+                  {actor.searchKeywords?.length ? actor.searchKeywords.join(', ') : '—'}
+                </td>
+                <td className={tdClass}>
+                  <StatusBadge active={actor.isActive} />
+                </td>
+                <td className={tdRightClass}>
+                  {canWriteActors ? (
+                    <div className={actionGroupClass}>
+                      <Link to={`/actors/${actor._id}/edit`} className={actionEditClass}>
+                        Edit
+                      </Link>
+                      <button type="button" onClick={() => handleDelete(actor)} className={actionDeleteClass}>
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">View only</span>
+                  )}
                 </td>
               </tr>
-            ) : filteredActors.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  {search.trim() ? 'No actors match your search.' : 'No actors yet.'}
-                </td>
-              </tr>
-            ) : (
-              paginatedActors.map((actor) => (
-                <tr key={actor._id}>
-                  <td className="px-4 py-3 font-medium text-slate-700">{actor.sortOrder ?? 0}</td>
-                  <td className="px-4 py-3">
-                    {actor.image ? (
-                      <img
-                        src={actor.image}
-                        alt={actor.name}
-                        className="h-12 w-12 rounded-full object-cover ring-1 ring-slate-200"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-400">
-                        —
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{actor.name}</td>
-                  <td className="max-w-xs px-4 py-3 text-slate-600">
-                    {actor.searchKeywords?.length ? actor.searchKeywords.join(', ') : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge active={actor.isActive} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {canWriteActors ? (
-                      <>
-                        <Link
-                          to={`/actors/${actor._id}/edit`}
-                          className="mr-3 font-semibold text-slate-900 hover:underline"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(actor)}
-                          className="font-semibold text-red-600 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-slate-400">View only</span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          )}
+        </tbody>
+      </AdminTable>
 
-      {!loading && filteredActors.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between text-sm text-slate-600">
-          <p>
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
-            {Math.min(currentPage * PAGE_SIZE, filteredActors.length)} of {filteredActors.length} actors
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-          <p>
-            Page {currentPage} of {totalPages}
-          </p>
-        </div>
+      {!loading && totalCount > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="actors"
+        />
       )}
     </div>
   )

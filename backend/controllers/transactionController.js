@@ -1,9 +1,36 @@
 import asyncHandler from '../utils/asyncHandler.js'
-import { getAdminOrderById, getAllOrders } from '../services/orderService.js'
+import Order from '../models/Order.js'
+import { getAdminOrderById } from '../services/orderService.js'
 import { formatTransactionResponse } from '../utils/formatTransaction.js'
+import { buildPaginationMeta, parsePageLimit } from '../utils/pagination.js'
+import { buildTransactionListFilter } from '../utils/transactionFilters.js'
+import { getTransactionSummary } from '../utils/transactionSummary.js'
 
 export const listAdminTransactions = asyncHandler(async (req, res) => {
-  const orders = await getAllOrders()
+  const pagination = parsePageLimit(req.query)
+
+  if (pagination) {
+    const { page, limit, skip } = pagination
+    const filter = buildTransactionListFilter(req.query)
+
+    const [orders, total, summary] = await Promise.all([
+      Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Order.countDocuments(filter),
+      getTransactionSummary(),
+    ])
+
+    res.json({
+      success: true,
+      data: {
+        transactions: orders.map(formatTransactionResponse),
+        pagination: buildPaginationMeta(page, limit, total),
+        summary,
+      },
+    })
+    return
+  }
+
+  const orders = await Order.find().sort({ createdAt: -1 })
   const transactions = orders.map(formatTransactionResponse)
 
   const successfulTxns = transactions.filter((txn) => txn.transactionStatus === 'successful')

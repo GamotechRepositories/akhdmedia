@@ -18,13 +18,104 @@ const getCategoryMap = async () => {
   return buildCategoryMap(categories)
 }
 
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const buildAdminListFilter = (query = {}) => {
+  const filter = {}
+
+  if (query.mediaType && query.mediaType !== 'all') {
+    filter.mediaType = query.mediaType
+  }
+
+  if (query.categorySlug && query.categorySlug !== 'all') {
+    filter.categorySlug = query.categorySlug
+  }
+
+  if (query.status === 'active') {
+    filter.isActive = true
+  } else if (query.status === 'inactive') {
+    filter.isActive = false
+  }
+
+  const search = String(query.search || '').trim()
+  if (search) {
+    const tokens = search.split(/\s+/).filter(Boolean)
+    const searchFields = [
+      'name',
+      'clipId',
+      'categorySlug',
+      'subCategorySlug',
+      'brand',
+      'description',
+    ]
+
+    const tokenFilters = tokens.map((token) => {
+      const regex = new RegExp(escapeRegex(token), 'i')
+      return {
+        $or: searchFields.map((field) => ({ [field]: regex })),
+      }
+    })
+
+    if (tokenFilters.length) {
+      filter.$and = tokenFilters
+    }
+  }
+
+  return filter
+}
+
+const ensureClipIds = async (products = []) => {
+  for (const product of products) {
+    if (!product.clipId) {
+      product.clipId = await generateClipId()
+      await product.save()
+    }
+  }
+}
+
+const formatProductList = (products, categoryMap, includeDelivery) =>
+  products.map((product) => formatProduct(product, categoryMap, { includeDelivery }))
+
 export const reserveClipId = asyncHandler(async (req, res) => {
   const clipId = await generateClipId()
   res.json({ clipId })
 })
 
 export const getProducts = asyncHandler(async (req, res) => {
-  const filter = req.query.admin === 'true' ? {} : { isActive: true }
+  const isAdmin = req.query.admin === 'true'
+  const page = Number.parseInt(req.query.page, 10)
+  const limit = Number.parseInt(req.query.limit, 10)
+  const usePagination =
+    isAdmin && Number.isFinite(page) && page > 0 && Number.isFinite(limit) && limit > 0
+
+  if (usePagination) {
+    const safeLimit = Math.min(Math.max(limit, 1), 100)
+    const filter = buildAdminListFilter(req.query)
+    const skip = (page - 1) * safeLimit
+
+    const [products, total, categoryMap] = await Promise.all([
+      Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit),
+      Product.countDocuments(filter),
+      getCategoryMap(),
+    ])
+
+    await ensureClipIds(products)
+
+    res.json({
+      data: {
+        products: formatProductList(products, categoryMap, true),
+        pagination: {
+          page,
+          limit: safeLimit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+        },
+      },
+    })
+    return
+  }
+
+  const filter = isAdmin ? {} : { isActive: true }
 
   if (req.query.categorySlug) {
     filter.categorySlug = req.query.categorySlug
@@ -36,21 +127,11 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   const products = await Product.find(filter).sort({ createdAt: -1 })
 
-  for (const product of products) {
-    if (!product.clipId) {
-      product.clipId = await generateClipId()
-      await product.save()
-    }
-  }
+  await ensureClipIds(products)
 
   const categoryMap = await getCategoryMap()
 
-  const includeDelivery = req.query.admin === 'true'
-  res.json(
-    products.map((product) =>
-      formatProduct(product, categoryMap, { includeDelivery }),
-    ),
-  )
+  res.json(formatProductList(products, categoryMap, isAdmin))
 })
 
 export const getProductById = asyncHandler(async (req, res) => {

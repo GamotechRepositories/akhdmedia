@@ -171,47 +171,60 @@ const OrderDetail = () => {
       </div>
 
       <div className={`${cardClass} overflow-hidden`}>
-        <div className="border-b border-slate-200 px-5 py-4">
+        <div className="border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
           <h2 className="text-sm font-semibold text-slate-900">Purchased items</h2>
         </div>
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Product</th>
-              <th className="px-4 py-3">Clip ID</th>
-              <th className="px-4 py-3">License</th>
-              <th className="px-4 py-3">License No</th>
-              <th className="px-4 py-3">Qty</th>
-              <th className="px-4 py-3">Subtotal</th>
-              <th className="px-4 py-3">Promo discount</th>
-              <th className="px-4 py-3">GST</th>
-              <th className="px-4 py-3">Line total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {order.items?.map((item, index) => {
-              const lineAmounts = getOrderLineAmountBreakdown(item, order)
-
-              return (
-              <tr key={`${item.productId}-${item.imageSize}-${index}`}>
-                <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.clipId || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{item.imageSize || '—'}</td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.licenseNumber || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{item.quantity}</td>
-                <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.subtotal)}</td>
-                <td className="px-4 py-3 text-emerald-700">
-                  {lineAmounts.discountAmount > 0 ? `-${formatCurrency(lineAmounts.discountAmount)}` : '—'}
-                </td>
-                <td className="px-4 py-3 text-slate-600">{formatCurrency(lineAmounts.gst)}</td>
-                <td className="px-4 py-3 font-medium text-slate-900">
-                  {formatCurrency(lineAmounts.total)}
-                </td>
+        <div className="admin-scrollbar overflow-x-auto">
+          <table className="w-full min-w-[48rem] divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-3 py-2.5 sm:px-4 sm:py-3">Product</th>
+                <th className="hidden px-3 py-2.5 sm:table-cell sm:px-4 sm:py-3">Clip ID</th>
+                <th className="px-3 py-2.5 sm:px-4 sm:py-3">License</th>
+                <th className="hidden px-3 py-2.5 md:table-cell sm:px-4 sm:py-3">License No</th>
+                <th className="px-3 py-2.5 sm:px-4 sm:py-3">Qty</th>
+                <th className="hidden px-3 py-2.5 sm:table-cell sm:px-4 sm:py-3">Subtotal</th>
+                <th className="hidden px-3 py-2.5 lg:table-cell sm:px-4 sm:py-3">Promo</th>
+                <th className="hidden px-3 py-2.5 lg:table-cell sm:px-4 sm:py-3">GST</th>
+                <th className="px-3 py-2.5 sm:px-4 sm:py-3">Total</th>
               </tr>
-              )
-            })}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {order.items?.map((item, index) => {
+                const lineAmounts = getOrderLineAmountBreakdown(item, order)
+
+                return (
+                  <tr key={`${item.productId}-${item.imageSize}-${index}`}>
+                    <td className="px-3 py-2.5 font-medium text-slate-900 sm:px-4 sm:py-3">
+                      <p>{item.name}</p>
+                      <p className="mt-0.5 font-mono text-[11px] text-slate-500 sm:hidden">{item.clipId || '—'}</p>
+                    </td>
+                    <td className="hidden px-3 py-2.5 font-mono text-xs text-slate-600 sm:table-cell sm:px-4 sm:py-3">
+                      {item.clipId || '—'}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-600 sm:px-4 sm:py-3">{item.imageSize || '—'}</td>
+                    <td className="hidden px-3 py-2.5 font-mono text-xs text-slate-600 md:table-cell sm:px-4 sm:py-3">
+                      {item.licenseNumber || '—'}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-600 sm:px-4 sm:py-3">{item.quantity}</td>
+                    <td className="hidden px-3 py-2.5 text-slate-600 sm:table-cell sm:px-4 sm:py-3">
+                      {formatCurrency(lineAmounts.subtotal)}
+                    </td>
+                    <td className="hidden px-3 py-2.5 text-emerald-700 lg:table-cell sm:px-4 sm:py-3">
+                      {lineAmounts.discountAmount > 0 ? `-${formatCurrency(lineAmounts.discountAmount)}` : '—'}
+                    </td>
+                    <td className="hidden px-3 py-2.5 text-slate-600 lg:table-cell sm:px-4 sm:py-3">
+                      {formatCurrency(lineAmounts.gst)}
+                    </td>
+                    <td className="px-3 py-2.5 font-medium text-slate-900 sm:px-4 sm:py-3">
+                      {formatCurrency(lineAmounts.total)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

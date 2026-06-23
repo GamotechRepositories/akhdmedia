@@ -1,23 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { fetchTransactions } from '../api/client'
+import { fetchAdminTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { cardClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
+import AdminPagination from '../components/ui/AdminPagination'
+import AdminTable from '../components/ui/AdminTable'
+import {
+  actionViewClass,
+  cardClass,
+  inputClass,
+  tableBodyClass,
+  tableEmptyClass,
+  tableHeadClass,
+  tableRowClass,
+  tdClass,
+  tdHideMd,
+  tdPrimaryClass,
+  tdRightClass,
+  thClass,
+  thHideMd,
+  thRightClass,
+} from '../components/ui/adminUi'
+import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
 
 const PAGE_SIZE = 50
+const transactionsLoader = createPaginatedLoader()
 
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
   digital: 'Digital media',
   outlet: 'Outlet media',
   other: 'Other',
-}
-
-const formatPurchaseReason = (reason, otherText = '') => {
-  if (reason === 'other' && otherText.trim()) {
-    return `Other: ${otherText.trim()}`
-  }
-  return PURCHASE_REASON_LABELS[reason] || reason
 }
 
 const formatCurrency = (amount = 0) =>
@@ -51,131 +63,101 @@ const FILTERS = [
   { id: 'pending', label: 'Pending' },
 ]
 
-const shortOrderNumber = (orderNumber = '') => orderNumber?.slice(-8).toUpperCase() || ''
-
-const buildTransactionSearchText = (txn) => {
-  const reasons = (txn.purchaseReasons || [])
-    .map((reason) => formatPurchaseReason(reason, txn.purchaseReasonOther))
-    .join(' ')
-
-  const itemFields = (txn.items || []).flatMap((item) => [
-    item.name,
-    item.clipId,
-    item.licenseNumber,
-    item.imageSize,
-    item.productId,
-    item.brand,
-    String(item.quantity ?? ''),
-    String(item.price ?? ''),
-    String(item.lineTotal ?? ''),
-    formatCurrency(item.price),
-    formatCurrency(item.lineTotal),
-  ])
-
-  return [
-    txn.id,
-    txn.transactionId,
-    txn.orderId,
-    txn.orderNumber,
-    shortOrderNumber(txn.orderNumber),
-    txn.customerName,
-    txn.customerEmail,
-    txn.customerPhone,
-    reasons,
-    txn.paymentMethod,
-    'online',
-    'online payment',
-    txn.paymentStatus,
-    txn.transactionStatus,
-    txn.transactionStatusLabel,
-    txn.orderStatus,
-    txn.razorpayOrderId,
-    txn.razorpayPaymentId,
-    txn.currency,
-    String(txn.amount ?? ''),
-    formatCurrency(txn.amount),
-    formatDate(txn.createdAt),
-    ...itemFields,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-}
-
-const matchesSearch = (txn, query) => {
-  const normalized = query.trim().toLowerCase()
-  if (!normalized) return true
-
-  const haystack = buildTransactionSearchText(txn)
-  const tokens = normalized.split(/\s+/).filter(Boolean)
-  return tokens.every((token) => haystack.includes(token))
-}
-
 const Transactions = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const tableContainerRef = useRef(null)
+  const skipSearchResetRef = useRef(true)
+
   const [transactions, setTransactions] = useState([])
   const [summary, setSummary] = useState(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [filter, setFilter] = useState(location.state?.restore?.filter || 'all')
   const [searchQuery, setSearchQuery] = useState(location.state?.restore?.searchQuery || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(location.state?.restore?.searchQuery || '')
   const [highlightedId, setHighlightedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(location.state?.restore?.page || 1)
 
   useEffect(() => {
-    const loadTransactions = async () => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => window.clearTimeout(timer)
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (skipSearchResetRef.current) {
+      skipSearchResetRef.current = false
+      return
+    }
+    setCurrentPage(1)
+    transactionsLoader.clear()
+  }, [debouncedSearch])
+
+  const loadTransactions = useCallback(
+    async ({ force = false } = {}) => {
+      const cacheKey = buildPageCacheKey('transactions', currentPage, {
+        search: debouncedSearch,
+        status: filter,
+      })
+
       setLoading(true)
       setError('')
+
       try {
-        const response = await fetchTransactions()
-        setTransactions(response.data.data?.transactions || [])
-        setSummary(response.data.data?.summary || null)
+        const result = await transactionsLoader.load({
+          cacheKey,
+          force,
+          fetchPage: async () => {
+            const response = await fetchAdminTransactions({
+              page: currentPage,
+              limit: PAGE_SIZE,
+              search: debouncedSearch,
+              status: filter,
+            })
+            const payload = response.data?.data || {}
+            return {
+              items: payload.transactions || [],
+              totalCount: payload.pagination?.total || 0,
+              totalPages: payload.pagination?.totalPages || 1,
+              summary: payload.summary || null,
+            }
+          },
+        })
+
+        setTransactions(result.items)
+        setTotalCount(result.totalCount)
+        setTotalPages(result.totalPages)
+        if (result.summary) setSummary(result.summary)
       } catch (err) {
         setError(err.message)
+        setTransactions([])
+        setTotalCount(0)
+        setTotalPages(1)
       } finally {
         setLoading(false)
       }
-    }
+    },
+    [currentPage, debouncedSearch, filter],
+  )
 
+  useEffect(() => {
     loadTransactions()
-  }, [])
-
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((txn) => {
-      if (filter !== 'all' && txn.transactionStatus !== filter) {
-        return false
-      }
-      return matchesSearch(txn, searchQuery)
-    })
-  }, [transactions, filter, searchQuery])
-
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE))
-  const paginatedTransactions = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredTransactions.slice(start, start + PAGE_SIZE)
-  }, [filteredTransactions, currentPage])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filter, searchQuery])
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages)
-  }, [currentPage, totalPages])
+  }, [loadTransactions])
 
   useEffect(() => {
     const restore = location.state?.restore
-    if (!restore || loading) return
+    if (!restore) return
 
-    if (restore.filter) {
-      setFilter(restore.filter)
-    }
+    transactionsLoader.clear()
 
+    if (restore.filter) setFilter(restore.filter)
     if (restore.searchQuery !== undefined) {
       setSearchQuery(restore.searchQuery)
+      setDebouncedSearch(restore.searchQuery)
     }
+    if (restore.page) setCurrentPage(restore.page)
 
     const frame = requestAnimationFrame(() => {
       if (tableContainerRef.current && typeof restore.scrollTop === 'number') {
@@ -193,7 +175,10 @@ const Transactions = () => {
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [loading, location.state, navigate])
+  }, [location.state, navigate])
+
+  const listStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const listEnd = Math.min(currentPage * PAGE_SIZE, totalCount)
 
   return (
     <div className="space-y-4">
@@ -263,7 +248,11 @@ const Transactions = () => {
             <button
               key={item.id}
               type="button"
-              onClick={() => setFilter(item.id)}
+              onClick={() => {
+                transactionsLoader.clear()
+                setFilter(item.id)
+                setCurrentPage(1)
+              }}
               className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                 filter === item.id
                   ? 'bg-slate-900 text-white'
@@ -277,128 +266,99 @@ const Transactions = () => {
 
         {!loading && (
           <p className="text-xs text-slate-500">
-            Showing {filteredTransactions.length} of {transactions.length} transactions
+            {totalCount === 0
+              ? 'No transactions match your search or filters.'
+              : `Showing ${listStart}-${listEnd} of ${totalCount} transactions`}
           </p>
         )}
       </div>
 
-      {!loading && filteredTransactions.length > 0 && (
-        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-2 p-2`}>
-          <p className="text-xs text-slate-600">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-
-            {Math.min(currentPage * PAGE_SIZE, filteredTransactions.length)} of {filteredTransactions.length} entries
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="text-xs font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div
-        ref={tableContainerRef}
-        className={`${cardClass} max-h-[min(60vh,640px)] min-h-[240px] overflow-y-auto`}
-      >
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <AdminTable ref={tableContainerRef} maxHeight className="min-h-[240px]">
+        <thead className={tableHeadClass}>
+          <tr>
+            <th className={thClass}>Date</th>
+            <th className={thClass}>Customer</th>
+            <th className={thHideMd}>Items</th>
+            <th className={thClass}>Status</th>
+            <th className={thClass}>Amount</th>
+            <th className={thRightClass}>View</th>
+          </tr>
+        </thead>
+        <tbody className={tableBodyClass}>
+          {loading ? (
             <tr>
-              <th className="px-4 py-3 whitespace-nowrap">Date</th>
-              <th className="px-4 py-3 whitespace-nowrap">Customer</th>
-              <th className="px-4 py-3 whitespace-nowrap">Items</th>
-              <th className="px-4 py-3 whitespace-nowrap">Status</th>
-              <th className="px-4 py-3 whitespace-nowrap">Amount</th>
-              <th className="px-4 py-3 text-right whitespace-nowrap">View</th>
+              <td colSpan={6} className={tableEmptyClass}>
+                Loading transactions...
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  Loading transactions...
+          ) : transactions.length === 0 ? (
+            <tr>
+              <td colSpan={6} className={tableEmptyClass}>
+                No transactions match your search or filters.
+              </td>
+            </tr>
+          ) : (
+            transactions.map((txn) => (
+              <tr
+                key={txn.id}
+                id={`txn-row-${txn.id}`}
+                className={`${tableRowClass} ${
+                  highlightedId === txn.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
+                }`}
+              >
+                <td className={`${tdClass} whitespace-nowrap text-slate-600`}>
+                  {formatDate(txn.createdAt)}
+                </td>
+                <td className={tdClass}>
+                  <p className="font-medium text-slate-900">{txn.customerName || '—'}</p>
+                  <p className="break-all text-xs text-slate-500">{txn.customerEmail || '—'}</p>
+                </td>
+                <td className={tdHideMd}>
+                  {txn.itemCount || txn.items?.length || 0} item
+                  {(txn.itemCount || txn.items?.length || 0) === 1 ? '' : 's'}
+                </td>
+                <td className={tdClass}>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      statusStyles[txn.transactionStatus] || 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {txn.transactionStatusLabel}
+                  </span>
+                </td>
+                <td className={`${tdPrimaryClass} whitespace-nowrap`}>{formatCurrency(txn.amount)}</td>
+                <td className={tdRightClass}>
+                  <Link
+                    to={`/transactions/${txn.id}`}
+                    state={{
+                      fromList: {
+                        filter,
+                        searchQuery,
+                        page: currentPage,
+                        scrollTop: tableContainerRef.current?.scrollTop ?? 0,
+                        transactionId: txn.id,
+                      },
+                    }}
+                    className={actionViewClass}
+                  >
+                    View
+                  </Link>
                 </td>
               </tr>
-            ) : filteredTransactions.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                  {transactions.length === 0
-                    ? 'No transactions found.'
-                    : 'No transactions match your search or filters.'}
-                </td>
-              </tr>
-            ) : (
-              paginatedTransactions.map((txn) => (
-                <tr
-                  key={txn.id}
-                  id={`txn-row-${txn.id}`}
-                  className={`hover:bg-slate-50/80 ${
-                    highlightedId === txn.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
-                  }`}
-                >
-                  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
-                    {formatDate(txn.createdAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">{txn.customerName || '—'}</p>
-                    <p className="text-xs text-slate-500">{txn.customerEmail || '—'}</p>
-                    <p className="text-xs text-slate-500">{txn.customerPhone || '—'}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    <p className="text-xs text-slate-700">
-                      {txn.itemCount || txn.items?.length || 0} item
-                      {(txn.itemCount || txn.items?.length || 0) === 1 ? '' : 's'}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        statusStyles[txn.transactionStatus] || 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {txn.transactionStatusLabel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">
-                    {formatCurrency(txn.amount)}
-                  </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <Link
-                      to={`/transactions/${txn.id}`}
-                      state={{
-                        fromList: {
-                          filter,
-                          searchQuery,
-                          scrollTop: tableContainerRef.current?.scrollTop ?? 0,
-                          transactionId: txn.id,
-                        },
-                      }}
-                      className={secondaryBtnClass}
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          )}
+        </tbody>
+      </AdminTable>
+
+      {!loading && totalCount > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       <AdminAlertModal
         open={Boolean(error)}

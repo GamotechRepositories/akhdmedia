@@ -1,5 +1,8 @@
 import asyncHandler from '../utils/asyncHandler.js'
+import Order from '../models/Order.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
+import { buildPaginationMeta, parsePageLimit } from '../utils/pagination.js'
+import { buildOrderListFilter } from '../utils/orderFilters.js'
 import {
   createPendingOnlineOrderFromCart,
   getAdminOrderById,
@@ -262,6 +265,29 @@ export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {
 })
 
 export const listAdminOrders = asyncHandler(async (req, res) => {
+  const pagination = parsePageLimit(req.query)
+
+  if (pagination) {
+    const { page, limit, skip } = pagination
+    const filter = buildOrderListFilter(req.query)
+
+    const [orders, total, grandTotal] = await Promise.all([
+      Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Order.countDocuments(filter),
+      Order.countDocuments(),
+    ])
+
+    res.json({
+      success: true,
+      data: {
+        orders: orders.map(formatOrderResponse),
+        pagination: buildPaginationMeta(page, limit, total),
+        meta: { grandTotal },
+      },
+    })
+    return
+  }
+
   const orders = await getAllOrders()
 
   res.json({

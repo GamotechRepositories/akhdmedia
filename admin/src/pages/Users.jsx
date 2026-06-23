@@ -1,10 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { secondaryBtnClass, tableWrapClass } from '../components/ui/adminUi'
-import { deleteUser, fetchUsers } from '../api/client'
+import AdminPagination from '../components/ui/AdminPagination'
+import AdminTable from '../components/ui/AdminTable'
+import {
+  actionDeleteClass,
+  actionGroupClass,
+  cardClass,
+  exportBtnClass,
+  statGridClass,
+  tableBodyClass,
+  tableEmptyClass,
+  tableHeadClass,
+  tableRowClass,
+  tdClass,
+  tdHideMd,
+  tdHideSm,
+  tdPrimaryClass,
+  tdRightClass,
+  thClass,
+  thHideMd,
+  thHideSm,
+  thRightClass,
+} from '../components/ui/adminUi'
+import { deleteUser, fetchAdminUsers, fetchUsers } from '../api/client'
 import { downloadUsersExcel } from '../utils/exportUsersExcel'
+import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
 
 const PAGE_SIZE = 50
+const usersLoader = createPaginatedLoader()
 
 const formatDate = (value) => {
   if (!value) return '—'
@@ -18,40 +41,95 @@ const formatDate = (value) => {
 }
 
 const Users = () => {
+  const skipSearchResetRef = useRef(true)
+
   const [users, setUsers] = useState([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [grandTotal, setGrandTotal] = useState(0)
+  const [latestSignup, setLatestSignup] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingUserId, setDeletingUserId] = useState('')
   const [exporting, setExporting] = useState(false)
 
-  const loadUsers = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const response = await fetchUsers()
-      setUsers(response.data?.data?.users || [])
-    } catch (loadError) {
-      setError(loadError.message || 'Could not load users')
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
+    return () => window.clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    if (skipSearchResetRef.current) {
+      skipSearchResetRef.current = false
+      return
     }
-  }
+    setCurrentPage(1)
+    usersLoader.clear()
+  }, [debouncedSearch])
+
+  const loadUsers = useCallback(
+    async ({ force = false } = {}) => {
+      const cacheKey = buildPageCacheKey('users', currentPage, { search: debouncedSearch })
+
+      setLoading(true)
+      setError('')
+
+      try {
+        const result = await usersLoader.load({
+          cacheKey,
+          force,
+          fetchPage: async () => {
+            const response = await fetchAdminUsers({
+              page: currentPage,
+              limit: PAGE_SIZE,
+              search: debouncedSearch,
+            })
+            const payload = response.data?.data || {}
+            return {
+              items: payload.users || [],
+              totalCount: payload.pagination?.total || 0,
+              totalPages: payload.pagination?.totalPages || 1,
+              grandTotal: payload.meta?.grandTotal ?? payload.pagination?.total ?? 0,
+              latestSignup: payload.meta?.latestSignup ?? null,
+            }
+          },
+        })
+
+        setUsers(result.items)
+        setTotalCount(result.totalCount)
+        setTotalPages(result.totalPages)
+        setGrandTotal(result.grandTotal)
+        setLatestSignup(result.latestSignup)
+      } catch (loadError) {
+        setError(loadError.message || 'Could not load users')
+        setUsers([])
+        setTotalCount(0)
+        setTotalPages(1)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [currentPage, debouncedSearch],
+  )
 
   useEffect(() => {
     loadUsers()
-  }, [])
+  }, [loadUsers])
 
-  const handleExportExcel = () => {
-    if (!users.length) {
-      setError('No users to export')
-      return
-    }
-
+  const handleExportExcel = async () => {
     setExporting(true)
+    setError('')
     try {
-      downloadUsersExcel(users, { scope: 'all' })
+      const response = await fetchUsers()
+      const allUsers = response.data?.data?.users || []
+      if (!allUsers.length) {
+        setError('No users to export')
+        return
+      }
+      downloadUsersExcel(allUsers, { scope: 'all' })
     } catch (exportError) {
       setError(exportError.message || 'Could not export users')
     } finally {
@@ -66,7 +144,12 @@ const Users = () => {
     setError('')
     try {
       await deleteUser(user.id)
-      setUsers((current) => current.filter((entry) => entry.id !== user.id))
+      usersLoader.clear()
+      if (users.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1)
+      } else {
+        await loadUsers({ force: true })
+      }
     } catch (deleteError) {
       setError(deleteError.message || 'Could not delete user')
     } finally {
@@ -74,54 +157,31 @@ const Users = () => {
     }
   }
 
-  const filteredUsers = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    if (!term) return users
-    return users.filter((user) =>
-      [user.name, user.email, user.phone].some((value) =>
-        String(value || '')
-          .toLowerCase()
-          .includes(term),
-      ),
-    )
-  }, [search, users])
-
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredUsers.slice(start, start + PAGE_SIZE)
-  }, [filteredUsers, currentPage])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [search])
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages)
-  }, [currentPage, totalPages])
+  const listStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const listEnd = Math.min(currentPage * PAGE_SIZE, totalCount)
 
   return (
-    <section className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="space-y-4">
+      <div className={statGridClass}>
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total users</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{users.length}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{grandTotal}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Shown</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{filteredUsers.length}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{totalCount}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest signup</p>
           <p className="mt-1 text-sm font-semibold text-slate-900">
-            {users[0]?.createdAt ? formatDate(users[0].createdAt) : '—'}
+            {latestSignup ? formatDate(latestSignup) : '—'}
           </p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={`${cardClass} p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <label className="block flex-1">
+          <label className="block min-w-0 flex-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Search users
             </span>
@@ -136,8 +196,8 @@ const Users = () => {
           <button
             type="button"
             onClick={handleExportExcel}
-            disabled={loading || exporting || users.length === 0}
-            className={`${secondaryBtnClass} shrink-0 disabled:cursor-not-allowed disabled:opacity-50`}
+            disabled={loading || exporting || grandTotal === 0}
+            className={`${exportBtnClass} shrink-0`}
           >
             <span className="inline-flex items-center gap-2">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,92 +213,80 @@ const Users = () => {
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Exports all {users.length} registered users (name, email, phone, role, joined date).
+          Exports all {grandTotal} registered users (name, email, phone, role, joined date).
         </p>
-      </div>
-
-      <div className={tableWrapClass}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Phone</th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">Joined</th>
-                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {loading && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    Loading users...
-                  </td>
-                </tr>
-              )}
-
-              {!loading && !error && filteredUsers.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    No users found.
-                  </td>
-                </tr>
-              )}
-
-              {!loading &&
-                !error &&
-                paginatedUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{user.name || '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{user.email || '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{user.phone || '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{formatDate(user.createdAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(user)}
-                        disabled={deletingUserId === user.id}
-                        className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
-                      >
-                        {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {!loading && !error && filteredUsers.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm text-slate-600">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of{' '}
-            {filteredUsers.length} entries
+        {!loading && (
+          <p className="mt-1 text-xs text-slate-500">
+            {totalCount === 0
+              ? 'No users match your search.'
+              : `Showing ${listStart}-${listEnd} of ${totalCount} users`}
           </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="text-sm font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        )}
+      </div>
+
+      <AdminTable>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th className={thClass}>Name</th>
+            <th className={thClass}>Email</th>
+            <th className={thHideSm}>Phone</th>
+            <th className={thHideMd}>Joined</th>
+            <th className={thRightClass}>Actions</th>
+          </tr>
+        </thead>
+        <tbody className={tableBodyClass}>
+          {loading && (
+            <tr>
+              <td colSpan={5} className={tableEmptyClass}>
+                Loading users...
+              </td>
+            </tr>
+          )}
+
+          {!loading && !error && users.length === 0 && (
+            <tr>
+              <td colSpan={5} className={tableEmptyClass}>
+                No users found.
+              </td>
+            </tr>
+          )}
+
+          {!loading &&
+            !error &&
+            users.map((user) => (
+              <tr key={user.id} className={tableRowClass}>
+                <td className={tdPrimaryClass}>{user.name || '—'}</td>
+                <td className={tdClass}>
+                  <p className="break-all">{user.email || '—'}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 sm:hidden">{user.phone || '—'}</p>
+                </td>
+                <td className={tdHideSm}>{user.phone || '—'}</td>
+                <td className={`${tdHideMd} text-slate-600`}>{formatDate(user.createdAt)}</td>
+                <td className={tdRightClass}>
+                  <div className={actionGroupClass}>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(user)}
+                      disabled={deletingUserId === user.id}
+                      className={actionDeleteClass}
+                    >
+                      {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </AdminTable>
+
+      {!loading && !error && totalCount > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       <AdminAlertModal

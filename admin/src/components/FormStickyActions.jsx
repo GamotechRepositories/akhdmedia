@@ -10,14 +10,14 @@ const FormStickyActions = ({
   disabled = false,
   hint = null,
 }) => (
-  <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur-md lg:left-72">
-    <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+  <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur-md sm:px-4 sm:py-4 lg:left-72">
+    <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {hint ? (
         <p className="text-sm text-slate-500">{hint}</p>
       ) : (
         <span className="hidden sm:block" aria-hidden="true" />
       )}
-      <div className="ml-auto flex flex-wrap gap-3">
+      <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:gap-3">
         <Link to={cancelTo} state={cancelState} className={secondaryBtnClass}>
           Cancel
         </Link>

@@ -1,6 +1,9 @@
 import Actor from '../models/Actor.js'
 import Product from '../models/Product.js'
 import asyncHandler from '../utils/asyncHandler.js'
+import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../utils/pagination.js'
+
+const ACTOR_SEARCH_FIELDS = ['name', 'slug', 'searchKeywords']
 
 const slugify = (value = '') =>
   value
@@ -52,6 +55,28 @@ export const getPublicActors = asyncHandler(async (req, res) => {
 })
 
 export const getActors = asyncHandler(async (req, res) => {
+  const pagination = parsePageLimit(req.query)
+
+  if (pagination) {
+    const { page, limit, skip } = pagination
+    const searchFilter = buildTokenSearchFilter(req.query.search, ACTOR_SEARCH_FIELDS)
+    const filter = searchFilter.$and ? searchFilter : {}
+
+    const [actors, total] = await Promise.all([
+      Actor.find(filter).sort({ sortOrder: 1, createdAt: 1 }).skip(skip).limit(limit),
+      Actor.countDocuments(filter),
+    ])
+
+    res.json({
+      success: true,
+      data: {
+        actors,
+        pagination: buildPaginationMeta(page, limit, total),
+      },
+    })
+    return
+  }
+
   const actors = await Actor.find().sort({ sortOrder: 1, createdAt: 1 })
   res.json(actors)
 })

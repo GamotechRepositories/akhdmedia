@@ -3,6 +3,20 @@ import AppError from '../utils/AppError.js'
 import Admin from '../models/Admin.js'
 import Order from '../models/Order.js'
 import User from '../models/User.js'
+import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../utils/pagination.js'
+
+const USER_SEARCH_FIELDS = ['name', 'email', 'phone']
+
+const buildUserListFilter = (query = {}) => {
+  const filter = { role: { $ne: 'admin' } }
+  const searchFilter = buildTokenSearchFilter(query.search, USER_SEARCH_FIELDS)
+
+  if (searchFilter.$and) {
+    filter.$and = searchFilter.$and
+  }
+
+  return filter
+}
 
 const formatUser = (user) => ({
   id: user._id.toString(),
@@ -15,6 +29,41 @@ const formatUser = (user) => ({
 })
 
 export const listUsers = asyncHandler(async (req, res) => {
+  const pagination = parsePageLimit(req.query)
+
+  if (pagination) {
+    const { page, limit, skip } = pagination
+    const filter = buildUserListFilter(req.query)
+
+    const [users, total, latestUser, grandTotal] = await Promise.all([
+      User.find(filter)
+        .select('name email phone role createdAt updatedAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+      User.findOne({ role: { $ne: 'admin' } })
+        .sort({ createdAt: -1 })
+        .select('createdAt')
+        .lean(),
+      User.countDocuments({ role: { $ne: 'admin' } }),
+    ])
+
+    res.json({
+      success: true,
+      data: {
+        users: users.map(formatUser),
+        pagination: buildPaginationMeta(page, limit, total),
+        meta: {
+          grandTotal,
+          latestSignup: latestUser?.createdAt || null,
+        },
+      },
+    })
+    return
+  }
+
   const users = await User.find({ role: { $ne: 'admin' } })
     .select('name email phone role createdAt updatedAt')
     .sort({ createdAt: -1 })

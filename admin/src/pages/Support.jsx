@@ -1,10 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { fetchSupportRequests } from '../api/client'
+import { fetchAdminSupportRequests } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { cardClass, inputClass } from '../components/ui/adminUi'
+import AdminPagination from '../components/ui/AdminPagination'
+import AdminTable from '../components/ui/AdminTable'
+import {
+  actionViewClass,
+  cardClass,
+  inputClass,
+  tableBodyClass,
+  tableEmptyClass,
+  tableHeadClass,
+  tableRowClass,
+  tdClass,
+  tdHideSm,
+  tdPrimaryClass,
+  tdRightClass,
+  thClass,
+  thHideSm,
+  thRightClass,
+} from '../components/ui/adminUi'
+import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
 
 const PAGE_SIZE = 50
+const supportLoader = createPaginatedLoader()
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -13,14 +32,6 @@ const STATUS_FILTERS = [
   { id: 'resolved', label: 'Resolved' },
   { id: 'closed', label: 'Closed' },
 ]
-
-const SUBJECT_LABELS = {
-  download: 'Download issue',
-  license_email: 'License email',
-  payment: 'Payment',
-  license: 'License',
-  other: 'Other',
-}
 
 const STATUS_LABELS = {
   open: 'Open',
@@ -40,39 +51,98 @@ const Support = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const tableContainerRef = useRef(null)
+  const skipSearchResetRef = useRef(true)
   const restore = location.state?.restore
 
   const [requests, setRequests] = useState([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [openCount, setOpenCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState(restore?.searchQuery || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(restore?.searchQuery || '')
   const [statusFilter, setStatusFilter] = useState(restore?.statusFilter || 'all')
   const [highlightedId, setHighlightedId] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(restore?.page || 1)
 
   useEffect(() => {
-    const load = async () => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
+    return () => window.clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    if (skipSearchResetRef.current) {
+      skipSearchResetRef.current = false
+      return
+    }
+    setCurrentPage(1)
+    supportLoader.clear()
+  }, [debouncedSearch])
+
+  const loadRequests = useCallback(
+    async ({ force = false } = {}) => {
+      const cacheKey = buildPageCacheKey('support', currentPage, {
+        search: debouncedSearch,
+        status: statusFilter,
+      })
+
       setLoading(true)
       setError('')
+
       try {
-        const response = await fetchSupportRequests()
-        setRequests(response.data.data?.requests || [])
+        const result = await supportLoader.load({
+          cacheKey,
+          force,
+          fetchPage: async () => {
+            const response = await fetchAdminSupportRequests({
+              page: currentPage,
+              limit: PAGE_SIZE,
+              search: debouncedSearch,
+              status: statusFilter,
+            })
+            const payload = response.data?.data || {}
+            return {
+              items: payload.requests || [],
+              totalCount: payload.pagination?.total || 0,
+              totalPages: payload.pagination?.totalPages || 1,
+              openCount: payload.meta?.openCount ?? 0,
+            }
+          },
+        })
+
+        setRequests(result.items)
+        setTotalCount(result.totalCount)
+        setTotalPages(result.totalPages)
+        setOpenCount(result.openCount)
       } catch (err) {
         setError(err.message)
+        setRequests([])
+        setTotalCount(0)
+        setTotalPages(1)
       } finally {
         setLoading(false)
       }
-    }
+    },
+    [currentPage, debouncedSearch, statusFilter],
+  )
 
-    load()
-  }, [])
+  useEffect(() => {
+    loadRequests()
+  }, [loadRequests])
 
   useEffect(() => {
     const nextRestore = location.state?.restore
-    if (!nextRestore || loading) return
+    if (!nextRestore) return
 
-    if (nextRestore.searchQuery !== undefined) setSearch(nextRestore.searchQuery)
+    supportLoader.clear()
+
+    if (nextRestore.searchQuery !== undefined) {
+      setSearch(nextRestore.searchQuery)
+      setDebouncedSearch(nextRestore.searchQuery)
+    }
     if (nextRestore.statusFilter) setStatusFilter(nextRestore.statusFilter)
+    if (nextRestore.page) setCurrentPage(nextRestore.page)
 
     const frame = requestAnimationFrame(() => {
       if (tableContainerRef.current && typeof nextRestore.scrollTop === 'number') {
@@ -90,46 +160,10 @@ const Support = () => {
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [loading, location.state, navigate])
+  }, [location.state, navigate])
 
-  const filteredRequests = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return requests.filter((request) => {
-      if (statusFilter !== 'all' && request.status !== statusFilter) return false
-      if (!query) return true
-
-      const haystack = [
-        request.ticketNumber,
-        request.name,
-        request.email,
-        request.phone,
-        request.orderNumber,
-        request.message,
-        SUBJECT_LABELS[request.subject],
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-
-      return haystack.includes(query)
-    })
-  }, [requests, search, statusFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE))
-  const paginatedRequests = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredRequests.slice(start, start + PAGE_SIZE)
-  }, [filteredRequests, currentPage])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [search, statusFilter])
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages)
-  }, [currentPage, totalPages])
-
-  const openCount = requests.filter((request) => request.status === 'open').length
+  const listStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const listEnd = Math.min(currentPage * PAGE_SIZE, totalCount)
 
   return (
     <div className="space-y-4">
@@ -147,7 +181,11 @@ const Support = () => {
               <button
                 key={filter.id}
                 type="button"
-                onClick={() => setStatusFilter(filter.id)}
+                onClick={() => {
+                  supportLoader.clear()
+                  setStatusFilter(filter.id)
+                  setCurrentPage(1)
+                }}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   statusFilter === filter.id
                     ? 'bg-slate-900 text-white'
@@ -159,107 +197,95 @@ const Support = () => {
             ))}
           </div>
         </div>
+        {!loading && (
+          <p className="mt-2 text-xs text-slate-500">
+            {totalCount === 0
+              ? 'No support requests match your filters.'
+              : `Showing ${listStart}-${listEnd} of ${totalCount} requests`}
+            {openCount > 0 ? ` · ${openCount} open` : ''}
+          </p>
+        )}
       </div>
 
-      {loading && <p className="text-sm text-slate-500">Loading support requests...</p>}
-
-      {!loading && !error && (
-        <div ref={tableContainerRef} className={`${cardClass} max-h-[70vh] overflow-x-auto overflow-y-auto`}>
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Ticket</th>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredRequests.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
-                    No support requests found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedRequests.map((request) => (
-                  <tr
-                    key={request.id}
-                    id={`support-row-${request.id}`}
-                    className={`hover:bg-slate-50/80 ${
-                      highlightedId === request.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
+      <AdminTable ref={tableContainerRef} maxHeight>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th className={thClass}>Ticket</th>
+            <th className={thClass}>Customer</th>
+            <th className={thHideSm}>Phone</th>
+            <th className={thClass}>Status</th>
+            <th className={thRightClass}>Action</th>
+          </tr>
+        </thead>
+        <tbody className={tableBodyClass}>
+          {loading ? (
+            <tr>
+              <td colSpan={5} className={tableEmptyClass}>
+                Loading support requests...
+              </td>
+            </tr>
+          ) : requests.length === 0 ? (
+            <tr>
+              <td colSpan={5} className={tableEmptyClass}>
+                No support requests found.
+              </td>
+            </tr>
+          ) : (
+            requests.map((request) => (
+              <tr
+                key={request.id}
+                id={`support-row-${request.id}`}
+                className={`${tableRowClass} ${
+                  highlightedId === request.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
+                }`}
+              >
+                <td className={`${tdPrimaryClass} font-mono text-xs`}>{request.ticketNumber}</td>
+                <td className={tdClass}>
+                  <p className="font-medium text-slate-900">{request.name}</p>
+                  <p className="break-all text-xs text-slate-500">{request.email}</p>
+                  <p className="text-xs text-slate-500 sm:hidden">{request.phone || '—'}</p>
+                </td>
+                <td className={tdHideSm}>{request.phone || '—'}</td>
+                <td className={tdClass}>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                      statusStyles[request.status] || 'bg-slate-100 text-slate-600'
                     }`}
                   >
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-900">
-                      {request.ticketNumber}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">{request.name}</p>
-                      <p className="text-xs text-slate-500">{request.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{request.phone || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
-                          statusStyles[request.status] || 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {STATUS_LABELS[request.status] || request.status?.replace('_', ' ') || '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        to={`/support/${request.id}`}
-                        state={{
-                          fromList: {
-                            searchQuery: search,
-                            statusFilter,
-                            scrollTop: tableContainerRef.current?.scrollTop ?? 0,
-                            requestId: request.id,
-                          },
-                        }}
-                        className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        View request
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    {STATUS_LABELS[request.status] || request.status?.replace('_', ' ') || '—'}
+                  </span>
+                </td>
+                <td className={tdRightClass}>
+                  <Link
+                    to={`/support/${request.id}`}
+                    state={{
+                      fromList: {
+                        searchQuery: search,
+                        statusFilter,
+                        page: currentPage,
+                        scrollTop: tableContainerRef.current?.scrollTop ?? 0,
+                        requestId: request.id,
+                      },
+                    }}
+                    className={actionViewClass}
+                  >
+                    View
+                  </Link>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </AdminTable>
 
-      {!loading && !error && filteredRequests.length > 0 && (
-        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
-          <p className="text-sm text-slate-600">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredRequests.length)} of{' '}
-            {filteredRequests.length} entries
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="text-sm font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+      {!loading && totalCount > 0 && (
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       <AdminAlertModal

@@ -103,6 +103,15 @@ export const deleteCategory = (id) => api.delete(`/categories/${id}`)
 
 export const fetchActors = () => api.get('/admin/actors')
 
+export const fetchAdminActors = ({ page = 1, limit = 50, search = '' } = {}) =>
+  api.get('/admin/actors', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+    },
+  })
+
 export const fetchPublicActors = () => api.get('/actors')
 
 export const fetchActor = (id) => api.get(`/admin/actors/${id}`)
@@ -115,6 +124,26 @@ export const deleteActor = (id) => api.delete(`/admin/actors/${id}`)
 
 export const fetchProducts = (admin = true) =>
   api.get('/products', { params: { admin: admin ? 'true' : 'false' } })
+
+export const fetchAdminProducts = ({
+  page = 1,
+  limit = 50,
+  search = '',
+  mediaType = 'all',
+  categorySlug = 'all',
+  status = 'all',
+} = {}) =>
+  api.get('/products', {
+    params: {
+      admin: 'true',
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(mediaType !== 'all' ? { mediaType } : {}),
+      ...(categorySlug !== 'all' ? { categorySlug } : {}),
+      ...(status !== 'all' ? { status } : {}),
+    },
+  })
 
 export const fetchProduct = (id) =>
   api.get(`/products/${id}`, { params: { admin: 'true' } })
@@ -269,13 +298,66 @@ export const deleteProduct = (id) => api.delete(`/products/${id}`)
 
 export const fetchOrders = () => api.get('/admin/orders')
 
+export const fetchAdminOrders = ({
+  page = 1,
+  limit = 50,
+  search = '',
+  paymentStatus = 'all',
+  status = 'all',
+  customerEmail = '',
+  dateFrom = '',
+  dateTo = '',
+} = {}) =>
+  api.get('/admin/orders', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(paymentStatus !== 'all' ? { paymentStatus } : {}),
+      ...(status !== 'all' ? { status } : {}),
+      ...(customerEmail.trim() ? { customerEmail: customerEmail.trim() } : {}),
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+    },
+  })
+
 export const fetchOrder = (id) => api.get(`/admin/orders/${id}`)
 
 export const fetchTransactions = () => api.get('/admin/transactions')
 
+export const fetchAdminTransactions = ({
+  page = 1,
+  limit = 50,
+  search = '',
+  status = 'all',
+} = {}) =>
+  api.get('/admin/transactions', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(status !== 'all' ? { status } : {}),
+    },
+  })
+
 export const fetchTransaction = (id) => api.get(`/admin/transactions/${id}`)
 
 export const fetchSupportRequests = () => api.get('/admin/support')
+
+export const fetchAdminSupportRequests = ({
+  page = 1,
+  limit = 50,
+  search = '',
+  status = 'all',
+} = {}) =>
+  api.get('/admin/support', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(status !== 'all' ? { status } : {}),
+    },
+  })
 
 export const fetchSupportRequest = (id) => api.get(`/admin/support/${id}`)
 
@@ -284,6 +366,15 @@ export const updateSupportRequest = (id, payload) => api.patch(`/admin/support/$
 export const replySupportRequest = (id, payload) => api.post(`/admin/support/${id}/reply`, payload)
 
 export const fetchUsers = () => api.get('/admin/users')
+
+export const fetchAdminUsers = ({ page = 1, limit = 50, search = '' } = {}) =>
+  api.get('/admin/users', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+    },
+  })
 
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
 

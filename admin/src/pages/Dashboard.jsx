@@ -13,6 +13,8 @@ import {
   fetchTransactions,
 } from '../api/client'
 import { BRAND } from '../config/brand'
+import { ADMIN_PERMISSIONS } from '../constants/adminPermissions'
+import { useAuth } from '../context/AuthContext'
 
 const formatCurrency = (amount = 0) =>
   new Intl.NumberFormat('en-IN', {
@@ -73,21 +75,109 @@ const StatCard = ({ label, value, hint, accent, to, linkLabel }) => (
 const QuickAction = ({ title, description, to, accent }) => (
   <Link
     to={to}
-    className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+    className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:gap-4 sm:p-4"
   >
-    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accent}`}>
+    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${accent}`}>
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
       </svg>
     </div>
-    <div>
+    <div className="min-w-0">
       <p className="font-semibold text-slate-900 group-hover:text-slate-700">{title}</p>
-      <p className="mt-1 text-sm text-slate-500">{description}</p>
+      <p className="mt-0.5 text-sm text-slate-500">{description}</p>
     </div>
   </Link>
 )
 
+const QUICK_ACTIONS = [
+  {
+    title: 'Homepage content',
+    description: 'Ticker messages & hero slides',
+    to: '/home-content',
+    permission: ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE,
+    accent: 'bg-indigo-100 text-indigo-800',
+  },
+  {
+    title: 'Manage categories',
+    description: 'Navbar groups & subcategories',
+    to: '/categories',
+    permission: ADMIN_PERMISSIONS.CATEGORIES_READ,
+    accent: 'bg-amber-100 text-amber-800',
+  },
+  {
+    title: 'Manage actors',
+    description: 'Actor profiles & search keywords',
+    to: '/actors',
+    permission: ADMIN_PERMISSIONS.ACTORS_READ,
+    accent: 'bg-rose-100 text-rose-800',
+  },
+  {
+    title: 'Add new product',
+    description: 'Upload a video clip or stock image',
+    to: '/products/new',
+    permission: ADMIN_PERMISSIONS.PRODUCTS_WRITE,
+    accent: 'bg-slate-900 text-white',
+  },
+  {
+    title: 'All products',
+    description: 'Browse, edit & manage listings',
+    to: '/products',
+    permission: ADMIN_PERMISSIONS.PRODUCTS_READ,
+    accent: 'bg-sky-100 text-sky-800',
+  },
+  {
+    title: 'Promo codes',
+    description: 'Discount coupons for checkout',
+    to: '/promo-codes',
+    permission: ADMIN_PERMISSIONS.PROMO_CODES_READ,
+    accent: 'bg-fuchsia-100 text-fuchsia-800',
+  },
+  {
+    title: 'Orders',
+    description: 'Customer purchases & billing',
+    to: '/orders',
+    permission: ADMIN_PERMISSIONS.ORDERS_READ,
+    accent: 'bg-emerald-100 text-emerald-800',
+  },
+  {
+    title: 'Transactions',
+    description: 'Razorpay payments & history',
+    to: '/transactions',
+    permission: ADMIN_PERMISSIONS.TRANSACTIONS_READ,
+    accent: 'bg-violet-100 text-violet-800',
+  },
+  {
+    title: 'Revenue',
+    description: 'Monthly revenue records',
+    to: '/revenue',
+    permission: ADMIN_PERMISSIONS.REVENUE_VIEW,
+    accent: 'bg-teal-100 text-teal-800',
+  },
+  {
+    title: 'Users',
+    description: 'Registered customer accounts',
+    to: '/users',
+    permission: ADMIN_PERMISSIONS.USERS_MANAGE,
+    accent: 'bg-blue-100 text-blue-800',
+  },
+  {
+    title: 'Support',
+    description: 'Customer help requests',
+    to: '/support',
+    permission: ADMIN_PERMISSIONS.SUPPORT_MANAGE,
+    accent: 'bg-orange-100 text-orange-800',
+  },
+  {
+    title: 'Admin team',
+    description: 'Accounts & page access',
+    to: '/admins',
+    permission: ADMIN_PERMISSIONS.ADMINS_MANAGE,
+    accent: 'bg-slate-100 text-slate-800',
+  },
+]
+
 const Dashboard = () => {
+  const { hasPermission } = useAuth()
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
@@ -172,6 +262,11 @@ const Dashboard = () => {
     year: 'numeric',
   })
 
+  const visibleQuickActions = useMemo(
+    () => QUICK_ACTIONS.filter((action) => hasPermission(action.permission)),
+    [hasPermission],
+  )
+
   return (
     <div className="space-y-4">
       <p className="text-sm font-semibold text-slate-700">{todayLabel}</p>
@@ -180,11 +275,11 @@ const Dashboard = () => {
         <div className={`${cardClass} px-5 py-4 text-sm text-slate-700`}>{message}</div>
       )}
 
-      <section className={`${cardClass} p-6 sm:p-8`}>
+      <section className={`${cardClass} p-4 sm:p-6 lg:p-8`}>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Sales analytics</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">Orders & revenue by month</h2>
+            <h2 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">Orders & revenue by month</h2>
             <p className="mt-1 text-sm text-slate-500">
               Monthly orders (dark) and revenue (green) for {chartYear}. Upcoming months are shown in light gray.
             </p>
@@ -295,9 +390,9 @@ const Dashboard = () => {
 
       <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
         <div className={`${cardClass} overflow-hidden`}>
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Recent orders</h2>
+          <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-slate-900 sm:text-lg">Recent orders</h2>
               <p className="mt-1 text-sm text-slate-500">Latest customer purchases</p>
             </div>
             <Link to="/orders" className="text-sm font-semibold text-slate-900 hover:underline">
@@ -314,7 +409,7 @@ const Dashboard = () => {
               recentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                 >
                   <div>
                     <p className="font-semibold text-slate-900">
@@ -354,28 +449,13 @@ const Dashboard = () => {
         </div>
 
         <div className="space-y-5">
-          <div className={`${cardClass} p-6`}>
-            <h2 className="text-lg font-bold text-slate-900">Quick actions</h2>
-            <p className="mt-1 text-sm text-slate-500">Jump into common admin tasks</p>
-            <div className="mt-5 space-y-3">
-              <QuickAction
-                title="Add new product"
-                description="Upload a video clip or stock image"
-                to="/products/new"
-                accent="bg-slate-900 text-white"
-              />
-              <QuickAction
-                title="Manage categories"
-                description="Update navbar and subcategories"
-                to="/categories"
-                accent="bg-amber-100 text-amber-800"
-              />
-              <QuickAction
-                title="Review transactions"
-                description="Check Razorpay payment activity"
-                to="/transactions"
-                accent="bg-violet-100 text-violet-800"
-              />
+          <div className={`${cardClass} p-4 sm:p-6`}>
+            <h2 className="text-base font-bold text-slate-900 sm:text-lg">Quick actions</h2>
+            <p className="mt-1 text-sm text-slate-500">Jump to any admin section</p>
+            <div className="admin-scrollbar mt-5 max-h-[min(70vh,36rem)] space-y-2.5 overflow-y-auto pr-1">
+              {visibleQuickActions.map((action) => (
+                <QuickAction key={action.to} {...action} />
+              ))}
             </div>
           </div>
         </div>

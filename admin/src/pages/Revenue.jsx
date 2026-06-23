@@ -1,7 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import { cardClass, inputClass } from '../components/ui/adminUi'
+import AdminPagination from '../components/ui/AdminPagination'
+import AdminTable from '../components/ui/AdminTable'
+import {
+  cardClass,
+  inputClass,
+  statGridClass,
+  tableBodyClass,
+  tableEmptyClass,
+  tableHeadClass,
+  tableRowClass,
+  tdClass,
+  tdHideLg,
+  tdHideMd,
+  tdHideSm,
+  tdPrimaryClass,
+  thClass,
+  thHideLg,
+  thHideMd,
+  thHideSm,
+} from '../components/ui/adminUi'
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const PAGE_SIZE = 50
@@ -131,11 +150,11 @@ const Revenue = () => {
     <div className="space-y-4">
       <div className={`${cardClass} p-3 sm:p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Revenue tracking</p>
             <p className="mt-1 text-sm text-slate-600">Monthly revenue record from successful payments.</p>
           </div>
-          <label className="block sm:w-52">
+          <label className="block w-full sm:w-52">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year</span>
             <select
               value={selectedYear}
@@ -153,96 +172,76 @@ const Revenue = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className={`${cardClass} p-5`}>
+      <div className={statGridClass}>
+        <div className={`${cardClass} p-4 sm:p-5`}>
           <p className="text-sm text-slate-500">Total revenue</p>
-          <p className="mt-2 text-3xl font-bold text-emerald-600">{formatCurrency(totals.revenue)}</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600 sm:text-3xl">{formatCurrency(totals.revenue)}</p>
         </div>
-        <div className={`${cardClass} p-5`}>
+        <div className={`${cardClass} p-4 sm:p-5`}>
           <p className="text-sm text-slate-500">Paid transactions</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{totals.paidTransactions}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">{totals.paidTransactions}</p>
         </div>
-        <div className={`${cardClass} p-5`}>
+        <div className={`${cardClass} p-4 sm:p-5`}>
           <p className="text-sm text-slate-500">All transactions</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{totals.totalTransactions}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">{totals.totalTransactions}</p>
         </div>
-        <div className={`${cardClass} p-5`}>
+        <div className={`${cardClass} p-4 sm:p-5 sm:col-span-2 xl:col-span-1`}>
           <p className="text-sm text-slate-500">Months tracked</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{monthlyRows.length}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">{monthlyRows.length}</p>
         </div>
       </div>
 
-      <div className={`${cardClass} max-h-[70vh] overflow-auto`}>
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <AdminTable wide maxHeight>
+        <thead className={tableHeadClass}>
+          <tr>
+            <th className={thClass}>Month</th>
+            <th className={thClass}>Revenue</th>
+            <th className={thHideSm}>Paid</th>
+            <th className={thHideMd}>Failed</th>
+            <th className={thHideMd}>Pending</th>
+            <th className={thHideSm}>All txns</th>
+            <th className={thHideLg}>Avg paid</th>
+          </tr>
+        </thead>
+        <tbody className={tableBodyClass}>
+          {loading ? (
             <tr>
-              <th className="px-4 py-3">Month</th>
-              <th className="px-4 py-3">Revenue</th>
-              <th className="px-4 py-3">Paid</th>
-              <th className="px-4 py-3">Failed</th>
-              <th className="px-4 py-3">Pending</th>
-              <th className="px-4 py-3">All txns</th>
-              <th className="px-4 py-3">Avg paid value</th>
+              <td colSpan={7} className={tableEmptyClass}>
+                Loading monthly revenue...
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                  Loading monthly revenue...
+          ) : monthlyRows.length === 0 ? (
+            <tr>
+              <td colSpan={7} className={tableEmptyClass}>
+                No revenue data found.
+              </td>
+            </tr>
+          ) : (
+            paginatedRows.map((row) => (
+              <tr key={row.key} className={tableRowClass}>
+                <td className={tdPrimaryClass}>{row.label}</td>
+                <td className={`${tdClass} font-semibold text-emerald-700`}>
+                  {formatCurrency(row.totalRevenue)}
                 </td>
+                <td className={tdHideSm}>{row.paidTransactions}</td>
+                <td className={tdHideMd}>{row.failedTransactions}</td>
+                <td className={tdHideMd}>{row.pendingTransactions}</td>
+                <td className={tdHideSm}>{row.totalTransactions}</td>
+                <td className={`${tdHideLg} text-slate-700`}>{formatCurrency(row.avgOrderValue)}</td>
               </tr>
-            ) : monthlyRows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                  No revenue data found.
-                </td>
-              </tr>
-            ) : (
-              paginatedRows.map((row) => (
-                <tr key={row.key} className="hover:bg-slate-50/80">
-                  <td className="px-4 py-3 font-medium text-slate-900">{row.label}</td>
-                  <td className="px-4 py-3 font-semibold text-emerald-700">{formatCurrency(row.totalRevenue)}</td>
-                  <td className="px-4 py-3 text-slate-700">{row.paidTransactions}</td>
-                  <td className="px-4 py-3 text-slate-700">{row.failedTransactions}</td>
-                  <td className="px-4 py-3 text-slate-700">{row.pendingTransactions}</td>
-                  <td className="px-4 py-3 text-slate-700">{row.totalTransactions}</td>
-                  <td className="px-4 py-3 text-slate-700">{formatCurrency(row.avgOrderValue)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          )}
+        </tbody>
+      </AdminTable>
 
       {!loading && monthlyRows.length > 0 && (
-        <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
-          <p className="text-sm text-slate-600">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, monthlyRows.length)} of{' '}
-            {monthlyRows.length} entries
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="text-sm font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={monthlyRows.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       <AdminAlertModal
