@@ -918,7 +918,7 @@ const ProductMediaGallery = ({ product }) => {
   );
 
   const inlineFrameClassName =
-    'aspect-video w-full min-h-[220px] max-h-[min(72vw,520px)] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:min-h-[260px] sm:max-h-[min(68vw,560px)] sm:rounded-2xl xl:min-h-[420px] xl:max-h-none xl:aspect-[4/3]';
+    'aspect-[3/4] w-full min-h-[320px] max-h-[min(92vw,680px)] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:aspect-video sm:min-h-[300px] sm:max-h-[min(80vw,600px)] sm:rounded-2xl xl:min-h-[420px] xl:max-h-none xl:aspect-[4/3]';
 
   const mediaShell = (
     <div
