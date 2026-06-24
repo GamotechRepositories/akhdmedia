@@ -249,8 +249,8 @@ const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
     xhr.send(file)
   })
 
-const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
-  const { data: presign } = await api.post('/upload/presign', {
+const requestUploadPresign = async (file, type, options = {}) => {
+  const { data } = await api.post('/upload/presign', {
     type,
     filename: file.name,
     contentType: file.type || 'application/octet-stream',
@@ -261,30 +261,60 @@ const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
     previewIndex: options.previewIndex,
     tier: options.tier,
   })
+  return data
+}
+
+const uploadDirectToPresignedS3 = async (presign, file, onProgress) => {
+  if (presign.uploadFields) {
+    await uploadFileToS3Post(presign.uploadUrl, presign.uploadFields, file, onProgress)
+    return
+  }
+  await uploadFileToS3(presign.uploadUrl, file, presign.headers, onProgress)
+}
+
+const buildPresignUploadResult = (presign, file, type) => ({
+  data: {
+    key: presign.key,
+    filename: presign.filename,
+    size: file.size,
+    type,
+    url: presign.url,
+  },
+})
+
+const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
+  const presign = await requestUploadPresign(file, type, options)
 
   if (presign.method === 'proxy') {
     return uploadMediaViaProxy(file, type, onProgress, options)
   }
 
   try {
-    if (presign.uploadFields) {
-      await uploadFileToS3Post(presign.uploadUrl, presign.uploadFields, file, onProgress)
-    } else {
-      await uploadFileToS3(presign.uploadUrl, file, presign.headers, onProgress)
-    }
+    await uploadDirectToPresignedS3(presign, file, onProgress)
   } catch (error) {
     throw error instanceof Error ? error : new Error('S3 upload failed')
   }
 
-  return {
-    data: {
-      key: presign.key,
-      filename: presign.filename,
-      size: file.size,
-      type,
-      url: presign.url,
-    },
+  return buildPresignUploadResult(presign, file, type)
+}
+
+/** Crop in browser, then PUT the file directly to S3 via presigned URL. */
+export const uploadCroppedPreviewToS3 = async (file, onProgress, options = {}) => {
+  const presign = await requestUploadPresign(file, 'preview-image', options)
+
+  if (presign.method === 'proxy') {
+    throw new Error(
+      'Direct S3 upload is unavailable. Configure AWS on the API server and allow CORS on the S3 bucket for this admin domain.',
+    )
   }
+
+  try {
+    await uploadDirectToPresignedS3(presign, file, onProgress)
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('S3 upload failed')
+  }
+
+  return buildPresignUploadResult(presign, file, 'preview-image')
 }
 
 export const uploadMedia = (file, type, onProgress, options = {}) =>

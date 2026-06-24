@@ -16,6 +16,7 @@ import MediaTypeSelector from '../components/MediaTypeSelector'
 import PricingModeSelector from '../components/PricingModeSelector'
 import ResolutionTierEditor from '../components/ResolutionTierEditor'
 import MediaUpload from '../components/MediaUpload'
+import PreviewImageUpload from '../components/PreviewImageUpload'
 import MasterQualitySelector from '../components/MasterQualitySelector'
 import SearchableSelect from '../components/SearchableSelect'
 import PageLoader from '../components/ui/PageLoader'
@@ -871,16 +872,13 @@ const ProductForm = () => {
         >
           <div className="grid gap-2 sm:grid-cols-3">
             {form.images.map((image, index) => (
-              <MediaUpload
+              <PreviewImageUpload
                 key={`preview-image-${index}-${image || 'empty'}`}
                 label={`Preview Image ${index + 1}`}
-                accept="image/jpeg,image/png,image/webp"
-                uploadType="preview-image"
                 clipId={form.clipId}
                 previewIndex={index + 1}
                 value={image}
                 onChange={(url) => updateImage(index, url)}
-                valueKind="url"
                 placeholder={`Image URL ${index + 1}`}
               />
             ))}
