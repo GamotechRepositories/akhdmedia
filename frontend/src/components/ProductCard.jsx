@@ -99,9 +99,11 @@ const ProductCard = ({ product, compact = false }) => {
                 {product.category} · {getProductBadgeLabel(product)}
               </p>
             </div>
-            <div className="flex shrink-0 items-center rounded bg-gray-50 px-[0.35em] py-[0.15em] text-[length:clamp(0.5rem,6.5cqw,0.625rem)] font-bold text-gray-600">
-              40 sec
-            </div>
+            {isVideo && product.videoInfo?.duration && (
+              <div className="flex shrink-0 items-center rounded bg-gray-50 px-[0.35em] py-[0.15em] text-[length:clamp(0.5rem,6.5cqw,0.625rem)] font-bold text-gray-600">
+                {product.videoInfo.duration}
+              </div>
+            )}
           </div>
         </div>
       </Link>
