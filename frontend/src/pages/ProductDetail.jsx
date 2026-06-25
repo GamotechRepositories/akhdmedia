@@ -110,11 +110,7 @@ const ProductDetail = () => {
   const relatedProducts = getRelatedProducts(product.id, 32);
   const relatedPreviewLimit = 19;
   const relatedPreview = relatedProducts.slice(0, relatedPreviewLimit);
-  const relatedViewAllLink = product.actorId
-    ? `/videos?actor=${encodeURIComponent(product.actorId)}`
-    : product.categorySlug
-      ? `/videos/${product.categorySlug}`
-      : '/videos';
+  const relatedViewAllLink = '/videos';
   const resolutionEntries = sortImageSizeEntries(product.imageSizes);
   const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
   const listingPrice = lowestTierInfo?.price ?? product.price;
