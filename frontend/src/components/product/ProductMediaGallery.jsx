@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
@@ -47,8 +48,6 @@ const getDefaultMediaIndex = (items) => {
 
 const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
-  const shellRef = useRef(null);
-  const lightboxAnchorRef = useRef({ parent: null, next: null });
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
   const loadedVideoSrcRef = useRef('');
@@ -371,8 +370,18 @@ const ProductMediaGallery = ({ product }) => {
     void resumePlayback(snapshot, { fromUserGesture: true });
   }, [captureSnapshot, resumePlayback]);
 
+  const handleExitImmersive = useCallback(
+    (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      void exitFullscreen();
+    },
+    [exitFullscreen],
+  );
+
   const toggleFullscreen = useCallback(
     async (event) => {
+      event?.preventDefault?.();
       event?.stopPropagation?.();
       const isCurrentlyImmersive =
         isFullscreen || isLightboxOpen || isNativeVideoFullscreen ||
@@ -461,37 +470,14 @@ const ProductMediaGallery = ({ product }) => {
     return () => window.clearTimeout(timer);
   }, [isImmersive, isLightboxOpen, isFullscreen, isNativeVideoFullscreen, resumePlayback]);
 
-  // Move lightbox shell to <body> so it covers footer/mobile nav (no video remount).
+  // Portal lightbox to <body> via createPortal (keeps React click handlers working).
   useEffect(() => {
-    const shell = shellRef.current;
-    if (!shell) return undefined;
-
-    const setLightboxPageState = (active) => {
-      document.documentElement.classList.toggle('media-lightbox-open', active);
-      document.body.classList.toggle('media-lightbox-open', active);
-    };
-
-    if (isLightboxOpen) {
-      if (shell.parentElement !== document.body) {
-        lightboxAnchorRef.current = {
-          parent: shell.parentElement,
-          next: shell.nextSibling,
-        };
-        document.body.appendChild(shell);
-      }
-      setLightboxPageState(true);
-    } else if (lightboxAnchorRef.current.parent && shell.parentElement === document.body) {
-      lightboxAnchorRef.current.parent.insertBefore(shell, lightboxAnchorRef.current.next);
-      setLightboxPageState(false);
-    } else {
-      setLightboxPageState(false);
-    }
+    document.documentElement.classList.toggle('media-lightbox-open', isLightboxOpen);
+    document.body.classList.toggle('media-lightbox-open', isLightboxOpen);
 
     return () => {
-      setLightboxPageState(false);
-      if (shell.parentElement === document.body && lightboxAnchorRef.current.parent) {
-        lightboxAnchorRef.current.parent.insertBefore(shell, lightboxAnchorRef.current.next);
-      }
+      document.documentElement.classList.remove('media-lightbox-open');
+      document.body.classList.remove('media-lightbox-open');
     };
   }, [isLightboxOpen]);
 
@@ -922,8 +908,8 @@ const ProductMediaGallery = ({ product }) => {
 
       <button
         type="button"
-        onClick={toggleFullscreen}
-        className={`pointer-events-auto absolute ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass} ${isImmersive ? '!z-[120]' : 'z-30'}`}
+        onClick={isImmersive ? handleExitImmersive : toggleFullscreen}
+        className={`pointer-events-auto absolute ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass} ${isImmersive ? '!z-[120] touch-manipulation' : 'z-30'}`}
         aria-label={isImmersive ? 'Exit fullscreen' : 'View fullscreen'}
         title={isImmersive ? 'Exit fullscreen' : 'Fullscreen'}
       >
@@ -964,34 +950,42 @@ const ProductMediaGallery = ({ product }) => {
   const inlineFrameClassName =
     'aspect-[3/4] w-full min-h-[320px] max-h-[min(92vw,680px)] overflow-hidden rounded-xl border border-gray-200 bg-black shadow-lg sm:aspect-video sm:min-h-[300px] sm:max-h-[min(80vw,600px)] sm:rounded-2xl xl:min-h-[420px] xl:max-h-none xl:aspect-[4/3]';
 
-  const mediaShell = (
-    <div
-      ref={shellRef}
-      className={isLightboxOpen ? 'media-lightbox' : 'relative w-full'}
-      role={isLightboxOpen ? 'dialog' : undefined}
-      aria-modal={isLightboxOpen ? 'true' : undefined}
-      aria-label={isLightboxOpen ? 'Fullscreen media preview' : undefined}
+  const renderMediaFrame = (mode) => (
+    <ProtectedMediaFrame
+      ref={frameRef}
+      watermark
+      className={mode === 'lightbox' ? 'media-lightbox__frame' : inlineFrameClassName}
     >
-      <ProtectedMediaFrame
-        ref={frameRef}
-        watermark
-        className={isLightboxOpen ? 'media-lightbox__frame' : inlineFrameClassName}
-      >
-        {renderMediaChrome(!isLightboxOpen)}
-        <div className={isLightboxOpen ? 'media-lightbox__media' : 'relative h-full w-full'}>
-          {mediaContent}
-        </div>
-      </ProtectedMediaFrame>
-    </div>
+      {renderMediaChrome(mode === 'inline')}
+      <div className={mode === 'lightbox' ? 'media-lightbox__media' : 'relative h-full w-full'}>
+        {mediaContent}
+      </div>
+    </ProtectedMediaFrame>
   );
+
+  const lightboxPortal = isLightboxOpen
+    ? createPortal(
+        <div
+          className="media-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Fullscreen media preview"
+        >
+          {renderMediaFrame('lightbox')}
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <div className="w-full min-w-0 max-w-full">
       {isLightboxOpen ? (
         <div className={`${inlineFrameClassName} pointer-events-none invisible`} aria-hidden />
-      ) : null}
+      ) : (
+        <div className="relative w-full">{renderMediaFrame('inline')}</div>
+      )}
 
-      {mediaShell}
+      {lightboxPortal}
 
       {isVideoSelected && !isImmersive && renderVideoProgressBar('inline')}
 
