@@ -44,9 +44,6 @@ const EditorialPolicy = () => {
           <section className="mt-6">
             <h2 className="text-base font-semibold text-gray-900">3 ) Commercial-Use Rights</h2>
             <p className="mt-2 text-sm leading-relaxed text-gray-800">
-              The buyer may use the content for business or commercial purposes.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-gray-800">
               The purchased photos and videos may be used for editorial, news-reporting, informational,
               commentary, entertainment-news, and media-publication purposes, including:
             </p>
