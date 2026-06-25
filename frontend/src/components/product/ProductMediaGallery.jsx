@@ -10,6 +10,7 @@ import {
   getFullscreenElement,
   isIOSDevice,
   isVideoNativeFullscreen,
+  prefersOverlayFullscreen,
   requestElementFullscreen,
   requestVideoFullscreen,
   supportsElementFullscreen,
@@ -295,6 +296,13 @@ const ProductMediaGallery = ({ product }) => {
       window.setTimeout(() => {
         inTransitionRef.current = false;
       }, 2000);
+
+      // Phones / tablets — overlay keeps watermark; native video FS shows only the <video>
+      if (prefersOverlayFullscreen()) {
+        setIsLightboxOpen(true);
+        void resumePlayback(snapshot, { fromUserGesture });
+        return;
+      }
 
       // iOS Safari — native video fullscreen hides browser chrome
       if (isIOSDevice() && video && isVideoSelected) {
