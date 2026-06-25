@@ -10,12 +10,17 @@ import {
 } from '../utils/formatFileSize'
 import { inputClass } from './ui/adminUi'
 
+const FULL_IMAGE_ASPECT = 'full'
+
 const ASPECT_OPTIONS = [
-  { id: '16:9', label: '16:9 Wide', value: 16 / 9 },
   { id: '4:3', label: '4:3', value: 4 / 3 },
   { id: '3:4', label: '3:4 Tall', value: 3 / 4 },
   { id: '1:1', label: '1:1 Square', value: 1 },
+  { id: 'full', label: 'Full Image', value: FULL_IMAGE_ASPECT },
 ]
+
+const getDefaultAspectForPreview = (previewIndex) =>
+  previewIndex === 1 ? 3 / 4 : FULL_IMAGE_ASPECT
 
 const PreviewImageUpload = ({
   label,
@@ -29,11 +34,13 @@ const PreviewImageUpload = ({
   const inputRef = useRef(null)
   const progressRef = useRef(0)
   const cropSourceRef = useRef('')
+  const selectedFileRef = useRef(null)
 
   const [imageSrc, setImageSrc] = useState('')
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
-  const [aspect, setAspect] = useState(16 / 9)
+  const [aspect, setAspect] = useState(() => getDefaultAspectForPreview(previewIndex))
+  const isFullImageMode = aspect === FULL_IMAGE_ASPECT
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -58,6 +65,7 @@ const PreviewImageUpload = ({
       URL.revokeObjectURL(cropSourceRef.current)
     }
     cropSourceRef.current = ''
+    selectedFileRef.current = null
     setImageSrc('')
     setCrop({ x: 0, y: 0 })
     setZoom(1)
@@ -67,6 +75,7 @@ const PreviewImageUpload = ({
   const openCropperWithFile = (file) => {
     if (!file) return
     clearCropSource()
+    selectedFileRef.current = file
     const objectUrl = URL.createObjectURL(file)
     cropSourceRef.current = objectUrl
     setImageSrc(objectUrl)
@@ -103,8 +112,75 @@ const PreviewImageUpload = ({
     setUploadEta(formatUploadEta(payload.loaded, payload.total, payload.speedBps))
   }
 
+  const uploadPreviewFile = async (file) => {
+    const response = await uploadCroppedPreviewToS3(file, reportProgress, {
+      clipId,
+      previewIndex,
+    })
+
+    const payload = response.data
+    const uploadedUrl = payload.url || ''
+
+    if (!uploadedUrl) {
+      throw new Error('S3 upload finished but no public URL was returned')
+    }
+
+    const withCacheBuster = (url) => {
+      const base = url.split('?')[0]
+      return `${base}?v=${Date.now()}`
+    }
+
+    progressRef.current = 100
+    setUploadProgress(100)
+    setUploadedSize(payload.size || file.size)
+
+    onChange(withCacheBuster(uploadedUrl), {
+      filename: payload.filename || file.name,
+      size: payload.size || file.size,
+      url: uploadedUrl,
+      key: payload.key || '',
+    })
+    clearCropSource()
+  }
+
   const handleApplyCrop = async () => {
-    if (!imageSrc || !croppedAreaPixels) {
+    if (!imageSrc) {
+      setError('Choose an image first.')
+      return
+    }
+
+    if (isFullImageMode) {
+      if (!selectedFileRef.current) {
+        setError('Choose an image to upload.')
+        return
+      }
+
+      if (!uploadReady) {
+        setError('Wait for Clip ID before uploading to S3.')
+        return
+      }
+
+      setUploading(true)
+      progressRef.current = 0
+      setUploadProgress(0)
+      setUploadSpeed('')
+      setUploadEta('')
+      setError('')
+
+      try {
+        await uploadPreviewFile(selectedFileRef.current)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setUploading(false)
+        setUploadProgress(0)
+        setUploadSpeed('')
+        setUploadEta('')
+      }
+      return
+    }
+
+    if (!croppedAreaPixels) {
       setError('Choose an image and adjust the crop area first.')
       return
     }
@@ -128,34 +204,7 @@ const PreviewImageUpload = ({
       })
       const file = new File([blob], `preview-${previewIndex}.jpg`, { type: 'image/jpeg' })
 
-      const response = await uploadCroppedPreviewToS3(file, reportProgress, {
-        clipId,
-        previewIndex,
-      })
-
-      const payload = response.data
-      const uploadedUrl = payload.url || ''
-
-      if (!uploadedUrl) {
-        throw new Error('S3 upload finished but no public URL was returned')
-      }
-
-      const withCacheBuster = (url) => {
-        const base = url.split('?')[0]
-        return `${base}?v=${Date.now()}`
-      }
-
-      progressRef.current = 100
-      setUploadProgress(100)
-      setUploadedSize(payload.size || file.size)
-
-      onChange(withCacheBuster(uploadedUrl), {
-        filename: payload.filename || file.name,
-        size: payload.size || file.size,
-        url: uploadedUrl,
-        key: payload.key || '',
-      })
-      clearCropSource()
+      await uploadPreviewFile(file)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -177,14 +226,40 @@ const PreviewImageUpload = ({
       ? 'Preparing Clip ID...'
       : imageSrc
         ? 'Choose another image'
-        : 'Choose image to crop'
+        : isFullImageMode
+          ? 'Choose full image'
+          : 'Choose image to crop'
+
+  const uploadActionLabel = uploading
+    ? `Uploading to S3 ${uploadProgress}%`
+    : isFullImageMode
+      ? 'Upload full image to S3'
+      : 'Crop & upload to S3'
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <p className="mb-2 text-xs font-semibold text-slate-700">{label}</p>
       <p className="mb-3 text-[11px] text-slate-500">
-        Select an image, crop it, then upload the cropped file directly to S3.
+        Pick a ratio (or Full Image), select a file, then upload to S3.
       </p>
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {ASPECT_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => handleAspectChange(option.value)}
+            disabled={uploading || disabled}
+            className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-60 ${
+              aspect === option.value
+                ? 'border-slate-900 bg-slate-900 text-white'
+                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -216,58 +291,53 @@ const PreviewImageUpload = ({
 
       {imageSrc ? (
         <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {ASPECT_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => handleAspectChange(option.value)}
-                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold transition ${
-                  aspect === option.value
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          {isFullImageMode ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <img
+                src={imageSrc}
+                alt="Full preview"
+                className="mx-auto max-h-80 w-full object-contain"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-900">
+                <Cropper
+                  image={imageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={aspect}
+                  cropShape="rect"
+                  showGrid
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
 
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-900">
-            <Cropper
-              image={imageSrc}
-              crop={crop}
-              zoom={zoom}
-              aspect={aspect}
-              cropShape="rect"
-              showGrid
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-            />
-          </div>
-
-          <label className="block text-xs font-medium text-slate-700">
-            Zoom
-            <input
-              type="range"
-              min="1"
-              max="3"
-              step="0.05"
-              value={zoom}
-              onChange={(event) => setZoom(Number(event.target.value))}
-              className="mt-2 w-full accent-slate-900"
-            />
-          </label>
+              <label className="block text-xs font-medium text-slate-700">
+                Zoom
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.05"
+                  value={zoom}
+                  onChange={(event) => setZoom(Number(event.target.value))}
+                  className="mt-2 w-full accent-slate-900"
+                />
+              </label>
+            </>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={handleApplyCrop}
-              disabled={uploading || !croppedAreaPixels}
+              disabled={uploading || (!isFullImageMode && !croppedAreaPixels)}
               className="rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
             >
-              {uploading ? `Uploading to S3 ${uploadProgress}%` : 'Crop & upload to S3'}
+              {uploadActionLabel}
             </button>
             <button
               type="button"
@@ -284,7 +354,7 @@ const PreviewImageUpload = ({
       {uploading ? (
         <div className="mt-3">
           <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-600">
-            <span>Uploading cropped image to S3...</span>
+            <span>{isFullImageMode ? 'Uploading full image to S3...' : 'Uploading cropped image to S3...'}</span>
             <span>{uploadProgress}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
