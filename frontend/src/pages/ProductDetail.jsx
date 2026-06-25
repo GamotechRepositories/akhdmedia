@@ -108,6 +108,13 @@ const ProductDetail = () => {
   const isVideo = isVideoProduct(product);
   const isPurchasable = Boolean(product.isPurchasable);
   const relatedProducts = getRelatedProducts(product.id, 32);
+  const relatedPreviewLimit = 19;
+  const relatedPreview = relatedProducts.slice(0, relatedPreviewLimit);
+  const relatedViewAllLink = product.actorId
+    ? `/videos?actor=${encodeURIComponent(product.actorId)}`
+    : product.categorySlug
+      ? `/videos/${product.categorySlug}`
+      : '/videos';
   const resolutionEntries = sortImageSizeEntries(product.imageSizes);
   const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
   const listingPrice = lowestTierInfo?.price ?? product.price;
@@ -389,9 +396,20 @@ const ProductDetail = () => {
           <div className="scroll-section mt-10 w-full min-w-0 border-t border-gray-200 pt-8 sm:mt-12 [contain-intrinsic-size:auto_520px]">
             <h2 className="mb-5 text-lg font-bold text-gray-900 sm:text-xl">More like this</h2>
             <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4">
-              {relatedProducts.map((p) => (
+              {relatedPreview.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
+              <Link
+                to={relatedViewAllLink}
+                className="group flex aspect-[4/5] w-full min-w-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 text-center transition hover:border-gray-900 hover:bg-gray-900 hover:text-white sm:rounded-xl"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-current bg-white text-gray-900 transition group-hover:border-white group-hover:bg-white/10 group-hover:text-white sm:h-12 sm:w-12">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+                <span className="mt-3 text-sm font-semibold sm:text-base">View All</span>
+              </Link>
             </div>
           </div>
         )}
