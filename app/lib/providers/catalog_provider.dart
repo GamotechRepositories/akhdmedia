@@ -46,7 +46,7 @@ class CatalogProvider extends ChangeNotifier {
     return products.take(limit).toList();
   }
 
-  List<Product> getRelatedProducts(String productId, {int limit = 4}) {
+  List<Product> getRelatedProducts(String productId, {int limit = 32}) {
     final current = getProductById(productId);
     if (current == null) return [];
 

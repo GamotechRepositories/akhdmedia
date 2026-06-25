@@ -55,7 +55,7 @@ export const CatalogProvider = ({ children }) => {
   );
 
   const getRelatedProducts = useCallback(
-    (productId, limit = 4) => {
+    (productId, limit = 32) => {
       const currentProduct = catalog.products.find((product) => product.id === productId);
       const otherProducts = catalog.products.filter((product) => product.id !== productId);
 

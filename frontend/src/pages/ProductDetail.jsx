@@ -107,7 +107,7 @@ const ProductDetail = () => {
 
   const isVideo = isVideoProduct(product);
   const isPurchasable = Boolean(product.isPurchasable);
-  const relatedProducts = getRelatedProducts(product.id);
+  const relatedProducts = getRelatedProducts(product.id, 32);
   const resolutionEntries = sortImageSizeEntries(product.imageSizes);
   const [lowestTierName, lowestTierInfo] = resolutionEntries[0] || [];
   const listingPrice = lowestTierInfo?.price ?? product.price;
