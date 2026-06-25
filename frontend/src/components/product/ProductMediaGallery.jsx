@@ -58,6 +58,7 @@ const ProductMediaGallery = ({ product }) => {
   const userPausedRef = useRef(false);      // true when user explicitly paused
   const inTransitionRef = useRef(false);    // true during fullscreen enter/exit
   const pendingPlayRef = useRef(null);      // AbortController for in-flight play()
+  const pendingLightboxResumeRef = useRef(null);
 
   const mediaItems = buildProductMediaItems(product);
 
@@ -343,12 +344,21 @@ const ProductMediaGallery = ({ product }) => {
   );
 
   const exitFullscreen = useCallback(async () => {
+    const closingLightbox = isLightboxOpen;
     const snapshot = captureSnapshot();
-    inTransitionRef.current = true;
 
-    window.setTimeout(() => {
+    if (closingLightbox && snapshot.wasPlaying && !userPausedRef.current) {
+      pendingLightboxResumeRef.current = snapshot;
+    }
+
+    if (closingLightbox) {
       inTransitionRef.current = false;
-    }, 2000);
+    } else {
+      inTransitionRef.current = true;
+      window.setTimeout(() => {
+        inTransitionRef.current = false;
+      }, 2000);
+    }
 
     const video = videoRef.current;
     const fsEl = getFullscreenElement();
@@ -367,8 +377,11 @@ const ProductMediaGallery = ({ product }) => {
     setIsFullscreen(false);
     setIsNativeVideoFullscreen(false);
     setIsLightboxOpen(false);
-    void resumePlayback(snapshot, { fromUserGesture: true });
-  }, [captureSnapshot, resumePlayback]);
+
+    if (!closingLightbox) {
+      void resumePlayback(snapshot, { fromUserGesture: true });
+    }
+  }, [captureSnapshot, resumePlayback, isLightboxOpen]);
 
   const handleExitImmersive = useCallback(
     (event) => {
@@ -470,6 +483,27 @@ const ProductMediaGallery = ({ product }) => {
     return () => window.clearTimeout(timer);
   }, [isImmersive, isLightboxOpen, isFullscreen, isNativeVideoFullscreen, resumePlayback]);
 
+  // Resume inline video after mobile/tablet lightbox closes (portal remounts the player).
+  useEffect(() => {
+    if (isLightboxOpen || !pendingLightboxResumeRef.current) return undefined;
+
+    const snapshot = pendingLightboxResumeRef.current;
+    pendingLightboxResumeRef.current = null;
+    inTransitionRef.current = false;
+
+    const delays = [0, 120, 300, 600, 1000];
+    const timers = delays.map((delay) =>
+      window.setTimeout(() => {
+        if (userPausedRef.current || isLightboxOpen) return;
+        void resumePlayback(snapshot, { fromUserGesture: true });
+      }, delay),
+    );
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [isLightboxOpen, resumePlayback]);
+
   // Portal lightbox to <body> via createPortal (keeps React click handlers working).
   useEffect(() => {
     document.documentElement.classList.toggle('media-lightbox-open', isLightboxOpen);
@@ -541,6 +575,7 @@ const ProductMediaGallery = ({ product }) => {
     loadedVideoSrcRef.current = '';
     cancelPendingPlay();
     inTransitionRef.current = false;
+    pendingLightboxResumeRef.current = null;
     setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
     setIsVideoPlaying(false);
     setIsVideoBuffering(false);
@@ -655,17 +690,24 @@ const ProductMediaGallery = ({ product }) => {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isVideoSelected || userPausedRef.current) return undefined;
+    if (!video || !isVideoSelected || userPausedRef.current || isLightboxOpen) return undefined;
 
     let cancelled = false;
+    const snapshot = playbackSnapshotRef.current;
 
     const startAuto = async () => {
       if (cancelled || userPausedRef.current || inTransitionRef.current) return;
-      if (!video.paused) {
+      if (!video.paused && !video.ended) {
         setIsVideoPlaying(true);
         setIsVideoBuffering(false);
         return;
       }
+
+      if (snapshot.wasPlaying) {
+        await resumePlayback(snapshot, { fromUserGesture: false });
+        return;
+      }
+
       await safePlay({ fromUserGesture: false });
     };
 
@@ -680,7 +722,7 @@ const ProductMediaGallery = ({ product }) => {
       cancelled = true;
       video.removeEventListener('canplay', startAuto);
     };
-  }, [isVideoSelected, selectedItem?.src, product?.id, safePlay]);
+  }, [isVideoSelected, selectedItem?.src, product?.id, isLightboxOpen, safePlay, resumePlayback]);
 
   // ─── Keep muted state in sync ────────────────────────────────────────────
 
