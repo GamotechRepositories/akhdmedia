@@ -47,6 +47,8 @@ const getDefaultMediaIndex = (items) => {
 
 const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
+  const shellRef = useRef(null);
+  const lightboxAnchorRef = useRef({ parent: null, next: null });
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
   const loadedVideoSrcRef = useRef('');
@@ -458,6 +460,40 @@ const ProductMediaGallery = ({ product }) => {
 
     return () => window.clearTimeout(timer);
   }, [isImmersive, isLightboxOpen, isFullscreen, isNativeVideoFullscreen, resumePlayback]);
+
+  // Move lightbox shell to <body> so it covers footer/mobile nav (no video remount).
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return undefined;
+
+    const setLightboxPageState = (active) => {
+      document.documentElement.classList.toggle('media-lightbox-open', active);
+      document.body.classList.toggle('media-lightbox-open', active);
+    };
+
+    if (isLightboxOpen) {
+      if (shell.parentElement !== document.body) {
+        lightboxAnchorRef.current = {
+          parent: shell.parentElement,
+          next: shell.nextSibling,
+        };
+        document.body.appendChild(shell);
+      }
+      setLightboxPageState(true);
+    } else if (lightboxAnchorRef.current.parent && shell.parentElement === document.body) {
+      lightboxAnchorRef.current.parent.insertBefore(shell, lightboxAnchorRef.current.next);
+      setLightboxPageState(false);
+    } else {
+      setLightboxPageState(false);
+    }
+
+    return () => {
+      setLightboxPageState(false);
+      if (shell.parentElement === document.body && lightboxAnchorRef.current.parent) {
+        lightboxAnchorRef.current.parent.insertBefore(shell, lightboxAnchorRef.current.next);
+      }
+    };
+  }, [isLightboxOpen]);
 
   // ─── Lightbox keyboard + scroll lock ─────────────────────────────────────
 
@@ -930,6 +966,7 @@ const ProductMediaGallery = ({ product }) => {
 
   const mediaShell = (
     <div
+      ref={shellRef}
       className={isLightboxOpen ? 'media-lightbox' : 'relative w-full'}
       role={isLightboxOpen ? 'dialog' : undefined}
       aria-modal={isLightboxOpen ? 'true' : undefined}

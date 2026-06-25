@@ -123,6 +123,20 @@ const mergeAvailableTiers = (product = {}) => {
   return getCustomerTiers(tiers)
 }
 
+const buildPreviewImages = (product = {}) => {
+  const slots = [
+    product.images?.[0] || '',
+    product.images?.[1] || '',
+    product.images?.[2] || '',
+  ]
+
+  if (!slots[0] && product.videoPoster?.trim()) {
+    slots[0] = product.videoPoster.trim()
+  }
+
+  return slots
+}
+
 const mapProductToForm = (product) => {
   const mediaType = product.mediaType || MEDIA_TYPES.VIDEO
 
@@ -141,11 +155,7 @@ const mapProductToForm = (product) => {
     resolutionPricing: mergeTierConfig(product),
     rating: product.rating || 0,
     description: product.description || '',
-    images: [
-      product.images?.[0] || '',
-      product.images?.[1] || '',
-      product.images?.[2] || '',
-    ],
+    images: buildPreviewImages(product),
     demoVideo: product.demoVideo || '',
     videoPoster: product.videoPoster || '',
     deliveryFiles: mergeDeliveryFiles(product),

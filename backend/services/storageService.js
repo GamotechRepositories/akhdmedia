@@ -3,6 +3,7 @@ import fsPromises from 'fs/promises'
 import path from 'path'
 import {
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -12,6 +13,7 @@ import {
   getAwsS3Bucket,
   getAwsS3PublicUrl,
   AWS_S3_PRIVATE_PREFIX,
+  AWS_S3_PUBLIC_PREFIX,
   isAwsEnabled,
   isCloudFrontSigningEnabled,
   LOCAL_PRIVATE_DIR,
@@ -27,6 +29,7 @@ const getS3 = () => {
   if (!s3Client) {
     s3Client = new S3Client({
       region: getAwsRegion(),
+      followRegionRedirects: true,
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -37,6 +40,15 @@ const getS3 = () => {
     })
   }
   return s3Client
+}
+
+const getConfiguredS3Buckets = () => {
+  const buckets = [
+    process.env.AWS_S3_BUCKET?.trim(),
+    process.env.AWS_BUCKET_NAME?.trim(),
+  ].filter(Boolean)
+
+  return [...new Set(buckets)]
 }
 
 const ensureDir = async (dir) => {
@@ -316,4 +328,98 @@ export const readPrivateFile = async (key) => {
   const filePath = path.join(LOCAL_PRIVATE_DIR, relativeKey)
   const body = await fsPromises.readFile(filePath)
   return { body, contentType: 'application/octet-stream' }
+}
+
+const collectPreviewSlot = (slots, filename, url, lastModified = 0) => {
+  const match = filename.match(/^preview-(\d{2})-/i)
+  if (!match) return
+
+  const slot = Number(match[1])
+  if (slot < 1 || slot > 3) return
+  if (!/\.(jpe?g|png|webp)$/i.test(filename)) return
+
+  const existing = slots[slot]
+  if (!existing || lastModified > existing.lastModified) {
+    slots[slot] = { url, lastModified }
+  }
+}
+
+const listPreviewUrlsFromBucket = async (bucket, prefix) => {
+  const slots = {}
+  let continuationToken
+
+  do {
+    const response = await getS3().send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    )
+
+    for (const object of response.Contents || []) {
+      const filename = object.Key.split('/').pop()
+      collectPreviewSlot(
+        slots,
+        filename,
+        `${getPublicBaseUrl()}/${object.Key}`,
+        object.LastModified?.getTime() || 0,
+      )
+    }
+
+    continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined
+  } while (continuationToken)
+
+  return slots
+}
+
+/** Latest preview-01/02/03 files from storage for admin edit hydration. */
+export const listPublicProductPreviewUrls = async (clipId = '') => {
+  const id = clipId?.trim()?.toUpperCase()
+  if (!id) return ['', '', '']
+
+  const prefix = `${AWS_S3_PUBLIC_PREFIX}/products/${id}/previews/`
+
+  if (isAwsEnabled()) {
+    const buckets = getConfiguredS3Buckets()
+    let lastError = null
+
+    for (const bucket of buckets) {
+      try {
+        const slots = await listPreviewUrlsFromBucket(bucket, prefix)
+        return [1, 2, 3].map((slot) => slots[slot]?.url || '')
+      } catch (error) {
+        lastError = error
+        console.warn(`[preview-images] Could not list previews in ${bucket}:`, error?.message || error)
+      }
+    }
+
+    if (lastError) {
+      console.warn(`[preview-images] S3 list skipped for ${id}`)
+    }
+
+    return ['', '', '']
+  }
+
+  const slots = {}
+  const localDir = path.join(LOCAL_PUBLIC_DIR, 'products', id, 'previews')
+
+  try {
+    const files = await fsPromises.readdir(localDir)
+
+    for (const filename of files) {
+      const filePath = path.join(localDir, filename)
+      const stat = await fsPromises.stat(filePath)
+      collectPreviewSlot(
+        slots,
+        filename,
+        `${getApiBase()}/uploads/public/products/${id}/previews/${filename}`,
+        stat.mtimeMs,
+      )
+    }
+  } catch {
+    // previews folder may not exist yet
+  }
+
+  return [1, 2, 3].map((slot) => slots[slot]?.url || '')
 }

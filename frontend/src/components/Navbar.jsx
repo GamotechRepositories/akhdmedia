@@ -397,7 +397,7 @@ const Navbar = () => {
       </nav>
       </header>
 
-      <div className="safe-bottom fixed bottom-4 left-3 right-3 z-40 md:hidden">
+      <div className="mobile-bottom-nav safe-bottom fixed bottom-4 left-3 right-3 z-40 md:hidden">
         <div className="flex items-center justify-around rounded-2xl border border-white/20 bg-white/90 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl sm:p-2">
           <Link to="/" className={`rounded-xl p-3 transition ${activeCategory === 'home' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`} aria-label="Home">
             <svg className="h-5 w-5" fill={activeCategory === 'home' ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
