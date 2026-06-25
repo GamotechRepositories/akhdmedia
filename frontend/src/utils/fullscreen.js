@@ -18,7 +18,7 @@ export const isMobileDevice = () => {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 };
 
-/** Touch-first layouts (phones/tablets) — overlay lightbox is more reliable than element fullscreen for video. */
+/** Touch-first layouts — use lightbox overlay, upgraded to native FS when supported. */
 export const prefersOverlayFullscreen = () => {
   if (isIOSDevice()) return true;
   if (typeof window === 'undefined') return false;

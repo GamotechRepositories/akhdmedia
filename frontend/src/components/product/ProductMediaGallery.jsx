@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
@@ -299,14 +299,42 @@ const ProductMediaGallery = ({ product }) => {
         inTransitionRef.current = false;
       }, 2000);
 
-      // Phones / tablets — overlay keeps watermark; native video FS shows only the <video>
+      const tryNativeFullscreen = async (targets) => {
+        if (!supportsElementFullscreen()) return false;
+
+        for (const target of targets) {
+          if (!target) continue;
+          try {
+            await requestElementFullscreen(target);
+            isFullscreenRef.current = true;
+            setIsFullscreen(true);
+            void resumePlayback(snapshot, { fromUserGesture });
+            return true;
+          } catch {
+            // try next target
+          }
+        }
+
+        return false;
+      };
+
+      // Mobile / tablet — open watermark lightbox, then upgrade to native FS in same tap
       if (prefersOverlayFullscreen()) {
-        setIsLightboxOpen(true);
-        void resumePlayback(snapshot, { fromUserGesture });
+        flushSync(() => {
+          setIsLightboxOpen(true);
+        });
+
+        const lightboxFrame = frameRef.current;
+        const lightboxEl = lightboxFrame?.closest('.media-lightbox');
+        const entered = await tryNativeFullscreen([lightboxEl, lightboxFrame, frame].filter(Boolean));
+
+        if (!entered) {
+          void resumePlayback(snapshot, { fromUserGesture });
+        }
         return;
       }
 
-      // iOS Safari — native video fullscreen hides browser chrome
+      // iOS Safari desktop-class fallback — native video fullscreen hides browser chrome
       if (isIOSDevice() && video && isVideoSelected) {
         try {
           const entered = await requestVideoFullscreen(video);
@@ -320,23 +348,10 @@ const ProductMediaGallery = ({ product }) => {
         }
       }
 
-      // Android / desktop — Fullscreen API hides browser navigation bar
-      if (supportsElementFullscreen()) {
-        const targets = [frame, video].filter(Boolean);
-        for (const target of targets) {
-          try {
-            await requestElementFullscreen(target);
-            isFullscreenRef.current = true;
-            setIsFullscreen(true);
-            void resumePlayback(snapshot, { fromUserGesture });
-            return;
-          } catch {
-            // try next target
-          }
-        }
-      }
+      const entered = await tryNativeFullscreen([frame, video].filter(Boolean));
+      if (entered) return;
 
-      // Last resort — CSS overlay (browser chrome stays visible)
+      // Last resort — CSS overlay (browser chrome may stay visible)
       setIsLightboxOpen(true);
       void resumePlayback(snapshot, { fromUserGesture });
     },
@@ -345,13 +360,14 @@ const ProductMediaGallery = ({ product }) => {
 
   const exitFullscreen = useCallback(async () => {
     const closingLightbox = isLightboxOpen;
+    const closingNativeFs = isFullscreen || Boolean(getFullscreenElement());
     const snapshot = captureSnapshot();
 
-    if (closingLightbox && snapshot.wasPlaying && !userPausedRef.current) {
+    if ((closingLightbox || closingNativeFs) && snapshot.wasPlaying && !userPausedRef.current) {
       pendingLightboxResumeRef.current = snapshot;
     }
 
-    if (closingLightbox) {
+    if (closingLightbox || closingNativeFs) {
       inTransitionRef.current = false;
     } else {
       inTransitionRef.current = true;
@@ -378,10 +394,10 @@ const ProductMediaGallery = ({ product }) => {
     setIsNativeVideoFullscreen(false);
     setIsLightboxOpen(false);
 
-    if (!closingLightbox) {
+    if (!closingLightbox && !closingNativeFs) {
       void resumePlayback(snapshot, { fromUserGesture: true });
     }
-  }, [captureSnapshot, resumePlayback, isLightboxOpen]);
+  }, [captureSnapshot, resumePlayback, isLightboxOpen, isFullscreen]);
 
   const handleExitImmersive = useCallback(
     (event) => {
@@ -401,7 +417,8 @@ const ProductMediaGallery = ({ product }) => {
         Boolean(
           frameRef.current &&
             (getFullscreenElement() === frameRef.current ||
-              getFullscreenElement() === videoRef.current),
+              getFullscreenElement() === videoRef.current ||
+              getFullscreenElement() === frameRef.current.closest('.media-lightbox')),
         );
 
       if (isCurrentlyImmersive) {
@@ -419,9 +436,12 @@ const ProductMediaGallery = ({ product }) => {
     const onFullscreenChange = () => {
       const frame = frameRef.current;
       const video = videoRef.current;
+      const lightboxEl = frame?.closest('.media-lightbox');
       const fsEl = getFullscreenElement();
       const nowFullscreen = Boolean(
-        (frame && fsEl === frame) || (video && fsEl === video),
+        (frame && fsEl === frame) ||
+          (video && fsEl === video) ||
+          (lightboxEl && fsEl === lightboxEl),
       );
       const wasFullscreen = isFullscreenRef.current;
 
@@ -434,8 +454,12 @@ const ProductMediaGallery = ({ product }) => {
         void resumePlayback(snapshot, { fromUserGesture: true });
       }
 
-      // Browser-initiated exit (e.g. Esc key): restore playback
+      // Browser-initiated exit (e.g. back button): close overlay + restore playback
       if (wasFullscreen && !nowFullscreen && !inTransitionRef.current) {
+        setIsLightboxOpen(false);
+        if (snapshot.wasPlaying && !userPausedRef.current) {
+          pendingLightboxResumeRef.current = snapshot;
+        }
         void resumePlayback(snapshot, { fromUserGesture: true });
       }
     };
