@@ -28,9 +28,9 @@ const emptyBilling = {
 
 
 const PAYMENT_OPTIONS = [
-  { id: 'upi', label: 'UPI', hint: 'GPay, PhonePe, Paytm' },
-  { id: 'card', label: 'Card', hint: 'Visa, Mastercard, RuPay' },
-  { id: 'netbanking', label: 'Net Banking', hint: 'HDFC, SBI, ICICI' },
+  { id: 'upi', label: 'UPI' },
+  { id: 'card', label: 'Card' },
+  { id: 'netbanking', label: 'Net Banking' },
 ];
 
 const inputClass =
@@ -52,6 +52,44 @@ const IconAlert = () => (
     />
   </svg>
 );
+
+const IconUpi = ({ className = 'h-7 w-7' }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.75}
+      d="M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z"
+    />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 9h6M9 13h4" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16 3l2 2-2 2" />
+  </svg>
+);
+
+const IconCard = ({ className = 'h-7 w-7' }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <rect x="2" y="5" width="20" height="14" rx="2.5" strokeWidth={1.75} />
+    <path strokeLinecap="round" strokeWidth={1.75} d="M2 10h20" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 15h4" />
+  </svg>
+);
+
+const IconNetBanking = ({ className = 'h-7 w-7' }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.75}
+      d="M4 10h16M6 10V19M10 10V19M14 10V19M18 10V19M3 19h18M12 3l9 7H3l9-7z"
+    />
+  </svg>
+);
+
+const PAYMENT_OPTION_ICONS = {
+  upi: IconUpi,
+  card: IconCard,
+  netbanking: IconNetBanking,
+};
 
 const StepIndicator = ({ step }) => (
   <div className="mb-6 flex items-center justify-center gap-3">
@@ -105,7 +143,6 @@ const Checkout = () => {
   const [step, setStep] = useState('billing');
   const [loading, setLoading] = useState(false);
   const [alertPopup, setAlertPopup] = useState(null);
-  const [onlinePaymentMethod, setOnlinePaymentMethod] = useState('upi');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
@@ -225,7 +262,7 @@ const Checkout = () => {
     }, 2000);
   };
 
-  const placeOnlineOrder = async () => {
+  const placeOnlineOrder = async (paymentMethod) => {
     setIsProcessingOrder(true);
 
     const response = await orderAPI.createOrder(billingDetails, 'online');
@@ -249,7 +286,7 @@ const Checkout = () => {
       orderId: razorpay.orderId,
       name: BRAND.name,
       description: `Order ${order.orderNumber}`,
-      preferredMethod: onlinePaymentMethod,
+      preferredMethod: paymentMethod,
       prefill: {
         name: billingDetails.name,
         email: billingDetails.email,
@@ -279,12 +316,14 @@ const Checkout = () => {
     });
   };
 
-  const handlePayment = async () => {
+  const handlePaymentMethodSelect = async (methodId) => {
+    if (loading || isProcessingOrder) return;
+
     setLoading(true);
     setIsPlacingOrder(true);
 
     try {
-      await placeOnlineOrder();
+      await placeOnlineOrder(methodId);
     } catch (err) {
       setIsPlacingOrder(false);
       setIsProcessingOrder(false);
@@ -504,24 +543,25 @@ const Checkout = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {PAYMENT_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setOnlinePaymentMethod(option.id)}
-                    className={`rounded-lg border px-4 py-3 text-left transition sm:px-2 sm:py-2.5 sm:text-center ${
-                      onlinePaymentMethod === option.id
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 text-gray-700 hover:border-gray-400'
-                    }`}
-                  >
-                    <p className="text-sm font-bold sm:text-xs">{option.label}</p>
-                    <p className={`mt-0.5 text-xs sm:text-[10px] ${onlinePaymentMethod === option.id ? 'text-gray-300' : 'text-gray-400'}`}>
-                      {option.hint}
-                    </p>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {PAYMENT_OPTIONS.map((option) => {
+                  const PaymentIcon = PAYMENT_OPTION_ICONS[option.id];
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handlePaymentMethodSelect(option.id)}
+                      disabled={loading || isProcessingOrder}
+                      className="flex flex-row items-center justify-start gap-3 rounded-xl border border-gray-200 px-5 py-4 text-gray-700 transition hover:border-gray-400 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-col sm:justify-center sm:px-4 sm:py-5"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center sm:h-auto sm:w-auto">
+                        <PaymentIcon className="h-7 w-7 sm:h-8 sm:w-8" />
+                      </span>
+                      <span className="text-sm font-semibold">{option.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
@@ -534,16 +574,7 @@ const Checkout = () => {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handlePayment}
-                disabled={loading || isProcessingOrder}
-                className="mt-4 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                {loading || isProcessingOrder ? 'Opening payment...' : `Pay ${formatPayableCurrency(getCartTotal())}`}
-              </button>
-
-              <p className="mt-3 text-center text-[11px] text-gray-400">
+              <p className="mt-4 text-center text-[11px] text-gray-400">
                 By paying, you agree to {BRAND.name}&apos;s licensing terms
               </p>
             </div>
