@@ -863,10 +863,11 @@ const ProductMediaGallery = ({ product }) => {
             ref={videoRef}
             src={selectedItem.src}
             poster={selectedItem.poster}
-            className={`${isImmersive ? 'h-full w-full' : 'max-h-full max-w-full'} object-contain ${PROTECTED_MEDIA_CLASS}`}
+            className={`${isImmersive ? 'h-full w-full' : 'max-h-full max-w-full'} cursor-pointer object-contain ${PROTECTED_MEDIA_CLASS}`}
             playsInline
             muted={isMuted}
             preload={shouldBufferVideo ? 'auto' : 'none'}
+            onClick={toggleVideoPlay}
             {...getProtectedVideoProps()}
           />
 
