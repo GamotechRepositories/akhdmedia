@@ -22,6 +22,16 @@ export const IconPlay = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
+export const IconPreviewPlay = ({ className = 'h-4 w-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+    <path
+      fill="currentColor"
+      d="M10 8.2v7.6c0 .55.6.9 1.05.62l5.9-3.8c.46-.3.46-.94 0-1.24l-5.9-3.8A.75.75 0 0010 8.2z"
+    />
+  </svg>
+);
+
 export const IconVideoCamera = ({ className = 'h-4 w-4' }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
     <path d="M18 10.48V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4.48l4 3.98v-11.98l-4 3.98z" />

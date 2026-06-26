@@ -7,8 +7,7 @@ import {
 } from '../constants/mediaTypes';
 import { formatQualityBadgeLabel, getHighestQualityLabel } from '../constants/imageSizes';
 import ProductThumbnail from './ui/ProductThumbnail';
-import { IconPlay, IconVideoCamera } from './icons/Icons';
-import playButtonIcon from '../assets/play.png';
+import { IconPlay, IconPreviewPlay } from './icons/Icons';
 import { preventMediaContextMenu } from '../utils/mediaProtection';
 
 const THUMB_WIDTH = { compact: 400, default: 520 };
@@ -75,23 +74,11 @@ const ProductCard = ({ product, compact = false }) => {
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
 
-          {isVideo && (
-            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <img
-                  src={playButtonIcon}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  className="h-8 w-8 object-contain brightness-0 invert opacity-90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110 sm:h-10 sm:w-10"
-                />
-              </div>
-          )}
-
           <div className="absolute bottom-1.5 right-1.5 z-20 max-w-[65%] sm:bottom-[4%] sm:right-[4%]">
             <div className={`${previewActionPillClass} bg-black/90`}>
               {isVideo ? (
                 <>
-                  <IconVideoCamera className={`text-white ${previewActionIconClass}`} />
+                  <IconPreviewPlay className={`text-white ${previewActionIconClass}`} />
                   <span className="truncate font-bold uppercase text-white">Video Preview</span>
                 </>
               ) : (
