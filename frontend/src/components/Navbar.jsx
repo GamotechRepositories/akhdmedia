@@ -23,26 +23,6 @@ const Navbar = () => {
 
   const lastScrollY = useRef(0);
   const searchInputRef = useRef(null);
-  const categoryScrollRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const [categoryOverflow, setCategoryOverflow] = useState(false);
-
-  const updateCategoryScroll = useCallback(() => {
-    const el = categoryScrollRef.current;
-    if (!el) return;
-
-    const overflow = el.scrollWidth > el.clientWidth + 1;
-    setCategoryOverflow(overflow);
-    setCanScrollLeft(el.scrollLeft > 1);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
-
-  const scrollCategories = useCallback((direction) => {
-    const el = categoryScrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: direction * 220, behavior: 'smooth' });
-  }, []);
 
   const authLinkState =
     location.pathname === '/login' || location.pathname === '/register'
@@ -103,21 +83,6 @@ const Navbar = () => {
     }
     return undefined;
   }, [isSearchOpen]);
-
-  useEffect(() => {
-    updateCategoryScroll();
-    const el = categoryScrollRef.current;
-    if (!el) return undefined;
-
-    el.addEventListener('scroll', updateCategoryScroll, { passive: true });
-    const resizeObserver = new ResizeObserver(updateCategoryScroll);
-    resizeObserver.observe(el);
-
-    return () => {
-      el.removeEventListener('scroll', updateCategoryScroll);
-      resizeObserver.disconnect();
-    };
-  }, [navLinks, updateCategoryScroll]);
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
@@ -193,9 +158,6 @@ const Navbar = () => {
     `absolute -bottom-2 left-1/2 h-0.5 -translate-x-1/2 transition-all duration-300 ${
       isActive ? `w-full ${color}` : `w-0 group-hover:w-full ${color}`
     }`;
-
-  const scrollBtnClass =
-    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-30';
 
   return (
     <>
@@ -318,80 +280,45 @@ const Navbar = () => {
         aria-label="Footage categories"
       >
         <div className="mx-auto max-w-screen-2xl px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8">
-          <div className="relative flex h-10 items-center gap-2">
-            {categoryOverflow ? (
-              <button
-                type="button"
-                onClick={() => scrollCategories(-1)}
-                disabled={!canScrollLeft}
-                className={scrollBtnClass}
-                aria-label="Scroll categories left"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            ) : null}
-
-            <div
-              ref={categoryScrollRef}
-              className="min-w-0 flex-1 overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              <div className="mx-auto flex w-max min-w-full items-center justify-center gap-5 px-1 xl:gap-6 2xl:gap-8">
-                <div className="group relative flex h-10 shrink-0 items-center">
-                  <Link to="/" className={navLinkClass(activeCategory === 'home')}>
-                    Home
-                    <span className={underlineClass(activeCategory === 'home')} />
-                  </Link>
-                </div>
-
-                {navLinks.map((link) => (
-                  <div key={link.id} className="group relative flex h-10 shrink-0 items-center">
-                    <Link to={link.path} className={navLinkClass(activeCategory === link.id)}>
-                      {link.label}
-                      <span className={underlineClass(activeCategory === link.id)} />
-                    </Link>
-
-                    <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100 group-hover:-translate-y-1">
-                      <div className="relative grid gap-1 rounded-none border border-gray-100 bg-white p-6 shadow-xl">
-                        <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-gray-100 bg-white" />
-                        <h3 className="mb-2 border-b pb-2 text-xs font-bold tracking-wide text-gray-400">
-                          {link.label} Footage
-                        </h3>
-                        {link.subItems.map((sub) => (
-                          <Link
-                            key={sub.name}
-                            to={sub.path}
-                            className="block px-3 py-2 text-sm text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:pl-5 hover:text-black md:text-[15px]"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                        <div className="mt-2 border-t border-gray-50 pt-2">
-                          <Link to={link.path} className="block px-3 text-xs font-bold text-black underline decoration-gray-300 underline-offset-4 hover:decoration-black">
-                            View All {link.label}
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="flex min-h-10 flex-wrap items-center justify-center gap-x-4 gap-y-1 py-1 xl:gap-x-6 2xl:gap-x-8">
+            <div className="group relative flex h-10 shrink-0 items-center">
+              <Link to="/" className={navLinkClass(activeCategory === 'home')}>
+                Home
+                <span className={underlineClass(activeCategory === 'home')} />
+              </Link>
             </div>
 
-            {categoryOverflow ? (
-              <button
-                type="button"
-                onClick={() => scrollCategories(1)}
-                disabled={!canScrollRight}
-                className={scrollBtnClass}
-                aria-label="Scroll categories right"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            ) : null}
+            {navLinks.map((link) => (
+              <div key={link.id} className="group relative flex h-10 shrink-0 items-center">
+                <Link to={link.path} className={navLinkClass(activeCategory === link.id)}>
+                  {link.label}
+                  <span className={underlineClass(activeCategory === link.id)} />
+                </Link>
+
+                <div className="invisible absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100 group-hover:-translate-y-1">
+                  <div className="relative grid gap-1 rounded-none border border-gray-100 bg-white p-6 shadow-xl">
+                    <div className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-gray-100 bg-white" />
+                    <h3 className="mb-2 border-b pb-2 text-xs font-bold tracking-wide text-gray-400">
+                      {link.label} Footage
+                    </h3>
+                    {link.subItems.map((sub) => (
+                      <Link
+                        key={sub.name}
+                        to={sub.path}
+                        className="block px-3 py-2 text-sm text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:pl-5 hover:text-black md:text-[15px]"
+                      >
+                        {sub.name}
+                      </Link>
+                    ))}
+                    <div className="mt-2 border-t border-gray-50 pt-2">
+                      <Link to={link.path} className="block px-3 text-xs font-bold text-black underline decoration-gray-300 underline-offset-4 hover:decoration-black">
+                        View All {link.label}
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </nav>
