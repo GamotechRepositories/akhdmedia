@@ -39,14 +39,7 @@ const ProductCard = ({ product, compact = false }) => {
           <span
             className={`absolute left-1.5 top-1.5 z-20 max-w-[46%] truncate sm:left-[4%] sm:top-[4%] sm:max-w-[50%] ${badgeShellClass} ${badgePadClass} ${badgeTextClass}`}
           >
-            {isVideo ? (
-              <>
-                <span className="sm:hidden">Video</span>
-                <span className="hidden sm:inline">Stock Video</span>
-              </>
-            ) : (
-              getProductBadgeLabel(product)
-            )}
+            {isVideo ? 'Stock Video' : getProductBadgeLabel(product)}
           </span>
 
           <span
@@ -84,10 +77,7 @@ const ProductCard = ({ product, compact = false }) => {
               {isVideo ? (
                 <>
                   <IconPlay className="h-[0.8em] w-[0.8em] shrink-0 text-white" />
-                  <span className="truncate text-white">
-                    <span className="sm:hidden">Play</span>
-                    <span className="hidden sm:inline">Preview</span>
-                  </span>
+                  <span className="truncate font-bold uppercase text-white">Preview</span>
                 </>
               ) : (
                 <>
@@ -95,10 +85,7 @@ const ProductCard = ({ product, compact = false }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  <span className="truncate text-white">
-                    <span className="sm:hidden">View</span>
-                    <span className="hidden sm:inline">View Image</span>
-                  </span>
+                  <span className="truncate font-bold uppercase text-white">View Image</span>
                 </>
               )}
             </div>
