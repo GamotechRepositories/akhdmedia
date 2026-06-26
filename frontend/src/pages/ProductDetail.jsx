@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import ProductMediaGallery from '../components/product/ProductMediaGallery';
+import { scrollPageToTop } from '../components/ScrollToTop';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ToastContainer';
@@ -38,6 +39,15 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [selectedImageSize, setSelectedImageSize] = useState('');
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
+
+  useLayoutEffect(() => {
+    scrollPageToTop();
+  }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+    scrollPageToTop();
+  }, [product?.id]);
 
   useEffect(() => {
     const found = getProductById(id);

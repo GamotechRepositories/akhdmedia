@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
+import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import ActorsPage from './pages/ActorsPage';
 import CategoryPage from './pages/CategoryPage';
@@ -26,14 +26,9 @@ import Orders from './pages/Orders';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
-  const location = useLocation();
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [location.pathname]);
-
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
+      <ScrollToTop />
       <Navbar />
       <main className="mobile-page-bottom flex-grow">
         <Routes>

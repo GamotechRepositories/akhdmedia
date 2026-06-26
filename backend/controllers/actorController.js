@@ -48,6 +48,7 @@ export const getPublicActors = asyncHandler(async (req, res) => {
       id: actor._id.toString(),
       name: actor.name,
       slug: actor.slug,
+      searchKeywords: actor.searchKeywords || [],
       image: actor.image || '',
       sortOrder: actor.sortOrder ?? 0,
     })),
