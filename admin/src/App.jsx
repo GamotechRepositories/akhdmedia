@@ -18,6 +18,7 @@ import Users from './pages/Users'
 import Support from './pages/Support'
 import SupportDetail from './pages/SupportDetail'
 import HomeContent from './pages/HomeContent'
+import HomeCategoryProducts from './pages/HomeCategoryProducts'
 import PromoCodes from './pages/PromoCodes'
 import PromoCodeForm from './pages/PromoCodeForm'
 import Admins from './pages/Admins'
@@ -33,6 +34,7 @@ const App = () => (
         <Route element={<PermissionRoute />}>
           <Route index element={<Dashboard />} />
           <Route path="home-content" element={<HomeContent />} />
+          <Route path="home-category-products" element={<HomeCategoryProducts />} />
           <Route path="categories" element={<Categories />} />
           <Route path="categories/new" element={<CategoryForm />} />
           <Route path="categories/:id/edit" element={<CategoryForm />} />

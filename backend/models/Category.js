@@ -34,6 +34,11 @@ const categorySchema = new mongoose.Schema(
     featuredGradient: { type: String, default: 'from-gray-900/70 to-transparent' },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
+    /** Up to 8 products shown on the homepage for this category */
+    homePinnedProductIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+      default: [],
+    },
   },
   { timestamps: true },
 )

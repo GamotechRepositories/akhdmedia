@@ -15,6 +15,8 @@ const DEFAULT_SITE_CONTENT = {
   },
   heroSlides: [],
   showActorsSection: true,
+  homeLatestProductIds: [],
+  homeLatestHomepageProductIds: [],
 };
 
 const sortActorsByOrder = (actors = []) =>

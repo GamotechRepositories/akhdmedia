@@ -1,5 +1,12 @@
 import SiteSettings from '../models/SiteSettings.js'
 import AppError from '../utils/AppError.js'
+import {
+  HOME_PIN_LIMIT,
+  loadPinnedProductMap,
+  normalizePinnedProductIds,
+  serializePinnedProducts,
+  validatePinnedProductsExist,
+} from '../utils/homePinnedProducts.js'
 
 export const DEFAULT_SITE_SETTINGS = {
   key: 'homepage',
@@ -16,6 +23,7 @@ export const DEFAULT_SITE_SETTINGS = {
   },
   heroSlides: [],
   showActorsSection: true,
+  homeLatestProductIds: [],
 }
 
 const sanitizeTickerItems = (items = []) =>
@@ -97,11 +105,46 @@ export const updateSiteSettings = async (payload = {}) => {
   return settings
 }
 
-export const formatSiteSettings = (settings) => ({
-  tickerItems: settings.tickerItems,
-  browseSection: settings.browseSection,
-  heroSlides: settings.heroSlides?.length
-    ? settings.heroSlides
-    : DEFAULT_SITE_SETTINGS.heroSlides,
-  showActorsSection: settings.showActorsSection !== false,
-})
+export const formatSiteSettings = (settings, productMap = null) => {
+  const homeLatestProductIds = (settings.homeLatestProductIds || []).map((id) => id.toString())
+
+  return {
+    tickerItems: settings.tickerItems,
+    browseSection: settings.browseSection,
+    heroSlides: settings.heroSlides?.length
+      ? settings.heroSlides
+      : DEFAULT_SITE_SETTINGS.heroSlides,
+    showActorsSection: settings.showActorsSection !== false,
+    homeLatestProductIds,
+    homeLatestProducts: productMap
+      ? serializePinnedProducts(settings.homeLatestProductIds, productMap)
+      : undefined,
+  }
+}
+
+export const updateHomeLatestProductIds = async (rawIds = []) => {
+  const normalized = normalizePinnedProductIds(rawIds, { limit: HOME_PIN_LIMIT })
+  if (normalized.error) {
+    throw new AppError(normalized.error, 400)
+  }
+
+  const validated = await validatePinnedProductsExist(normalized.productIds, {
+    requireShowInLatest: true,
+  })
+  if (validated.error) {
+    throw new AppError(validated.error, 400)
+  }
+
+  const settings = await SiteSettings.findOneAndUpdate(
+    { key: 'homepage' },
+    { $set: { homeLatestProductIds: validated.productIds } },
+    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+  )
+
+  const productMap = await loadPinnedProductMap([settings.homeLatestProductIds])
+
+  return {
+    settings,
+    pinnedProducts: serializePinnedProducts(settings.homeLatestProductIds, productMap),
+  }
+}

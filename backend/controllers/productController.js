@@ -38,6 +38,10 @@ const buildAdminListFilter = (query = {}) => {
     filter.isActive = false
   }
 
+  if (query.showInLatest === 'true') {
+    filter.showInLatest = true
+  }
+
   const search = String(query.search || '').trim()
   if (search) {
     const tokens = search.split(/\s+/).filter(Boolean)

@@ -101,6 +101,14 @@ export const updateCategory = (id, payload) => api.put(`/categories/${id}`, payl
 
 export const deleteCategory = (id) => api.delete(`/categories/${id}`)
 
+export const fetchHomeCategoryPins = () => api.get('/categories/home-pins')
+
+export const updateCategoryHomePins = (categoryId, productIds) =>
+  api.put(`/categories/${categoryId}/home-pins`, { productIds })
+
+export const updateHomeLatestPins = (productIds) =>
+  api.put('/admin/site-content/home-latest-pins', { productIds })
+
 export const fetchActors = () => api.get('/admin/actors')
 
 export const fetchAdminActors = ({ page = 1, limit = 50, search = '' } = {}) =>
@@ -132,6 +140,7 @@ export const fetchAdminProducts = ({
   mediaType = 'all',
   categorySlug = 'all',
   status = 'all',
+  showInLatest = false,
 } = {}) =>
   api.get('/products', {
     params: {
@@ -142,6 +151,7 @@ export const fetchAdminProducts = ({
       ...(mediaType !== 'all' ? { mediaType } : {}),
       ...(categorySlug !== 'all' ? { categorySlug } : {}),
       ...(status !== 'all' ? { status } : {}),
+      ...(showInLatest ? { showInLatest: 'true' } : {}),
     },
   })
 

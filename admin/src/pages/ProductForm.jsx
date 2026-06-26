@@ -803,13 +803,20 @@ const ProductForm = () => {
               Visible on {BRAND.websiteLabel}
             </label>
 
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+            <label className="flex items-start gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
               <input
                 type="checkbox"
+                className="mt-0.5"
                 checked={form.showInLatest}
                 onChange={(e) => updateField('showInLatest', e.target.checked)}
               />
-              Show in homepage Latest Products section
+              <span>
+                Add to Latest Uploads (homepage)
+                <p className="mt-1 text-xs font-normal text-slate-500">
+                  Tick this if you want this product available in the Latest Uploads row on the
+                  homepage. After saving, pin it from Admin → Home Products → Latest Uploads.
+                </p>
+              </span>
             </label>
 
             <label className="block text-sm sm:col-span-2">

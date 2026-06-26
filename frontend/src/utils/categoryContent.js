@@ -1,16 +1,43 @@
 const categoryPath = (slug) => `/videos/${slug}`;
 
-const MIN_HOME_CATEGORY_PRODUCTS = 2;
-const EXPANDED_HOME_CATEGORY_THRESHOLD = 5;
-const DEFAULT_HOME_CATEGORY_PREVIEW = 4;
-const EXPANDED_HOME_CATEGORY_PREVIEW = 8;
+const MIN_HOME_CATEGORY_PRODUCTS = 1;
+const HOME_CATEGORY_PIN_LIMIT = 8;
 
-const getHomeCategoryPreviewLimit = (clipCount) => {
-  if (clipCount >= EXPANDED_HOME_CATEGORY_THRESHOLD) {
-    return EXPANDED_HOME_CATEGORY_PREVIEW;
-  }
-  return Math.min(clipCount, DEFAULT_HOME_CATEGORY_PREVIEW);
+export const getPinnedProductsFromIds = (productIds = [], products = []) => {
+  if (!productIds?.length) return [];
+
+  const productMap = new Map(products.map((product) => [String(product.id), product]));
+
+  return productIds
+    .map((id) => productMap.get(String(id)))
+    .filter(Boolean)
+    .slice(0, HOME_CATEGORY_PIN_LIMIT);
 };
+
+const getPinnedCategoryProducts = (category, products = []) =>
+  getPinnedProductsFromIds(category.homePinnedProductIds, products);
+
+export const mapDualGridSections = (categories = [], products = []) =>
+  categories
+    .filter((category) => category.isActive !== false)
+    .map((category) => {
+      const pinnedProducts = getPinnedCategoryProducts(category, products);
+
+      return {
+        id: category.slug,
+        title: category.breadcrumb,
+        link: categoryPath(category.slug),
+        clipCount: pinnedProducts.length,
+        products: pinnedProducts,
+        sortOrder: category.sortOrder ?? 0,
+      };
+    })
+    .filter((section) => section.clipCount >= MIN_HOME_CATEGORY_PRODUCTS)
+    .sort((a, b) => {
+      const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return b.clipCount - a.clipCount;
+    });
 
 export const mapStoryCollections = (categories = [], products = []) =>
   categories
@@ -70,22 +97,3 @@ export const mapFeaturedCollections = (categories = []) =>
       image: category.coverImage,
       gradient: category.featuredGradient || 'from-gray-900/70 to-transparent',
     }));
-
-export const mapDualGridSections = (categories = [], products = []) =>
-  categories
-    .map((category) => {
-      const categoryProducts = products.filter(
-        (product) => product.categorySlug === category.slug,
-      );
-      const clipCount = categoryProducts.length;
-
-      return {
-        id: category.slug,
-        title: category.breadcrumb,
-        link: categoryPath(category.slug),
-        clipCount,
-        products: categoryProducts.slice(0, getHomeCategoryPreviewLimit(clipCount)),
-      };
-    })
-    .filter((section) => section.clipCount >= MIN_HOME_CATEGORY_PRODUCTS)
-    .sort((a, b) => b.clipCount - a.clipCount);

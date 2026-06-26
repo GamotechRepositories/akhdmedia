@@ -42,6 +42,10 @@ const siteSettingsSchema = new mongoose.Schema(
       default: [],
     },
     showActorsSection: { type: Boolean, default: true },
+    homeLatestProductIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+      default: [],
+    },
   },
   { timestamps: true },
 )

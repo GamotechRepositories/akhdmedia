@@ -52,6 +52,12 @@ export const NAV_ITEMS = [
     description: 'Ticker & browse section',
   },
   {
+    to: '/home-category-products',
+    label: 'Home Products',
+    permission: ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE,
+    description: 'Pin latest & category rows',
+  },
+  {
     to: '/categories',
     label: 'Categories',
     permission: ADMIN_PERMISSIONS.CATEGORIES_READ,
@@ -121,6 +127,7 @@ export const getFirstAllowedPath = (admin) => {
 export const ROUTE_PERMISSIONS = [
   { path: '/', permission: ADMIN_PERMISSIONS.DASHBOARD_VIEW },
   { path: '/home-content', permission: ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE },
+  { path: '/home-category-products', permission: ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE },
   { path: '/categories', permission: ADMIN_PERMISSIONS.CATEGORIES_READ },
   { path: '/categories/new', permission: ADMIN_PERMISSIONS.CATEGORIES_WRITE },
   { path: '/categories/:id/edit', permission: ADMIN_PERMISSIONS.CATEGORIES_WRITE },

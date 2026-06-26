@@ -21,6 +21,7 @@ import { BRAND } from '../config/brand'
 const NAV_ICONS = {
   '/': IconDashboard,
   '/home-content': IconDashboard,
+  '/home-category-products': IconProducts,
   '/categories': IconCategories,
   '/actors': IconActors,
   '/products': IconProducts,
@@ -36,6 +37,7 @@ const NAV_ICONS = {
 const pageTitles = {
   '/': 'Dashboard',
   '/home-content': 'Homepage Content',
+  '/home-category-products': 'Homepage Products',
   '/categories': 'Categories',
   '/categories/new': 'Add Category',
   '/actors': 'Actors',

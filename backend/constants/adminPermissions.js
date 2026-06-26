@@ -29,7 +29,7 @@ export const ADMIN_PERMISSION_GROUPS = [
     id: 'home-content',
     label: 'Homepage',
     permissions: [
-      { key: ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE, label: 'Edit homepage ticker & browse section' },
+      { key: ADMIN_PERMISSIONS.HOME_CONTENT_MANAGE, label: 'Edit homepage ticker, browse section & category product rows' },
     ],
   },
   {
