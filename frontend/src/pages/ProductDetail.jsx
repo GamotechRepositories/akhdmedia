@@ -18,6 +18,8 @@ import {
 } from '../constants/mediaTypes';
 import { PURCHASE_UNAVAILABLE_MESSAGE } from '../constants/purchase';
 import { formatCurrency } from '../utils/formatters';
+import { shareProduct } from '../utils/shareProduct';
+import { IconShare } from '../components/icons/Icons';
 
 const SpecItem = ({ label, value }) => (
   <div>
@@ -39,6 +41,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [selectedImageSize, setSelectedImageSize] = useState('');
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useLayoutEffect(() => {
     scrollPageToTop();
@@ -183,6 +186,26 @@ const ProductDetail = () => {
     }
   };
 
+  const handleShareProduct = async () => {
+    if (isSharing) return;
+
+    setIsSharing(true);
+    try {
+      const result = await shareProduct(product, { price: displayPrice });
+      if (result.method === 'clipboard') {
+        success('Product link copied to clipboard');
+      } else {
+        success('Product shared');
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        showError(error.message || 'Could not share this product');
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   const specItems = isVideo
     ? [
         { label: 'Quality', value: product.videoInfo?.quality },
@@ -225,20 +248,33 @@ const ProductDetail = () => {
 
           <div className="relative z-0 min-w-0 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 px-5 py-5 text-white sm:px-6">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                {product.brand && (
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {product.brand && (
+                    <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
+                      {product.brand}
+                    </span>
+                  )}
                   <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
-                    {product.brand}
+                    {isVideo ? 'Stock Video' : 'Stock Image'}
                   </span>
-                )}
-                <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
-                  {isVideo ? 'Stock Video' : 'Stock Image'}
-                </span>
-                {isVideo && product.videoInfo?.duration && (
-                  <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
-                    {product.videoInfo.duration}
-                  </span>
-                )}
+                  {isVideo && product.videoInfo?.duration && (
+                    <span className="rounded-full bg-amber-400/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-900">
+                      {product.videoInfo.duration}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleShareProduct}
+                  disabled={isSharing}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
+                  aria-label="Share product"
+                >
+                  <IconShare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Share
+                </button>
               </div>
 
               <h1 className="break-words text-xl font-bold leading-snug sm:text-2xl lg:text-[1.65rem]">
