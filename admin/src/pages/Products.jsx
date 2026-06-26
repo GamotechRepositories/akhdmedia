@@ -49,6 +49,13 @@ const formatCurrency = (amount = 0) =>
     maximumFractionDigits: 0,
   }).format(Number(amount) || 0)
 
+const getProductThumbnailUrl = (product) => {
+  const image = (product.images ?? []).find(Boolean)
+  if (image) return image
+  if (product.videoPoster) return product.videoPoster
+  return ''
+}
+
 const buildProductsCacheKey = (page, filters) =>
   `${filters.search}|${filters.mediaType}|${filters.categorySlug}|${filters.status}::${page}`
 
@@ -394,6 +401,7 @@ const Products = () => {
       <AdminTable ref={tableContainerRef} maxHeight className="min-h-[240px]">
         <thead className={tableHeadClass}>
           <tr>
+            <th className={thClass}>Image</th>
             <th className={thClass}>Name</th>
             <th className={thClass}>Type</th>
             <th className={thHideMd}>Category</th>
@@ -404,17 +412,20 @@ const Products = () => {
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <TableLoader label="Loading products..." colSpan={6} className={tableEmptyClass} />
+            <TableLoader label="Loading products..." colSpan={7} className={tableEmptyClass} />
           ) : products.length === 0 ? (
             <tr>
-              <td colSpan={6} className={tableEmptyClass}>
+              <td colSpan={7} className={tableEmptyClass}>
                 {hasActiveFilters
                   ? 'No products match your search or filters.'
                   : 'No products found.'}
               </td>
             </tr>
           ) : (
-            products.map((product) => (
+            products.map((product) => {
+              const thumbnailUrl = getProductThumbnailUrl(product)
+
+              return (
               <tr
                 key={product.id}
                 id={`product-row-${product.id}`}
@@ -422,6 +433,19 @@ const Products = () => {
                   highlightedId === product.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
                 }`}
               >
+                <td className={tdClass}>
+                  {thumbnailUrl ? (
+                    <img
+                      src={thumbnailUrl}
+                      alt={product.name}
+                      className="h-10 w-14 rounded-md object-cover ring-1 ring-slate-200 sm:h-12 sm:w-16"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-14 items-center justify-center rounded-md bg-slate-100 text-xs text-slate-400 sm:h-12 sm:w-16">
+                      —
+                    </div>
+                  )}
+                </td>
                 <td className={tdPrimaryClass}>
                   <p>{product.name}</p>
                   {product.clipId && (
@@ -472,7 +496,8 @@ const Products = () => {
                   )}
                 </td>
               </tr>
-            ))
+              )
+            })
           )}
         </tbody>
       </AdminTable>
