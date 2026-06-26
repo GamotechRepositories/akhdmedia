@@ -2,10 +2,10 @@ import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getProductBadgeLabel,
+  getProductTypeLabel,
   isVideoProduct,
 } from '../constants/mediaTypes';
 import { formatQualityBadgeLabel, getHighestQualityLabel } from '../constants/imageSizes';
-import { formatCurrency } from '../utils/formatters';
 import ProductThumbnail from './ui/ProductThumbnail';
 import { IconPlay } from './icons/Icons';
 import { preventMediaContextMenu } from '../utils/mediaProtection';
@@ -18,7 +18,6 @@ const badgeTextClass =
 
 const ProductCard = ({ product, compact = false }) => {
   const isVideo = isVideoProduct(product);
-  const finalPrice = product.price || 0;
   const qualityLabel = formatQualityBadgeLabel(
     getHighestQualityLabel(product) ??
       product.videoInfo?.quality?.split(' ')[0] ??
@@ -29,17 +28,17 @@ const ProductCard = ({ product, compact = false }) => {
     <article className="@container group relative w-full min-w-0 translate-z-0 transform-gpu select-none [content-visibility:auto] [contain-intrinsic-size:auto_320px]">
       <Link to={`/product/${product.id}`} className="block">
         <div
-          className="protected-media-shell relative aspect-[4/5] w-full overflow-hidden rounded-lg bg-gray-100 shadow-sm @[220px]:rounded-xl"
+          className="protected-media-shell relative aspect-[4/5] w-full overflow-hidden rounded-lg bg-gray-900 shadow-sm @[220px]:rounded-xl"
           onContextMenu={preventMediaContextMenu}
         >
           <span
-            className={`absolute left-[5%] top-[5%] z-20 max-w-[40%] truncate rounded-md bg-black/80 px-[0.45em] py-[0.28em] font-bold uppercase text-white ${badgeTextClass}`}
+            className={`absolute left-[5%] top-[5%] z-20 max-w-[52%] truncate rounded-md bg-black/85 px-[0.45em] py-[0.28em] font-bold uppercase text-white ${badgeTextClass}`}
           >
-            {getProductBadgeLabel(product)}
+            {isVideo ? 'Stock Video' : getProductBadgeLabel(product)}
           </span>
 
           <span
-            className={`absolute right-[5%] top-[5%] z-20 flex max-w-[46%] items-center gap-[0.2em] truncate rounded-md bg-black/70 px-[0.45em] py-[0.28em] font-bold uppercase text-white ${badgeTextClass}`}
+            className={`absolute right-[5%] top-[5%] z-20 flex max-w-[46%] items-center gap-[0.2em] truncate rounded-md bg-black/75 px-[0.45em] py-[0.28em] font-bold uppercase text-white ${badgeTextClass}`}
           >
             {isVideo && <IconPlay className="h-[1.15em] w-[1.15em] shrink-0" />}
             <span className="truncate">{qualityLabel}</span>
@@ -52,36 +51,39 @@ const ProductCard = ({ product, compact = false }) => {
             height={THUMB_HEIGHT[compact ? 'compact' : 'default']}
             quality={75}
             loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
 
           {isVideo && (
-            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-              <div className="flex h-[clamp(2rem,22cqw,3rem)] w-[clamp(2rem,22cqw,3rem)] items-center justify-center rounded-full bg-white/95 opacity-0 shadow-lg transition-opacity duration-300 group-hover:opacity-100">
-                <IconPlay className="ml-0.5 h-[42%] w-[42%] text-gray-900" />
+            <>
+              <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <div className="flex h-[clamp(2.25rem,20cqw,3rem)] w-[clamp(2.25rem,20cqw,3rem)] items-center justify-center rounded-full bg-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.35)] ring-2 ring-white/60 transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
+                  <IconPlay className="ml-0.5 h-[42%] w-[42%] text-gray-900" />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div className="absolute inset-x-[5%] bottom-[5%] z-20">
-            <div className="flex min-h-[clamp(1.75rem,17cqw,3rem)] items-center justify-between gap-1 rounded-md bg-white/95 px-[0.45em] py-[0.2em] shadow-[0_4px_12px_rgba(0,0,0,0.1)] @[220px]:rounded-lg @[220px]:px-[0.55em]">
-              <span className="min-w-0 truncate text-[length:clamp(0.6875rem,10cqw,1rem)] font-bold leading-none text-gray-900">
-                {formatCurrency(finalPrice)}
-              </span>
-              <span className="flex h-[clamp(1.5rem,14cqw,2.5rem)] shrink-0 items-center gap-[0.25em] rounded-md bg-black px-[0.45em] font-bold uppercase text-white @[200px]:px-[0.65em] text-[length:clamp(0.4375rem,7cqw,0.75rem)]">
-                <span className="hidden @[200px]:inline">
-                  {isVideo ? 'Preview' : 'View'}
+            {isVideo ? (
+              <div className="flex min-h-[clamp(1.75rem,17cqw,2.75rem)] items-center justify-center gap-[0.35em] rounded-md bg-black/90 px-[0.55em] py-[0.35em] shadow-[0_4px_16px_rgba(0,0,0,0.28)] @[220px]:rounded-lg">
+                <IconPlay className="h-[1.05em] w-[1.05em] shrink-0 text-white" />
+                <span className="text-[length:clamp(0.5rem,7cqw,0.75rem)] font-bold uppercase tracking-[0.06em] text-white">
+                  Video Preview
                 </span>
-                {isVideo ? (
-                  <IconPlay className="h-[1.1em] w-[1.1em] shrink-0" />
-                ) : (
-                  <svg className="h-[1.1em] w-[1.1em] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </span>
-            </div>
+              </div>
+            ) : (
+              <div className="flex min-h-[clamp(1.75rem,17cqw,2.75rem)] items-center justify-center gap-[0.35em] rounded-md bg-black/90 px-[0.55em] py-[0.35em] shadow-[0_4px_16px_rgba(0,0,0,0.28)] @[220px]:rounded-lg">
+                <svg className="h-[1.05em] w-[1.05em] shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span className="text-[length:clamp(0.5rem,7cqw,0.75rem)] font-bold uppercase tracking-[0.06em] text-white">
+                  View Image
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -96,11 +98,12 @@ const ProductCard = ({ product, compact = false }) => {
                 {product.name}
               </h3>
               <p className="mt-0.5 truncate text-[length:clamp(0.5625rem,7.5cqw,0.75rem)] text-gray-500">
-                {product.category} · {getProductBadgeLabel(product)}
+                {product.category} · {getProductTypeLabel(product)}
               </p>
             </div>
             {isVideo && product.videoInfo?.duration && (
-              <div className="flex shrink-0 items-center rounded bg-gray-50 px-[0.35em] py-[0.15em] text-[length:clamp(0.5rem,6.5cqw,0.625rem)] font-bold text-gray-600">
+              <div className="flex shrink-0 items-center gap-1 rounded-md bg-gray-900 px-[0.4em] py-[0.2em] text-[length:clamp(0.5rem,6.5cqw,0.625rem)] font-bold text-white">
+                <IconPlay className="h-[0.9em] w-[0.9em]" />
                 {product.videoInfo.duration}
               </div>
             )}
