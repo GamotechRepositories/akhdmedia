@@ -21,10 +21,19 @@ import { formatCurrency } from '../utils/formatters';
 import { shareProduct } from '../utils/shareProduct';
 import { IconShare } from '../components/icons/Icons';
 
-const SpecItem = ({ label, value }) => (
+const SpecItem = ({ label, value, href }) => (
   <div>
     <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-    <p className="mt-0.5 text-xs font-semibold text-gray-900 sm:text-sm">{value}</p>
+    {href ? (
+      <Link
+        to={href}
+        className="mt-0.5 inline-block text-xs font-semibold text-gray-900 underline decoration-gray-300 underline-offset-2 transition hover:text-gray-600 hover:decoration-gray-500 sm:text-sm"
+      >
+        {value}
+      </Link>
+    ) : (
+      <p className="mt-0.5 text-xs font-semibold text-gray-900 sm:text-sm">{value}</p>
+    )}
   </div>
 );
 
@@ -206,8 +215,22 @@ const ProductDetail = () => {
     }
   };
 
+  const artistSpec =
+    product.actorName?.trim() && product.actorId
+      ? [
+          {
+            label: 'Artist',
+            value: product.actorName.trim(),
+            href: `/videos?actor=${encodeURIComponent(product.actorId)}`,
+          },
+        ]
+      : product.actorName?.trim()
+        ? [{ label: 'Artist', value: product.actorName.trim() }]
+        : [];
+
   const specItems = isVideo
     ? [
+        ...artistSpec,
         { label: 'Quality', value: product.videoInfo?.quality },
         { label: 'Frame rate', value: product.videoInfo?.fps },
         { label: 'Duration', value: product.videoInfo?.duration },
@@ -215,6 +238,7 @@ const ProductDetail = () => {
         { label: 'Format', value: product.videoInfo?.format },
       ].filter((item) => item.value)
     : [
+        ...artistSpec,
         { label: 'Quality', value: product.videoInfo?.quality },
         { label: 'File size', value: product.videoInfo?.size },
         { label: 'Format', value: product.videoInfo?.format || 'JPEG / PNG' },
@@ -398,7 +422,12 @@ const ProductDetail = () => {
                   </h3>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
                     {specItems.map((item) => (
-                      <SpecItem key={item.label} label={item.label} value={item.value} />
+                      <SpecItem
+                        key={item.label}
+                        label={item.label}
+                        value={item.value}
+                        href={item.href}
+                      />
                     ))}
                   </div>
                 </>

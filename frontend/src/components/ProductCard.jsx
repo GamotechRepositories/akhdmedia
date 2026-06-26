@@ -65,25 +65,25 @@ const ProductCard = ({ product, compact = false }) => {
             </>
           )}
 
-          <div className="absolute inset-x-[5%] bottom-[5%] z-20">
-            {isVideo ? (
-              <div className="flex min-h-[clamp(1.75rem,17cqw,2.75rem)] items-center justify-center gap-[0.35em] rounded-md bg-black/90 px-[0.55em] py-[0.35em] shadow-[0_4px_16px_rgba(0,0,0,0.28)] @[220px]:rounded-lg">
-                <IconPlay className="h-[1.05em] w-[1.05em] shrink-0 text-white" />
-                <span className="text-[length:clamp(0.5rem,7cqw,0.75rem)] font-bold uppercase tracking-[0.06em] text-white">
-                  Video Preview
-                </span>
-              </div>
-            ) : (
-              <div className="flex min-h-[clamp(1.75rem,17cqw,2.75rem)] items-center justify-center gap-[0.35em] rounded-md bg-black/90 px-[0.55em] py-[0.35em] shadow-[0_4px_16px_rgba(0,0,0,0.28)] @[220px]:rounded-lg">
-                <svg className="h-[1.05em] w-[1.05em] shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span className="text-[length:clamp(0.5rem,7cqw,0.75rem)] font-bold uppercase tracking-[0.06em] text-white">
-                  View Image
-                </span>
-              </div>
-            )}
+          <div className="absolute bottom-[5%] right-[5%] z-20 max-w-[72%]">
+            <div
+              className={`inline-flex items-center gap-[0.25em] rounded-md bg-black/90 px-[0.4em] py-[0.22em] shadow-[0_2px_10px_rgba(0,0,0,0.25)] ${badgeTextClass}`}
+            >
+              {isVideo ? (
+                <>
+                  <IconPlay className="h-[0.95em] w-[0.95em] shrink-0 text-white" />
+                  <span className="truncate font-bold uppercase text-white">Preview</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-[0.95em] w-[0.95em] shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span className="truncate font-bold uppercase text-white">View Image</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
