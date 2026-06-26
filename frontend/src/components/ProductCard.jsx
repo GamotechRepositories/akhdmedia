@@ -76,9 +76,7 @@ const ProductCard = ({ product, compact = false }) => {
           />
 
           {isVideo && (
-            <>
-              <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                 <img
                   src={playButtonIcon}
                   alt=""
@@ -87,7 +85,6 @@ const ProductCard = ({ product, compact = false }) => {
                   className="h-8 w-8 object-contain brightness-0 invert opacity-90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110 sm:h-10 sm:w-10"
                 />
               </div>
-            </>
           )}
 
           <div className="absolute bottom-1.5 right-1.5 z-20 max-w-[65%] sm:bottom-[4%] sm:right-[4%]">
