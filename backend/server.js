@@ -13,6 +13,7 @@ import {
   LOCAL_PUBLIC_DIR,
 } from './config/storage.js'
 import apiRoutes from './routes/index.js'
+import shareRoutes from './routes/share.js'
 import errorHandler from './middleware/errorHandler.js'
 import seedAdmin from './seed/seedAdmin.js'
 
@@ -48,6 +49,7 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads/public', express.static(LOCAL_PUBLIC_DIR))
 
+app.use('/share', shareRoutes)
 app.use('/api', apiRoutes)
 
 app.use((req, res) => {

@@ -10,10 +10,36 @@ const resolveAbsoluteUrl = (path = '') => {
   return new URL(path, window.location.origin).href;
 };
 
+export const getShareApiBaseUrl = () => {
+  const configuredShareBase = import.meta.env.VITE_SHARE_BASE_URL?.trim();
+  if (configuredShareBase) {
+    return configuredShareBase.replace(/\/$/, '');
+  }
+
+  const apiPublic = import.meta.env.VITE_API_PUBLIC_URL?.trim();
+  if (apiPublic) {
+    return apiPublic.replace(/\/$/, '');
+  }
+
+  const apiUrl = import.meta.env.VITE_API_URL?.trim() || '';
+  if (/^https?:\/\//i.test(apiUrl)) {
+    return apiUrl.replace(/\/api\/?$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
+  return '';
+};
+
+export const getProductSharePageUrl = (productId) =>
+  `${getShareApiBaseUrl()}/share/product/${productId}`;
+
 export const buildProductSharePayload = (product, { price } = {}) => {
-  const productUrl = resolveAbsoluteUrl(`/product/${product.id}`);
+  const productPageUrl = resolveAbsoluteUrl(`/product/${product.id}`);
+  const sharePageUrl = getProductSharePageUrl(product.id);
   const imageUrl = resolveAbsoluteUrl(getProductPosterUrl(product));
-  const mediaLabel = isVideoProduct(product) ? 'Stock Video' : 'Stock Image';
   const listingPrice = price ?? product.price;
 
   const detailLines = [
@@ -28,18 +54,15 @@ export const buildProductSharePayload = (product, { price } = {}) => {
     ...detailLines,
     '',
     `View on ${BRAND.name}:`,
-    productUrl,
-    imageUrl ? `\nPreview: ${imageUrl}` : null,
-  ]
-    .filter((line) => line !== null)
-    .join('\n');
+    sharePageUrl,
+  ].join('\n');
 
   return {
     title: product.name,
     text,
-    url: productUrl,
+    url: sharePageUrl,
+    productPageUrl,
     imageUrl,
-    mediaLabel,
   };
 };
 
