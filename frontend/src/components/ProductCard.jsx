@@ -32,7 +32,7 @@ const previewActionPillClass = `inline-flex max-w-full items-center gap-1 ${badg
 
 const cardPillIconClass = 'h-2 w-2 shrink-0 sm:h-2.5 sm:w-2.5';
 
-const previewActionIconClass = 'h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3';
+const previewActionIconClass = 'h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5';
 
 const ProductCard = ({ product, compact = false }) => {
   const isVideo = isVideoProduct(product);
