@@ -14,7 +14,12 @@ const THUMB_WIDTH = { compact: 400, default: 520 };
 const THUMB_HEIGHT = { compact: 500, default: 650 };
 
 const badgeTextClass =
-  'text-[length:clamp(0.4375rem,8cqw,0.625rem)] tracking-[0.04em]';
+  'text-[length:clamp(7px,4.2cqw,10px)] leading-none tracking-[0.03em]';
+
+const badgeShellClass =
+  'rounded bg-black/85 font-bold uppercase text-white shadow-sm';
+
+const badgePadClass = 'px-[0.3em] py-[0.14em]';
 
 const ProductCard = ({ product, compact = false }) => {
   const isVideo = isVideoProduct(product);
@@ -32,15 +37,22 @@ const ProductCard = ({ product, compact = false }) => {
           onContextMenu={preventMediaContextMenu}
         >
           <span
-            className={`absolute left-[5%] top-[5%] z-20 max-w-[52%] truncate rounded-md bg-black/85 px-[0.45em] py-[0.28em] font-bold uppercase text-white ${badgeTextClass}`}
+            className={`absolute left-1.5 top-1.5 z-20 max-w-[46%] truncate sm:left-[4%] sm:top-[4%] sm:max-w-[50%] ${badgeShellClass} ${badgePadClass} ${badgeTextClass}`}
           >
-            {isVideo ? 'Stock Video' : getProductBadgeLabel(product)}
+            {isVideo ? (
+              <>
+                <span className="sm:hidden">Video</span>
+                <span className="hidden sm:inline">Stock Video</span>
+              </>
+            ) : (
+              getProductBadgeLabel(product)
+            )}
           </span>
 
           <span
-            className={`absolute right-[5%] top-[5%] z-20 flex max-w-[46%] items-center gap-[0.2em] truncate rounded-md bg-black/75 px-[0.45em] py-[0.28em] font-bold uppercase text-white ${badgeTextClass}`}
+            className={`absolute right-1.5 top-1.5 z-20 flex max-w-[40%] items-center gap-[0.15em] truncate sm:right-[4%] sm:top-[4%] ${badgeShellClass} bg-black/75 ${badgePadClass} ${badgeTextClass}`}
           >
-            {isVideo && <IconPlay className="h-[1.15em] w-[1.15em] shrink-0" />}
+            {isVideo && <IconPlay className="hidden h-[0.85em] w-[0.85em] shrink-0 sm:inline-block" />}
             <span className="truncate">{qualityLabel}</span>
           </span>
 
@@ -58,36 +70,42 @@ const ProductCard = ({ product, compact = false }) => {
             <>
               <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <div className="flex h-[clamp(2.25rem,20cqw,3rem)] w-[clamp(2.25rem,20cqw,3rem)] items-center justify-center rounded-full bg-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.35)] ring-2 ring-white/60 transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
-                  <IconPlay className="ml-0.5 h-[42%] w-[42%] text-gray-900" />
+                <div className="flex h-[clamp(1.5rem,12cqw,2.5rem)] w-[clamp(1.5rem,12cqw,2.5rem)] items-center justify-center rounded-full bg-white/90 shadow-[0_6px_18px_rgba(0,0,0,0.3)] ring-1 ring-white/60 transition-all duration-300 group-hover:scale-105 group-hover:bg-white sm:ring-2">
+                  <IconPlay className="ml-0.5 h-[38%] w-[38%] text-gray-900" />
                 </div>
               </div>
             </>
           )}
 
-          <div className="absolute bottom-[5%] right-[5%] z-20 max-w-[72%]">
+          <div className="absolute bottom-1.5 right-1.5 z-20 max-w-[58%] sm:bottom-[4%] sm:right-[4%]">
             <div
-              className={`inline-flex items-center gap-[0.25em] rounded-md bg-black/90 px-[0.4em] py-[0.22em] shadow-[0_2px_10px_rgba(0,0,0,0.25)] ${badgeTextClass}`}
+              className={`inline-flex max-w-full items-center gap-[0.15em] ${badgeShellClass} bg-black/90 ${badgePadClass} ${badgeTextClass}`}
             >
               {isVideo ? (
                 <>
-                  <IconPlay className="h-[0.95em] w-[0.95em] shrink-0 text-white" />
-                  <span className="truncate font-bold uppercase text-white">Preview</span>
+                  <IconPlay className="h-[0.8em] w-[0.8em] shrink-0 text-white" />
+                  <span className="truncate text-white">
+                    <span className="sm:hidden">Play</span>
+                    <span className="hidden sm:inline">Preview</span>
+                  </span>
                 </>
               ) : (
                 <>
-                  <svg className="h-[0.95em] w-[0.95em] shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-[0.8em] w-[0.8em] shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  <span className="truncate font-bold uppercase text-white">View Image</span>
+                  <span className="truncate text-white">
+                    <span className="sm:hidden">View</span>
+                    <span className="hidden sm:inline">View Image</span>
+                  </span>
                 </>
               )}
             </div>
           </div>
         </div>
 
-        <div className="mt-[0.65em] px-[0.1em]">
+        <div className="mt-[0.55em] px-[0.1em]">
           <div className="flex items-start justify-between gap-1">
             <div className="min-w-0 flex-1">
               <h3
@@ -102,8 +120,8 @@ const ProductCard = ({ product, compact = false }) => {
               </p>
             </div>
             {isVideo && product.videoInfo?.duration && (
-              <div className="flex shrink-0 items-center gap-1 rounded-md bg-gray-900 px-[0.4em] py-[0.2em] text-[length:clamp(0.5rem,6.5cqw,0.625rem)] font-bold text-white">
-                <IconPlay className="h-[0.9em] w-[0.9em]" />
+              <div className="flex shrink-0 items-center gap-0.5 rounded bg-gray-900 px-[0.32em] py-[0.12em] text-[length:clamp(7px,4cqw,10px)] font-bold leading-none text-white">
+                <IconPlay className="h-[0.8em] w-[0.8em]" />
                 {product.videoInfo.duration}
               </div>
             )}
