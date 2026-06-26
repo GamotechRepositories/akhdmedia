@@ -467,7 +467,7 @@ const ProductDetail = () => {
         {relatedProducts.length > 0 && (
           <div className="scroll-section mt-10 w-full min-w-0 border-t border-gray-200 pt-8 sm:mt-12 [contain-intrinsic-size:auto_520px]">
             <h2 className="mb-5 text-lg font-bold text-gray-900 sm:text-xl">More like this</h2>
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3.5 sm:gap-6 md:grid-cols-4">
               {relatedPreview.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}

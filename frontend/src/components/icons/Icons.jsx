@@ -22,6 +22,12 @@ export const IconPlay = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
+export const IconVideoCamera = ({ className = 'h-4 w-4' }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path d="M18 10.48V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4.48l4 3.98v-11.98l-4 3.98z" />
+  </svg>
+);
+
 export const IconVolumeOn = ({ className = 'h-4 w-4' }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
     <path
