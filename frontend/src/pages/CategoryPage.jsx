@@ -118,7 +118,7 @@ const CategoryPage = () => {
     [baseProducts]
   );
 
-  const itemsPerPage = showFilters ? 21 : 28;
+  const itemsPerPage = 102;
   const { paginatedItems, range, page, totalPages, pageNumbers, goToPage } =
     usePagination(filteredProducts, itemsPerPage);
 
