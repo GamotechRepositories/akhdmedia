@@ -17,9 +17,19 @@ export const getPinnedProductsFromIds = (productIds = [], products = []) => {
 const getPinnedCategoryProducts = (category, products = []) =>
   getPinnedProductsFromIds(category.homePinnedProductIds, products);
 
+const compareCategorySortOrder = (left, right) => {
+  const orderDiff = (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+  if (orderDiff !== 0) return orderDiff;
+
+  return String(left.navLabel || left.breadcrumb || left.slug || '').localeCompare(
+    String(right.navLabel || right.breadcrumb || right.slug || ''),
+  );
+};
+
 export const mapDualGridSections = (categories = [], products = []) =>
-  categories
+  [...categories]
     .filter((category) => category.isActive !== false)
+    .sort(compareCategorySortOrder)
     .map((category) => {
       const pinnedProducts = getPinnedCategoryProducts(category, products);
 
@@ -32,12 +42,7 @@ export const mapDualGridSections = (categories = [], products = []) =>
         sortOrder: category.sortOrder ?? 0,
       };
     })
-    .filter((section) => section.clipCount >= MIN_HOME_CATEGORY_PRODUCTS)
-    .sort((a, b) => {
-      const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-      if (orderDiff !== 0) return orderDiff;
-      return b.clipCount - a.clipCount;
-    });
+    .filter((section) => section.clipCount >= MIN_HOME_CATEGORY_PRODUCTS);
 
 export const mapStoryCollections = (categories = [], products = []) =>
   categories

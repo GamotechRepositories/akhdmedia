@@ -25,7 +25,7 @@ export const updateAdminSiteContent = asyncHandler(async (req, res) => {
 export const updateHomeLatestPins = asyncHandler(async (req, res) => {
   const [{ pinnedProducts }, latestEligibleCount] = await Promise.all([
     updateHomeLatestProductIds(req.body.productIds),
-    Product.countDocuments({ showInLatest: true }),
+    Product.countDocuments(),
   ])
 
   res.json({

@@ -51,7 +51,7 @@ export const normalizePinnedProductIds = (rawIds = [], { limit = HOME_PIN_LIMIT 
 
 export const validatePinnedProductsExist = async (
   productIds,
-  { categorySlug = null, requireShowInLatest = false } = {},
+  { categorySlug = null } = {},
 ) => {
   if (productIds.length === 0) {
     return { productIds: [] }
@@ -61,22 +61,12 @@ export const validatePinnedProductsExist = async (
   if (categorySlug) {
     filter.categorySlug = categorySlug
   }
-  if (requireShowInLatest) {
-    filter.showInLatest = true
-  }
 
   const products = await Product.find(filter).select('_id')
   const foundIdSet = new Set(products.map((product) => product._id.toString()))
   const orderedIds = productIds.filter((id) => foundIdSet.has(id))
 
   if (orderedIds.length !== productIds.length) {
-    if (requireShowInLatest) {
-      return {
-        error:
-          'Some products were not found or are not enabled for Latest Uploads. Tick “Add to Latest Uploads (homepage)” in the product form first.',
-      }
-    }
-
     return {
       error: categorySlug
         ? 'Some products were not found or do not belong to this category'

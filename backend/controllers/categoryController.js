@@ -54,7 +54,7 @@ export const getHomeCategoryPins = asyncHandler(async (req, res) => {
       settings.homeLatestProductIds,
     ]),
     loadCategoryProductCounts(categories),
-    Product.countDocuments({ showInLatest: true }),
+    Product.countDocuments(),
   ])
 
   res.json({

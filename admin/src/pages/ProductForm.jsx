@@ -164,7 +164,6 @@ const mapProductToForm = (product) => {
     masterVideoUrl: product.masterVideoUrl || '',
     masterVideoTier: product.masterVideoTier || '',
     isActive: product.isActive ?? true,
-    showInLatest: product.showInLatest ?? false,
     actorListingOrder: String(product.actorListingOrder ?? product.allListingOrder ?? 0),
     categoryListingOrder: String(product.categoryListingOrder ?? 0),
     videoInfo: {
@@ -202,7 +201,6 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   masterVideoUrl: '',
   masterVideoTier: '',
   isActive: true,
-  showInLatest: false,
   actorListingOrder: '0',
   categoryListingOrder: '0',
   videoInfo: {
@@ -436,7 +434,6 @@ const ProductForm = () => {
       description: current.description,
       images: current.images,
       isActive: current.isActive,
-      showInLatest: current.showInLatest,
       actorListingOrder: current.actorListingOrder,
       categoryListingOrder: current.categoryListingOrder,
       demoVideo: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideo : '',
@@ -801,22 +798,6 @@ const ProductForm = () => {
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
               <input type="checkbox" checked={form.isActive} onChange={(e) => updateField('isActive', e.target.checked)} />
               Visible on {BRAND.websiteLabel}
-            </label>
-
-            <label className="flex items-start gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={form.showInLatest}
-                onChange={(e) => updateField('showInLatest', e.target.checked)}
-              />
-              <span>
-                Add to Latest Uploads (homepage)
-                <p className="mt-1 text-xs font-normal text-slate-500">
-                  Tick this if you want this product available in the Latest Uploads row on the
-                  homepage. After saving, pin it from Admin → Home Products → Latest Uploads.
-                </p>
-              </span>
             </label>
 
             <label className="block text-sm sm:col-span-2">

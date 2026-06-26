@@ -117,7 +117,6 @@ export const normalizeProductPayload = (body = {}) => {
     availableTiers: getAvailableTiers(body),
     deliveryFiles: buildDeliveryFilesMap(body),
     isActive: body.isActive !== false,
-    showInLatest: body.showInLatest === true,
     actorListingOrder: parseListingOrder(body.actorListingOrder ?? body.allListingOrder),
     categoryListingOrder: parseListingOrder(body.categoryListingOrder),
   }

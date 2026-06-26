@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchAdminProducts,
   fetchHomeCategoryPins,
@@ -6,12 +6,10 @@ import {
   updateHomeLatestPins,
 } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import AdminPageHeader from '../components/ui/AdminPageHeader'
 import PageLoader from '../components/ui/PageLoader'
 import StatusBadge from '../components/StatusBadge'
 import {
   actionDeleteClass,
-  cardClass,
   inputClass,
   sectionClass,
 } from '../components/ui/adminUi'
@@ -19,6 +17,24 @@ import { ADMIN_PERMISSIONS } from '../constants/adminPermissions'
 import { useAuth } from '../context/AuthContext'
 
 const PIN_LIMIT = 8
+
+const HOME_PRODUCT_GRID =
+  'grid grid-cols-2 gap-3.5 sm:gap-5 md:gap-6 lg:grid-cols-3 xl:grid-cols-4'
+
+const LATEST_SECTION_ID = 'latest-uploads'
+
+const reorderList = (items, fromIndex, toIndex) => {
+  const next = [...items]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+  return next
+}
+
+const DragHandleIcon = () => (
+  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+    <path d="M7 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM7 8.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM7 13a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" />
+  </svg>
+)
 
 const formatProductCount = (count = 0) =>
   `${Number(count).toLocaleString('en-IN')} ${Number(count) === 1 ? 'product' : 'products'}`
@@ -38,7 +54,6 @@ const getProductThumbnail = (product) =>
 const ProductSearchPicker = ({
   categorySlug = 'all',
   searchPlaceholder = 'Search products...',
-  showInLatestOnly = false,
   pinnedIds,
   disabled,
   onSelect,
@@ -87,7 +102,6 @@ const ProductSearchPicker = ({
           search: debouncedQuery,
           categorySlug: categorySlug === 'all' ? 'all' : categorySlug,
           status: 'all',
-          showInLatest: showInLatestOnly,
         })
         if (cancelled) return
 
@@ -117,7 +131,7 @@ const ProductSearchPicker = ({
     return () => {
       cancelled = true
     }
-  }, [open, debouncedQuery, categorySlug, showInLatestOnly, pinnedIds, disabled])
+  }, [open, debouncedQuery, categorySlug, pinnedIds, disabled])
 
   const handleSelect = (product) => {
     onSelect(product)
@@ -189,7 +203,25 @@ const ProductSearchPicker = ({
   )
 }
 
-const PinnedProductsGrid = ({ pinnedProducts, canWrite, saving, onRemove, emptyMessage }) => {
+const PinnedProductsGrid = ({
+  pinnedProducts,
+  canWrite,
+  saving,
+  onRemove,
+  onReorder,
+  emptyMessage,
+}) => {
+  const [dragIndex, setDragIndex] = useState(null)
+  const [overIndex, setOverIndex] = useState(null)
+  const canReorder = canWrite && Boolean(onReorder) && !saving && pinnedProducts.length > 1
+
+  const handleDrop = (targetIndex) => {
+    if (dragIndex === null || dragIndex === targetIndex || !onReorder) return
+    onReorder(dragIndex, targetIndex)
+    setDragIndex(null)
+    setOverIndex(null)
+  }
+
   if (pinnedProducts.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
@@ -199,53 +231,92 @@ const PinnedProductsGrid = ({ pinnedProducts, canWrite, saving, onRemove, emptyM
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {pinnedProducts.map((product, index) => (
-        <div key={product.id} className={`${cardClass} overflow-hidden`}>
-          <div className="relative aspect-video bg-slate-100">
-            {getProductThumbnail(product) ? (
-              <img
-                src={getProductThumbnail(product)}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                No preview
-              </div>
-            )}
-            <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
-              #{index + 1}
-            </span>
-          </div>
-          <div className="space-y-2 p-3">
-            <div>
-              <p className="line-clamp-2 text-sm font-semibold text-slate-900">{product.name}</p>
-              {product.clipId ? (
-                <p className="mt-0.5 font-mono text-[11px] text-slate-500">{product.clipId}</p>
-              ) : null}
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <StatusBadge active={product.isActive} />
-              {canWrite ? (
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => onRemove(product.id)}
-                  className={`${actionDeleteClass} disabled:cursor-not-allowed disabled:opacity-50`}
+    <div className={HOME_PRODUCT_GRID}>
+      {pinnedProducts.map((product, index) => {
+        const isDragging = dragIndex === index
+        const isDropTarget = overIndex === index && dragIndex !== null && dragIndex !== index
+
+        return (
+          <article
+            key={product.id}
+            draggable={canReorder}
+            onDragStart={() => setDragIndex(index)}
+            onDragOver={(event) => {
+              if (!canReorder || dragIndex === null) return
+              event.preventDefault()
+              setOverIndex(index)
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              handleDrop(index)
+            }}
+            onDragEnd={() => {
+              setDragIndex(null)
+              setOverIndex(null)
+            }}
+            className={`group relative w-full min-w-0 transition ${
+              isDragging ? 'scale-[0.98] opacity-50' : ''
+            } ${isDropTarget ? 'rounded-xl ring-2 ring-slate-900 ring-offset-2' : ''} ${
+              canReorder ? 'cursor-grab active:cursor-grabbing' : ''
+            }`}
+          >
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-gray-900 shadow-sm sm:rounded-xl">
+              {getProductThumbnail(product) ? (
+                <img
+                  src={getProductThumbnail(product)}
+                  alt={product.name}
+                  draggable={false}
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                  No preview
+                </div>
+              )}
+              <span className="absolute left-1.5 top-1.5 z-20 rounded-full bg-black/85 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm sm:left-[4%] sm:top-[4%]">
+                #{index + 1}
+              </span>
+              {canReorder ? (
+                <span
+                  className="absolute right-1.5 top-1.5 z-20 inline-flex items-center justify-center rounded bg-black/85 p-1.5 text-white shadow-sm sm:right-[4%] sm:top-[4%]"
+                  title="Drag to reorder"
                 >
-                  Remove
-                </button>
+                  <DragHandleIcon />
+                </span>
               ) : null}
             </div>
-          </div>
-        </div>
-      ))}
+
+            <div className="mt-[0.55em] px-[0.1em]">
+              <h3 className="line-clamp-2 text-[11px] font-medium leading-snug text-gray-900 sm:text-sm">
+                {product.name}
+              </h3>
+              {product.clipId ? (
+                <p className="mt-0.5 truncate font-mono text-[10px] text-gray-500 sm:text-xs">
+                  {product.clipId}
+                </p>
+              ) : null}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <StatusBadge active={product.isActive} />
+                {canWrite ? (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => onRemove(product.id)}
+                    className={`${actionDeleteClass} disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
 }
 
-const LatestPinSection = ({ latest, canWrite, saving, onAdd, onRemove }) => {
+const LatestPinSection = ({ latest, canWrite, saving, onAdd, onRemove, onReorder }) => {
   const pinnedProducts = latest?.pinnedProducts || []
   const pinnedIds = pinnedProducts.map((product) => product.id)
   const atLimit = pinnedProducts.length >= PIN_LIMIT
@@ -258,8 +329,8 @@ const LatestPinSection = ({ latest, canWrite, saving, onAdd, onRemove }) => {
           <ProductCountBadge count={latest?.productCount ?? 0} />
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          Homepage latest row · {pinnedProducts.length}/{PIN_LIMIT} pinned · only products with
-          “Add to Latest Uploads (homepage)” enabled
+          Homepage latest row · {pinnedProducts.length}/{PIN_LIMIT} pinned
+          {canWrite && pinnedProducts.length > 1 ? ' · drag cards to reorder' : ''}
         </p>
       </div>
 
@@ -268,8 +339,7 @@ const LatestPinSection = ({ latest, canWrite, saving, onAdd, onRemove }) => {
           <label className="block text-sm font-medium text-slate-700">Add product</label>
           <ProductSearchPicker
             categorySlug="all"
-            showInLatestOnly
-            searchPlaceholder="Search Latest-eligible products..."
+            searchPlaceholder="Search any product to pin in Latest Uploads..."
             pinnedIds={pinnedIds}
             disabled={atLimit || saving}
             onSelect={onAdd}
@@ -283,6 +353,7 @@ const LatestPinSection = ({ latest, canWrite, saving, onAdd, onRemove }) => {
           canWrite={canWrite}
           saving={saving}
           onRemove={onRemove}
+          onReorder={onReorder}
           emptyMessage="No products pinned yet for Latest Uploads."
         />
       </div>
@@ -296,6 +367,7 @@ const CategoryPinSection = ({
   saving,
   onAdd,
   onRemove,
+  onReorder,
 }) => {
   const pinnedProducts = category.pinnedProducts || []
   const pinnedIds = pinnedProducts.map((product) => product.id)
@@ -311,6 +383,7 @@ const CategoryPinSection = ({
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {category.navLabel} · {pinnedProducts.length}/{PIN_LIMIT} pinned for homepage
+            {canWrite && pinnedProducts.length > 1 ? ' · drag cards to reorder' : ''}
           </p>
         </div>
         {!category.isActive ? (
@@ -341,6 +414,7 @@ const CategoryPinSection = ({
           canWrite={canWrite}
           saving={saving}
           onRemove={(productId) => onRemove(category.id, productId)}
+          onReorder={(fromIndex, toIndex) => onReorder(category.id, fromIndex, toIndex)}
           emptyMessage="No products pinned yet for this category."
         />
       </div>
@@ -360,8 +434,14 @@ const HomeCategoryProducts = () => {
   const [loading, setLoading] = useState(true)
   const [savingCategoryId, setSavingCategoryId] = useState('')
   const [savingLatest, setSavingLatest] = useState(false)
+  const [selectedSectionId, setSelectedSectionId] = useState(LATEST_SECTION_ID)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === selectedSectionId) ?? null,
+    [categories, selectedSectionId],
+  )
 
   const loadPins = useCallback(async () => {
     setLoading(true)
@@ -434,6 +514,21 @@ const HomeCategoryProducts = () => {
     persistPins(categoryId, nextIds)
   }
 
+  const handleCategoryReorder = (categoryId, fromIndex, toIndex) => {
+    const category = categories.find((entry) => entry.id === categoryId)
+    if (!category) return
+
+    const reordered = reorderList(category.pinnedProducts || [], fromIndex, toIndex)
+    const nextIds = reordered.map((product) => product.id)
+
+    setCategories((current) =>
+      current.map((entry) =>
+        entry.id === categoryId ? { ...entry, pinnedProducts: reordered } : entry,
+      ),
+    )
+    persistPins(categoryId, nextIds)
+  }
+
   const persistLatestPins = async (productIds) => {
     setSavingLatest(true)
     setError('')
@@ -469,16 +564,47 @@ const HomeCategoryProducts = () => {
     persistLatestPins(nextIds)
   }
 
+  const handleLatestReorder = (fromIndex, toIndex) => {
+    const reordered = reorderList(latest.pinnedProducts || [], fromIndex, toIndex)
+    const nextIds = reordered.map((product) => product.id)
+
+    setLatest((current) => ({
+      ...current,
+      pinnedProducts: reordered,
+    }))
+    persistLatestPins(nextIds)
+  }
+
   if (loading) {
     return <PageLoader label="Loading homepage category products..." />
   }
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Homepage Products"
-        description="Pin up to 8 products for Latest Uploads and up to 8 per category. Only pinned products appear on the homepage."
-      />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Homepage Products</h1>
+          <label className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2 lg:min-w-[280px] lg:flex-1 lg:max-w-md">
+            <span className="sr-only">Select homepage section</span>
+            <select
+              value={selectedSectionId}
+              onChange={(event) => setSelectedSectionId(event.target.value)}
+              className={`${inputClass} mt-0 w-full sm:min-w-[240px]`}
+            >
+              <option value={LATEST_SECTION_ID}>Latest Uploads</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="text-sm text-slate-500">
+          Pin up to 8 products for Latest Uploads and up to 8 per category. Only pinned products
+          appear on the homepage.
+        </p>
+      </div>
 
       {success ? (
         <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -493,24 +619,28 @@ const HomeCategoryProducts = () => {
       ) : null}
 
       <div className="space-y-6">
-        <LatestPinSection
-          latest={latest}
-          canWrite={canWrite}
-          saving={savingLatest}
-          onAdd={handleLatestAdd}
-          onRemove={handleLatestRemove}
-        />
-
-        {categories.map((category) => (
-          <CategoryPinSection
-            key={category.id}
-            category={category}
+        {selectedSectionId === LATEST_SECTION_ID ? (
+          <LatestPinSection
+            latest={latest}
             canWrite={canWrite}
-            saving={savingCategoryId === category.id}
+            saving={savingLatest}
+            onAdd={handleLatestAdd}
+            onRemove={handleLatestRemove}
+            onReorder={handleLatestReorder}
+          />
+        ) : null}
+
+        {selectedCategory ? (
+          <CategoryPinSection
+            key={selectedCategory.id}
+            category={selectedCategory}
+            canWrite={canWrite}
+            saving={savingCategoryId === selectedCategory.id}
             onAdd={handleAdd}
             onRemove={handleRemove}
+            onReorder={handleCategoryReorder}
           />
-        ))}
+        ) : null}
       </div>
 
       <AdminAlertModal

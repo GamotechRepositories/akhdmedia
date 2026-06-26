@@ -128,9 +128,7 @@ export const updateHomeLatestProductIds = async (rawIds = []) => {
     throw new AppError(normalized.error, 400)
   }
 
-  const validated = await validatePinnedProductsExist(normalized.productIds, {
-    requireShowInLatest: true,
-  })
+  const validated = await validatePinnedProductsExist(normalized.productIds)
   if (validated.error) {
     throw new AppError(validated.error, 400)
   }
