@@ -191,11 +191,11 @@ const ProductDetail = () => {
 
     setIsSharing(true);
     try {
-      const result = await shareProduct(product, { price: displayPrice });
+      const result = await shareProduct(product);
       if (result.method === 'clipboard') {
-        success('Product link copied to clipboard');
+        success('Link copied to clipboard');
       } else {
-        success('Product shared');
+        success('Link shared');
       }
     } catch (error) {
       if (error?.name !== 'AbortError') {
@@ -269,10 +269,11 @@ const ProductDetail = () => {
                   type="button"
                   onClick={handleShareProduct}
                   disabled={isSharing}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
-                  aria-label="Share product"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label="Share"
+                  title="Share"
                 >
-                  <IconShare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <IconShare className="h-4 w-4" />
                   Share
                 </button>
               </div>
