@@ -2,6 +2,9 @@ export const HERO_BANNER_DESKTOP_RATIO = '3 / 1'
 export const HERO_BANNER_MOBILE_RATIO = '16 / 10'
 export const HERO_BANNER_TABLET_RATIO = '16 / 10'
 
+/** Admin preview max width — overlay text scales with banner width to match live site */
+export const HERO_OVERLAY_REFERENCE_WIDTH = 896
+
 export const DEFAULT_IMAGE_FOCUS = { scale: 1, x: 50, y: 50 }
 
 export const resolveImageFocus = (focus) => {

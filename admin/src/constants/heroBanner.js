@@ -18,6 +18,9 @@ export const HERO_BANNER_MOBILE_HINT = {
 export const HERO_BANNER_UPLOAD_GUIDE =
   'Upload a wide landscape image at 2400 × 800 px (3:1). Keep headline, faces, and key action inside the center area — mobile uses a taller crop from the same file.'
 
+/** Admin preview max width — overlay text scales with banner width to match live site */
+export const HERO_OVERLAY_REFERENCE_WIDTH = 896
+
 export const DEFAULT_IMAGE_FOCUS = { scale: 1, x: 50, y: 50 }
 export const MIN_IMAGE_FOCUS_SCALE = 1
 export const MAX_IMAGE_FOCUS_SCALE = 2.5

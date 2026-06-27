@@ -10,10 +10,13 @@ import {
   MAX_IMAGE_FOCUS_SCALE,
   MIN_IMAGE_FOCUS_SCALE,
 } from '../constants/heroBanner'
-import { resolveCtaTypography, resolveHeadlineTypography } from '../constants/heroTypography'
-
-export const DEFAULT_HEADLINE_POSITION = { x: 5, y: 62 }
-export const DEFAULT_CTA_POSITION = { x: 5, y: 78 }
+import {
+  DEFAULT_CTA_POSITION,
+  DEFAULT_HEADLINE_POSITION,
+  resolveCtaTypography,
+  resolveHeadlineTypography,
+  resolveOverlayPosition,
+} from '../constants/heroTypography'
 
 const PREVIEW_MODES = [
   {
@@ -31,7 +34,7 @@ const PREVIEW_MODES = [
 ]
 
 const clampFocusPercent = (value) => Math.min(100, Math.max(0, Math.round(value)))
-const clampOverlayPercent = (value) => Math.min(95, Math.max(2, Math.round(value)))
+const clampOverlayPercent = (value) => Math.min(95, Math.max(0, Math.round(value)))
 
 const getImageFocus = (slide) => {
   const focus = slide?.imageFocus
@@ -46,14 +49,6 @@ const getImageFocus = (slide) => {
   }
 }
 
-const getPosition = (slide, field, fallback) => {
-  const pos = slide?.[field]
-  if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
-    return { x: clampOverlayPercent(pos.x), y: clampOverlayPercent(pos.y) }
-  }
-  return fallback
-}
-
 const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const containerRef = useRef(null)
   const panState = useRef(null)
@@ -66,10 +61,13 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const hasHeadline = Boolean(slide.headline?.trim())
   const hasButton = Boolean(slide.cta?.trim())
   const imageFocus = getImageFocus(slide)
-  const headlinePosition = getPosition(slide, 'headlinePosition', DEFAULT_HEADLINE_POSITION)
-  const ctaPosition = getPosition(slide, 'ctaPosition', DEFAULT_CTA_POSITION)
   const activePreview = PREVIEW_MODES.find((mode) => mode.id === previewMode) || PREVIEW_MODES[0]
   const compact = previewMode === 'mobile'
+  const headlinePosition = resolveOverlayPosition(
+    slide.headlinePosition,
+    DEFAULT_HEADLINE_POSITION,
+  )
+  const ctaPosition = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION)
   const headlineStyle = resolveHeadlineTypography(slide, { compact })
   const ctaStyle = resolveCtaTypography(slide, { compact })
 
@@ -254,7 +252,7 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
 
       <div
         ref={containerRef}
-        className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-gray-950 shadow-inner"
+        className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-gray-950 shadow-inner [container-type:size]"
         style={{ aspectRatio: activePreview.aspectRatio }}
       >
         <div
@@ -306,10 +304,7 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
                 : ''
             }`}
           >
-            <h3
-              className="text-white drop-shadow-lg"
-              style={headlineStyle}
-            >
+            <h3 className="m-0 p-0 text-white drop-shadow-lg" style={headlineStyle}>
               {slide.headline}
             </h3>
           </div>
@@ -334,7 +329,7 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
             }`}
           >
             <span
-              className="inline-flex items-center gap-2 rounded-full bg-white text-gray-900 shadow-lg"
+              className="inline-flex w-max max-w-none shrink-0 items-center gap-[0.35em] whitespace-nowrap rounded-full bg-white uppercase tracking-wider text-gray-900 shadow-lg"
               style={ctaStyle}
             >
               {slide.cta}

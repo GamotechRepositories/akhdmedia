@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { fetchCategories, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
-import HeroSlidePreview, {
+import HeroSlidePreview from '../components/HeroSlidePreview'
+import {
   DEFAULT_CTA_POSITION,
   DEFAULT_HEADLINE_POSITION,
-} from '../components/HeroSlidePreview'
+} from '../constants/heroTypography'
 import MediaUpload from '../components/MediaUpload'
 import PageLoader from '../components/ui/PageLoader'
 import {

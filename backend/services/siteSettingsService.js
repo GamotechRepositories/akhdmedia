@@ -45,7 +45,7 @@ const sanitizeTickerItems = (items = []) =>
 const clampOverlayPercent = (value, fallback) => {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
-  return Math.min(95, Math.max(2, Math.round(numeric)))
+  return Math.min(95, Math.max(0, Math.round(numeric)))
 }
 
 const sanitizeOverlayPosition = (position, fallback) => ({

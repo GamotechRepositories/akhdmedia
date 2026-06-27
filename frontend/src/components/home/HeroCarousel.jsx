@@ -11,30 +11,21 @@ import {
   HERO_BANNER_MOBILE_RATIO,
   resolveImageFocus,
 } from '../../constants/heroBanner';
-import { resolveCtaTypography, resolveHeadlineTypography } from '../../constants/heroTypography';
-
-const DEFAULT_HEADLINE_POSITION = { x: 5, y: 62 };
-const DEFAULT_CTA_POSITION = { x: 5, y: 78 };
-
-const resolveOverlayPosition = (position, fallback) => ({
-  x: Number.isFinite(Number(position?.x)) ? Number(position.x) : fallback.x,
-  y: Number.isFinite(Number(position?.y)) ? Number(position.y) : fallback.y,
-});
+import HeroSlideOverlay from './HeroSlideOverlay';
+import {
+  DEFAULT_CTA_POSITION,
+  DEFAULT_HEADLINE_POSITION,
+} from '../../constants/heroTypography';
 
 const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) => {
-  const hasButton = Boolean(slide.cta?.trim());
   const hasLink = Boolean(slide.link?.trim());
-  const hasOverlay = Boolean(slide.headline?.trim() || hasButton);
-  const headlinePosition = resolveOverlayPosition(slide.headlinePosition, DEFAULT_HEADLINE_POSITION);
-  const ctaPosition = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION);
+  const hasOverlay = Boolean(slide.headline?.trim() || slide.cta?.trim());
   const imageFocus = resolveImageFocus(slide.imageFocus);
-  const headlineStyle = resolveHeadlineTypography(slide, { compact });
-  const ctaStyle = resolveCtaTypography(slide, { compact });
   const slideClassName = `absolute inset-0 transition-opacity duration-700 ease-in-out ${
     isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
   }`;
 
-  const content = (
+  const imageLayer = (
     <>
       <div className="absolute inset-0 overflow-hidden">
         <div
@@ -65,61 +56,36 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
         </>
       ) : null}
-
-      {hasOverlay ? (
-        <div className="absolute inset-0 z-10">
-          {slide.headline ? (
-            <div
-              className="absolute max-w-[75%] text-white sm:max-w-[70%]"
-              style={{
-                left: `${headlinePosition.x}%`,
-                top: `${headlinePosition.y}%`,
-              }}
-            >
-              <h2 className="text-white drop-shadow-lg" style={headlineStyle}>
-                {slide.headline}
-              </h2>
-            </div>
-          ) : null}
-          {hasButton ? (
-            <div
-              className="absolute"
-              style={{
-                left: `${ctaPosition.x}%`,
-                top: `${ctaPosition.y}%`,
-              }}
-            >
-              <span
-                className="inline-flex items-center gap-2 rounded-full bg-white text-gray-900 shadow-lg"
-                style={ctaStyle}
-              >
-                {slide.cta}
-                <IconChevronRight className="shrink-0" style={{ width: '1em', height: '1em' }} />
-              </span>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </>
   );
 
+  const overlayLayer = hasOverlay ? (
+    <div className="pointer-events-none absolute inset-0 z-10">
+      <HeroSlideOverlay slide={slide} compact={compact} />
+    </div>
+  ) : null;
+
   if (hasLink) {
     return (
-      <Link
-        to={slide.link}
-        aria-label={slide.headline?.trim() || slide.cta?.trim() || 'View category'}
-        aria-hidden={!isActive}
-        tabIndex={isActive ? 0 : -1}
-        className={slideClassName}
-      >
-        {content}
-      </Link>
+      <div aria-hidden={!isActive} className={slideClassName}>
+        <Link
+          to={slide.link}
+          aria-label={slide.headline?.trim() || slide.cta?.trim() || 'View category'}
+          aria-hidden={!isActive}
+          tabIndex={isActive ? 0 : -1}
+          className="absolute inset-0 z-0 block"
+        >
+          {imageLayer}
+        </Link>
+        {overlayLayer}
+      </div>
     );
   }
 
   return (
     <div aria-hidden={!isActive} className={slideClassName}>
-      {content}
+      {imageLayer}
+      {overlayLayer}
     </div>
   );
 };
@@ -234,7 +200,7 @@ const HeroCarousel = () => {
     >
       {/* Mobile & tablet carousel — swipe to change slide */}
       <div
-        className="relative mx-auto w-full max-w-[2000px] touch-pan-y md:hidden"
+        className="relative mx-auto w-full max-w-[2000px] touch-pan-y [container-type:size] md:hidden"
         style={{ aspectRatio: HERO_BANNER_MOBILE_RATIO }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -260,7 +226,7 @@ const HeroCarousel = () => {
 
       {/* Desktop carousel — 3:1 matches admin preview & recommended upload size */}
       <div
-        className="relative mx-auto hidden w-full max-w-[2000px] md:block"
+        className="relative mx-auto hidden w-full max-w-[2000px] [container-type:size] md:block"
         style={{ aspectRatio: HERO_BANNER_DESKTOP_RATIO }}
       >
         {heroSlides.map((slide, index) => (

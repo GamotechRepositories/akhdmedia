@@ -1,7 +1,11 @@
+import { HERO_OVERLAY_REFERENCE_WIDTH } from './heroBanner'
+
 export const DEFAULT_HEADLINE_FONT_SIZE = 48
 export const DEFAULT_CTA_SCALE = 1
 export const DEFAULT_HEADLINE_FONT = 'system'
 export const DEFAULT_CTA_FONT = 'system'
+export const DEFAULT_HEADLINE_POSITION = { x: 5, y: 62 }
+export const DEFAULT_CTA_POSITION = { x: 5, y: 78 }
 
 export const HERO_FONT_OPTIONS = [
   {
@@ -43,6 +47,9 @@ export const HERO_FONT_OPTIONS = [
 
 const FONT_ID_SET = new Set(HERO_FONT_OPTIONS.map((option) => option.id))
 
+const toCqw = (px, compact = false) =>
+  `${((px * (compact ? 0.55 : 1)) / HERO_OVERLAY_REFERENCE_WIDTH) * 100}cqw`
+
 export const resolveHeroFontFamily = (fontId = DEFAULT_HEADLINE_FONT) => {
   const match = HERO_FONT_OPTIONS.find((option) => option.id === fontId)
   return match?.family || HERO_FONT_OPTIONS[0].family
@@ -65,8 +72,18 @@ export const sanitizeCtaScale = (value) => {
   return Math.min(1.8, Math.max(0.6, Math.round(numeric * 100) / 100))
 }
 
+export const resolveOverlayPosition = (position, fallback) => {
+  const x = Number(position?.x)
+  const y = Number(position?.y)
+
+  return {
+    x: Number.isFinite(x) ? Math.min(95, Math.max(0, x)) : fallback.x,
+    y: Number.isFinite(y) ? Math.min(95, Math.max(0, y)) : fallback.y,
+  }
+}
+
 export const resolveHeadlineTypography = (slide, { compact = false } = {}) => ({
-  fontSize: `${sanitizeHeadlineFontSize(slide?.headlineFontSize) * (compact ? 0.55 : 1)}px`,
+  fontSize: toCqw(sanitizeHeadlineFontSize(slide?.headlineFontSize), compact),
   fontFamily: resolveHeroFontFamily(slide?.headlineFontFamily || DEFAULT_HEADLINE_FONT),
   fontWeight: 900,
   lineHeight: 1.1,
@@ -76,16 +93,19 @@ export const resolveHeadlineTypography = (slide, { compact = false } = {}) => ({
 export const resolveCtaTypography = (slide, { compact = false } = {}) => {
   const scale = sanitizeCtaScale(slide?.ctaScale)
   const baseFont = compact ? 10 : 12
-  const basePadY = compact ? 8 : 10
-  const basePadX = compact ? 16 : 20
+  const basePadY = compact ? 8 : 11
+  const basePadX = compact ? 16 : 24
+  const fontPx = Math.round(baseFont * scale)
+  const padY = Math.round(basePadY * scale)
+  const padX = Math.round(basePadX * scale)
 
   return {
-    fontSize: `${Math.round(baseFont * scale)}px`,
-    padding: `${Math.round(basePadY * scale)}px ${Math.round(basePadX * scale)}px`,
+    fontSize: toCqw(fontPx, compact),
+    padding: `${toCqw(padY, compact)} ${toCqw(padX, compact)}`,
     fontFamily: resolveHeroFontFamily(slide?.ctaFontFamily || DEFAULT_CTA_FONT),
     fontWeight: 700,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    lineHeight: 1,
   }
 }
 
