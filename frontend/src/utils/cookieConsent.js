@@ -35,3 +35,7 @@ export const acceptCookieConsent = () => {
 export const rejectCookieConsent = () => {
   setCookieConsent(COOKIE_CONSENT_STATUS.REJECTED);
 };
+
+/** For optional analytics/marketing later — essential login/cart cookies always run */
+export const isNonEssentialStorageAllowed = () =>
+  getCookieConsent() === COOKIE_CONSENT_STATUS.ACCEPTED;
