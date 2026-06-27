@@ -10,7 +10,7 @@ class SiteContent {
   static const purchaseReasons = [
     ('personal', 'Personal collection'),
     ('digital', 'Digital media'),
-    ('outlet', 'Outlet media'),
+    ('outlet', 'Media agency'),
     ('other', 'Other'),
   ];
 

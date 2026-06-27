@@ -1,5 +1,5 @@
 class EmailConstants {
-  static const maxLicenseEmailResends = 2;
+  static const maxLicenseEmailResends = 1;
   static const licenseEmailResendWindowMs = 5 * 60 * 1000;
 
   static const licenseEmailResendLimitMessage =

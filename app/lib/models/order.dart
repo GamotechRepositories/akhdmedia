@@ -17,7 +17,7 @@ class Order {
     this.razorpayPaymentId = '',
     this.licenseEmailResendCount = 0,
     this.maxLicenseEmailResends = 2,
-    this.licenseEmailResendsRemaining = 2,
+    this.licenseEmailResendsRemaining = 1,
     this.isLicenseEmailResendWindowOpen = false,
     this.canResendLicenseEmail = false,
     this.canResumePayment = true,

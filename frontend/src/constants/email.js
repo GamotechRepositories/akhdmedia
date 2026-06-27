@@ -1,4 +1,4 @@
-export const MAX_LICENSE_EMAIL_RESENDS = 2;
+export const MAX_LICENSE_EMAIL_RESENDS = 1;
 
 export const LICENSE_EMAIL_RESEND_WINDOW_MS = 5 * 60 * 1000;
 

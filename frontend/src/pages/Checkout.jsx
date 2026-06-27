@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
+import { checkoutAPI, orderAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { formatPayableCurrency } from '../utils/formatters';
 import OrderAmountSummary from '../components/OrderAmountSummary';
@@ -14,7 +14,7 @@ const STEPS = ['billing', 'summary'];
 const PURCHASE_REASONS = [
   { id: 'personal', label: 'Personal collection' },
   { id: 'digital', label: 'Digital media' },
-  { id: 'outlet', label: 'Outlet media' },
+  { id: 'outlet', label: 'Media agency' },
   { id: 'other', label: 'Other' },
 ];
 
@@ -135,7 +135,6 @@ const Checkout = () => {
     getCartGstTotal,
     appliedPromo,
     discountAmount,
-    clearCart,
     loading: cartLoading,
   } = useCart();
   const { user } = useAuth();
@@ -143,7 +142,6 @@ const Checkout = () => {
   const [step, setStep] = useState('billing');
   const [loading, setLoading] = useState(false);
   const [alertPopup, setAlertPopup] = useState(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
@@ -198,18 +196,12 @@ const Checkout = () => {
     setBillingDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  const togglePurchaseReason = (reasonId) => {
-    setBillingDetails((prev) => {
-      const isRemoving = prev.purchaseReasons[0] === reasonId;
-      const purchaseReasons = isRemoving ? [] : [reasonId];
-
-      return {
-        ...prev,
-        purchaseReasons,
-        purchaseReasonOther:
-          reasonId === 'other' && isRemoving ? '' : prev.purchaseReasonOther,
-      };
-    });
+  const selectPurchaseReason = (reasonId) => {
+    setBillingDetails((prev) => ({
+      ...prev,
+      purchaseReasons: [reasonId],
+      purchaseReasonOther: reasonId === 'other' ? prev.purchaseReasonOther : '',
+    }));
   };
 
   const showAlert = (message, title = 'Required') => {
@@ -248,18 +240,23 @@ const Checkout = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const completeOrderSuccess = async (orderId) => {
+  const completeOrderSuccess = (orderId, paymentResponse, orderNumber = '') => {
     setIsProcessingOrder(false);
     setLoading(false);
-    setShowSuccessModal(true);
-    await clearCart();
-
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      setTimeout(() => {
-        navigate(`/order-success?method=online&orderId=${orderId}`);
-      }, 300);
-    }, 2000);
+    setIsPlacingOrder(false);
+    navigate(`/order-success?method=online&orderId=${orderId}`, {
+      replace: true,
+      state: {
+        showConfirmingOverlay: true,
+        previewOrderNumber: orderNumber,
+        pendingPaymentVerification: {
+          orderId,
+          razorpay_order_id: paymentResponse.razorpay_order_id,
+          razorpay_payment_id: paymentResponse.razorpay_payment_id,
+          razorpay_signature: paymentResponse.razorpay_signature,
+        },
+      },
+    });
   };
 
   const placeOnlineOrder = async (paymentMethod) => {
@@ -292,22 +289,9 @@ const Checkout = () => {
         email: billingDetails.email,
         contact: billingDetails.phone,
       },
-      onSuccess: async (paymentResponse) => {
-        setLoading(true);
-        const verifyResponse = await paymentAPI.verifyRazorpayPayment({
-          orderId: order.id,
-          razorpay_order_id: paymentResponse.razorpay_order_id,
-          razorpay_payment_id: paymentResponse.razorpay_payment_id,
-          razorpay_signature: paymentResponse.razorpay_signature,
-          clearCart: true,
-        });
-
-        if (!verifyResponse.success) {
-          throw new Error(verifyResponse.message || 'Payment verification failed');
-        }
-
-        await completeOrderSuccess(order.id);
-        return verifyResponse;
+      onSuccess: (paymentResponse) => {
+        completeOrderSuccess(order.id, paymentResponse, order.orderNumber);
+        return { success: true };
       },
       onDismiss: () => {
         setLoading(false);
@@ -348,13 +332,7 @@ const Checkout = () => {
 
   return (
     <>
-      <div
-        className="min-h-screen bg-[#f4f5f7]"
-        style={{
-          opacity: showSuccessModal ? 0.3 : 1,
-          pointerEvents: showSuccessModal ? 'none' : 'auto',
-        }}
-      >
+      <div className="min-h-screen bg-[#f4f5f7]">
         <div className="border-b border-gray-200 bg-white">
           <div className="mx-auto flex h-14 max-w-xl items-center justify-between px-4 sm:px-6">
             <div>
@@ -424,26 +402,33 @@ const Checkout = () => {
                   />
                 </div>
 
-                <div>
-                  <p className="mb-2 text-sm font-medium text-gray-700">
+                <fieldset>
+                  <legend className="mb-1 block text-sm font-medium text-gray-700">
                     Where will you use the video? <span className="text-red-500">*</span>
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  </legend>
+                  <p className="mb-3 text-xs text-gray-500">Select one option</p>
+                  <div className="space-y-2">
                     {PURCHASE_REASONS.map((reason) => {
                       const selected = billingDetails.purchaseReasons[0] === reason.id;
                       return (
-                        <button
+                        <label
                           key={reason.id}
-                          type="button"
-                          onClick={() => togglePurchaseReason(reason.id)}
-                          className={`rounded-lg border px-3 py-2.5 text-left text-sm transition ${
+                          className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition ${
                             selected
-                              ? 'border-gray-900 bg-gray-900 text-white'
-                              : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                              ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
                           }`}
                         >
-                          {reason.label}
-                        </button>
+                          <input
+                            type="radio"
+                            name="purchaseReason"
+                            value={reason.id}
+                            checked={selected}
+                            onChange={() => selectPurchaseReason(reason.id)}
+                            className="h-4 w-4 shrink-0 border-gray-300 text-gray-900 focus:ring-gray-900"
+                          />
+                          <span className="text-sm text-gray-800">{reason.label}</span>
+                        </label>
                       );
                     })}
                   </div>
@@ -462,7 +447,7 @@ const Checkout = () => {
                       />
                     </div>
                   )}
-                </div>
+                </fieldset>
               </div>
 
               <div className="mt-5 space-y-2.5">
@@ -580,20 +565,6 @@ const Checkout = () => {
             </div>
           )}
         </div>
-
-        {showSuccessModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
-                <IconCheck size={28} />
-              </div>
-              <h2 className="text-lg font-bold text-gray-900">Order confirmed</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Download link sent to <strong>{billingDetails.email}</strong>
-              </p>
-            </div>
-          </div>
-        )}
 
         {isProcessingOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

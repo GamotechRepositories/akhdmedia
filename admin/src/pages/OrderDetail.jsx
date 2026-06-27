@@ -10,7 +10,7 @@ import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
   digital: 'Digital media',
-  outlet: 'Outlet media',
+  outlet: 'Media agency',
   other: 'Other',
 }
 

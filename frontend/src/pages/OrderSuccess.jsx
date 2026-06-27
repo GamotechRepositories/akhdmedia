@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
+import { useCart } from '../context/CartContext';
 import { orderAPI, paymentAPI } from '../services/commerceApi';
 import { BRAND } from '../config/brand';
 import { openRazorpayCheckout } from '../utils/razorpay';
@@ -11,6 +12,7 @@ import {
   formatResendWindowLabel,
 } from '../constants/email';
 import OrderAmountSummary from '../components/OrderAmountSummary';
+import OrderConfirmingModal from '../components/OrderConfirmingModal';
 import PageLoader from '../components/ui/PageLoader';
 import { formatCurrency } from '../utils/formatters';
 import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
@@ -27,6 +29,7 @@ const saveBlobDownload = (blob, filename) => {
 const OrderSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { clearCart } = useCart();
   const handleContinue = () => {
     if (location.state?.fromOrders && location.state?.orderId) {
       navigate('/orders', { state: { focusOrderId: location.state.orderId } });
@@ -39,6 +42,7 @@ const OrderSuccess = () => {
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(true);
+  const [loadingOrderLabel, setLoadingOrderLabel] = useState('Loading order...');
   const [resendingEmail, setResendingEmail] = useState(false);
   const [emailNotice, setEmailNotice] = useState('');
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -47,8 +51,37 @@ const OrderSuccess = () => {
   const [resumingPayment, setResumingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
 
+  const pendingVerificationRef = useRef(null);
+  const previewOrderNumberRef = useRef('');
+  const showConfirmingInitiallyRef = useRef(
+    Boolean(
+      location.state?.showConfirmingOverlay ||
+        location.state?.pendingPaymentVerification,
+    ),
+  );
+
+  const [showConfirmingPopup, setShowConfirmingPopup] = useState(
+    showConfirmingInitiallyRef.current,
+  );
+
   const orderId = searchParams.get('orderId') || '';
-  const orderNumber = order?.orderNumber?.slice(-8).toUpperCase() || '--------';
+
+  if (
+    !pendingVerificationRef.current &&
+    location.state?.pendingPaymentVerification?.orderId === orderId
+  ) {
+    pendingVerificationRef.current = location.state.pendingPaymentVerification;
+  }
+
+  if (!previewOrderNumberRef.current && location.state?.previewOrderNumber) {
+    previewOrderNumberRef.current = location.state.previewOrderNumber;
+  }
+
+  const formatOrderNumber = (value = '') => value.slice(-8).toUpperCase();
+  const orderNumber =
+    formatOrderNumber(order?.orderNumber || '') ||
+    formatOrderNumber(previewOrderNumberRef.current || '') ||
+    '--------';
   const { total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
   const customerEmail = order?.billingAddress?.email || '';
   const orderItems = order?.items || [];
@@ -190,25 +223,82 @@ const OrderSuccess = () => {
   useEffect(() => {
     if (!orderId) {
       setLoadingOrder(false);
-      return;
+      return undefined;
     }
 
-    const fetchOrderData = async () => {
+    const pendingVerification =
+      pendingVerificationRef.current?.orderId === orderId
+        ? pendingVerificationRef.current
+        : null;
+
+    const loadOrderData = async () => {
       setLoadingOrder(true);
+
       try {
+        if (pendingVerification) {
+          pendingVerificationRef.current = null;
+          setLoadingOrderLabel('Confirming your payment...');
+
+          const verifyResponse = await paymentAPI.verifyRazorpayPayment({
+            orderId,
+            razorpay_order_id: pendingVerification.razorpay_order_id,
+            razorpay_payment_id: pendingVerification.razorpay_payment_id,
+            razorpay_signature: pendingVerification.razorpay_signature,
+            clearCart: true,
+          });
+
+          window.history.replaceState({}, '', `${location.pathname}${location.search}`);
+
+          if (verifyResponse.success && verifyResponse.data?.order) {
+            setOrder(verifyResponse.data.order);
+            if (verifyResponse.data.order.orderNumber) {
+              previewOrderNumberRef.current = verifyResponse.data.order.orderNumber;
+            }
+            try {
+              await clearCart();
+            } catch (error) {
+              console.error('Failed to clear cart after payment:', error);
+            }
+
+            if (
+              verifyResponse.data.order.paymentStatus === 'paid' &&
+              verifyResponse.data.order.items?.length
+            ) {
+              return;
+            }
+          } else if (!verifyResponse.success) {
+            setPaymentError(verifyResponse.message || 'Payment verification failed');
+          }
+        }
+
+        setLoadingOrderLabel('Loading order...');
         const response = await orderAPI.getOrder(orderId);
-        if (response.success) {
+        if (response.success && response.data?.order) {
           setOrder(response.data.order);
+          if (response.data.order.orderNumber) {
+            previewOrderNumberRef.current = response.data.order.orderNumber;
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch order:', error);
+        console.error('Failed to load order:', error);
+        setPaymentError(error.message || 'Could not load order details');
       } finally {
         setLoadingOrder(false);
       }
     };
 
-    fetchOrderData();
-  }, [orderId]);
+    loadOrderData();
+  }, [orderId, location.pathname, location.search, clearCart]);
+
+  useEffect(() => {
+    if (!showConfirmingInitiallyRef.current) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setShowConfirmingPopup(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const windowEndsAt = order?.licenseEmailResendWindowEndsAt;
@@ -227,8 +317,12 @@ const OrderSuccess = () => {
     return () => window.clearInterval(intervalId);
   }, [order?.licenseEmailResendWindowEndsAt]);
 
+  if (showConfirmingPopup) {
+    return <OrderConfirmingModal open />;
+  }
+
   if (loadingOrder) {
-    return <PageLoader fullScreen />;
+    return <PageLoader fullScreen label={loadingOrderLabel} />;
   }
 
   if (paymentPending) {
@@ -336,7 +430,7 @@ const OrderSuccess = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">License Issued</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Order confirm &amp; License Issued</h1>
           <p className="mt-1 text-sm text-gray-500">Order #{orderNumber}</p>
         </div>
 
