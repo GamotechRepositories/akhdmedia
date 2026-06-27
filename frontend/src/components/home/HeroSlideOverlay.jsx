@@ -1,10 +1,8 @@
 import { IconChevronRight } from '../icons/Icons';
 import {
-  DEFAULT_CTA_POSITION,
-  DEFAULT_HEADLINE_POSITION,
   resolveCtaTypography,
   resolveHeadlineTypography,
-  resolveOverlayPosition,
+  resolveOverlayPositions,
 } from '../../constants/heroTypography';
 
 const ctaClassName =
@@ -13,15 +11,43 @@ const ctaClassName =
 const HeroSlideOverlay = ({ slide, compact = false, showChevron = true }) => {
   const hasHeadline = Boolean(slide.headline?.trim());
   const hasButton = Boolean(slide.cta?.trim());
-  const headlinePosition = resolveOverlayPosition(
-    slide.headlinePosition,
-    DEFAULT_HEADLINE_POSITION,
+  const { headline: headlinePosition, cta: ctaPosition, stacked } = resolveOverlayPositions(
+    slide,
+    { compact },
   );
-  const ctaPosition = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION);
   const headlineStyle = resolveHeadlineTypography(slide, { compact });
   const ctaStyle = resolveCtaTypography(slide, { compact });
+  const ctaOffsetX = Math.max(0, ctaPosition.x - headlinePosition.x);
 
   if (!hasHeadline && !hasButton) return null;
+
+  if (stacked) {
+    return (
+      <div
+        className="pointer-events-none absolute flex max-w-[88%] flex-col items-start gap-[0.55em]"
+        style={{
+          left: `${headlinePosition.x}%`,
+          top: `${headlinePosition.y}%`,
+        }}
+      >
+        <h2 className="m-0 p-0 text-white drop-shadow-lg" style={headlineStyle}>
+          {slide.headline}
+        </h2>
+        <span
+          className={ctaClassName}
+          style={{
+            ...ctaStyle,
+            marginLeft: ctaOffsetX > 0 ? `${ctaOffsetX}%` : undefined,
+          }}
+        >
+          {slide.cta}
+          {showChevron ? (
+            <IconChevronRight className="h-[1em] w-[1em] shrink-0" aria-hidden />
+          ) : null}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <>

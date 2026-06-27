@@ -16,6 +16,9 @@ import {
   resolveCtaTypography,
   resolveHeadlineTypography,
   resolveOverlayPosition,
+  resolveOverlayPositions,
+  storageCtaYFromMobileDrag,
+  storageHeadlineYFromMobileDrag,
 } from '../constants/heroTypography'
 
 const PREVIEW_MODES = [
@@ -63,13 +66,12 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const imageFocus = getImageFocus(slide)
   const activePreview = PREVIEW_MODES.find((mode) => mode.id === previewMode) || PREVIEW_MODES[0]
   const compact = previewMode === 'mobile'
-  const headlinePosition = resolveOverlayPosition(
-    slide.headlinePosition,
-    DEFAULT_HEADLINE_POSITION,
-  )
-  const ctaPosition = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION)
+  const { headline: headlinePosition, cta: ctaPosition, stacked } = resolveOverlayPositions(slide, {
+    compact,
+  })
   const headlineStyle = resolveHeadlineTypography(slide, { compact })
   const ctaStyle = resolveCtaTypography(slide, { compact })
+  const ctaOffsetX = Math.max(0, ctaPosition.x - headlinePosition.x)
 
   const updateFocus = useCallback(
     (patch) => {
@@ -85,10 +87,25 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
 
       const rect = container.getBoundingClientRect()
       const x = clampOverlayPercent(((clientX - rect.left) / rect.width) * 100)
-      const y = clampOverlayPercent(((clientY - rect.top) / rect.height) * 100)
+      let y = clampOverlayPercent(((clientY - rect.top) / rect.height) * 100)
+
+      if (compact && field === 'headlinePosition') {
+        y = clampOverlayPercent(storageHeadlineYFromMobileDrag(y))
+      } else if (compact && field === 'ctaPosition' && stacked) {
+        const storedCta = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION)
+        onPositionChange(field, { x, y: storedCta.y })
+        return
+      } else if (compact && field === 'ctaPosition' && hasHeadline) {
+        const headlineStorage = resolveOverlayPosition(
+          slide.headlinePosition,
+          DEFAULT_HEADLINE_POSITION,
+        )
+        y = clampOverlayPercent(storageCtaYFromMobileDrag(headlineStorage.y, y))
+      }
+
       onPositionChange(field, { x, y })
     },
-    [onPositionChange],
+    [onPositionChange, compact, hasHeadline, stacked, slide.headlinePosition, slide.ctaPosition],
   )
 
   const handlePanPointerDown = (event) => {
@@ -286,7 +303,7 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
           </>
         ) : null}
 
-        {hasHeadline ? (
+        {stacked ? (
           <div
             role="button"
             tabIndex={0}
@@ -298,7 +315,7 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
               left: `${headlinePosition.x}%`,
               top: `${headlinePosition.y}%`,
             }}
-            className={`absolute z-10 max-w-[70%] cursor-grab select-none touch-none ${
+            className={`absolute z-10 flex max-w-[88%] cursor-grab select-none touch-none flex-col items-start gap-[0.55em] ${
               draggingField === 'headlinePosition'
                 ? 'cursor-grabbing ring-2 ring-sky-400 ring-offset-2 ring-offset-transparent'
                 : ''
@@ -307,35 +324,83 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
             <h3 className="m-0 p-0 text-white drop-shadow-lg" style={headlineStyle}>
               {slide.headline}
             </h3>
-          </div>
-        ) : null}
-
-        {hasButton ? (
-          <div
-            role="button"
-            tabIndex={0}
-            onPointerDown={handleOverlayPointerDown('ctaPosition')}
-            onPointerMove={handleOverlayPointerMove}
-            onPointerUp={handleOverlayPointerUp}
-            onPointerCancel={handleOverlayPointerUp}
-            style={{
-              left: `${ctaPosition.x}%`,
-              top: `${ctaPosition.y}%`,
-            }}
-            className={`absolute z-10 cursor-grab select-none touch-none ${
-              draggingField === 'ctaPosition'
-                ? 'cursor-grabbing ring-2 ring-emerald-400 ring-offset-2 ring-offset-transparent'
-                : ''
-            }`}
-          >
             <span
-              className="inline-flex w-max max-w-none shrink-0 items-center gap-[0.35em] whitespace-nowrap rounded-full bg-white uppercase tracking-wider text-gray-900 shadow-lg"
-              style={ctaStyle}
+              role="button"
+              tabIndex={0}
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                handleOverlayPointerDown('ctaPosition')(event)
+              }}
+              onPointerMove={handleOverlayPointerMove}
+              onPointerUp={handleOverlayPointerUp}
+              onPointerCancel={handleOverlayPointerUp}
+              style={{
+                ...ctaStyle,
+                marginLeft: ctaOffsetX > 0 ? `${ctaOffsetX}%` : undefined,
+              }}
+              className={`inline-flex w-max max-w-none shrink-0 items-center gap-[0.35em] whitespace-nowrap rounded-full bg-white uppercase tracking-wider text-gray-900 shadow-lg ${
+                draggingField === 'ctaPosition'
+                  ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-transparent'
+                  : ''
+              }`}
             >
               {slide.cta}
             </span>
           </div>
-        ) : null}
+        ) : (
+          <>
+            {hasHeadline ? (
+              <div
+                role="button"
+                tabIndex={0}
+                onPointerDown={handleOverlayPointerDown('headlinePosition')}
+                onPointerMove={handleOverlayPointerMove}
+                onPointerUp={handleOverlayPointerUp}
+                onPointerCancel={handleOverlayPointerUp}
+                style={{
+                  left: `${headlinePosition.x}%`,
+                  top: `${headlinePosition.y}%`,
+                }}
+                className={`absolute z-10 max-w-[70%] cursor-grab select-none touch-none ${
+                  draggingField === 'headlinePosition'
+                    ? 'cursor-grabbing ring-2 ring-sky-400 ring-offset-2 ring-offset-transparent'
+                    : ''
+                }`}
+              >
+                <h3 className="m-0 p-0 text-white drop-shadow-lg" style={headlineStyle}>
+                  {slide.headline}
+                </h3>
+              </div>
+            ) : null}
+
+            {hasButton ? (
+              <div
+                role="button"
+                tabIndex={0}
+                onPointerDown={handleOverlayPointerDown('ctaPosition')}
+                onPointerMove={handleOverlayPointerMove}
+                onPointerUp={handleOverlayPointerUp}
+                onPointerCancel={handleOverlayPointerUp}
+                style={{
+                  left: `${ctaPosition.x}%`,
+                  top: `${ctaPosition.y}%`,
+                }}
+                className={`absolute z-10 cursor-grab select-none touch-none ${
+                  draggingField === 'ctaPosition'
+                    ? 'cursor-grabbing ring-2 ring-emerald-400 ring-offset-2 ring-offset-transparent'
+                    : ''
+                }`}
+              >
+                <span
+                  className="inline-flex w-max max-w-none shrink-0 items-center gap-[0.35em] whitespace-nowrap rounded-full bg-white uppercase tracking-wider text-gray-900 shadow-lg"
+                  style={ctaStyle}
+                >
+                  {slide.cta}
+                </span>
+              </div>
+            ) : null}
+          </>
+        )}
 
         <div className="pointer-events-none absolute right-2 top-2 rounded-md bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90">
           {activePreview.label} · {activePreview.sizeLabel}
