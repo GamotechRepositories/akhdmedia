@@ -454,8 +454,9 @@ const OrderSuccess = () => {
                       License No: <span className="font-mono font-medium text-gray-900">{item.licenseNumber || '—'}</span>
                     </p>
                   </div>
-                  <p className="mt-3 text-xs font-medium text-slate-700">
-                    Download link sent to your email only.
+                  <p className="mt-3 text-sm font-bold text-gray-900">
+                    Download link sent to your{' '}
+                    <span className="text-blue-700">Email</span> only.
                   </p>
                 </div>
               ))}
