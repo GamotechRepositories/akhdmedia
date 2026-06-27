@@ -12,6 +12,7 @@ const OptimizedImage = ({
   height,
   quality = 75,
   className = '',
+  style,
   loading = 'lazy',
   fetchPriority,
   onError,
@@ -28,6 +29,7 @@ const OptimizedImage = ({
       loading={loading}
       decoding="async"
       fetchPriority={fetchPriority}
+      style={style}
       className={`${isProtected ? PROTECTED_MEDIA_CLASS : ''} ${className}`.trim()}
       onError={onError ?? ((e) => handleImageError(e, width, height))}
       {...protectedProps}

@@ -238,7 +238,7 @@ const MediaUpload = ({
         </div>
       )}
 
-      {previewUrl && isImage && (
+      {previewUrl && isImage && !isHeroUpload && (
         <img
           key={previewUrl}
           src={previewUrl}

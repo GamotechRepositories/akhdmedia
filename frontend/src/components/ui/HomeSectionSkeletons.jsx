@@ -1,10 +1,17 @@
 import ProductSkeleton from './ProductSkeleton';
 import { HOME_PRODUCT_GRID, PAGE_CONTAINER } from '../../constants/layout';
+import { HERO_BANNER_DESKTOP_RATIO, HERO_BANNER_MOBILE_RATIO } from '../../constants/heroBanner';
 
 export const HeroSkeleton = () => (
   <section className="relative w-full overflow-hidden bg-gray-950">
-    <div className="relative mx-auto aspect-[4/3] w-full max-w-[2000px] animate-pulse bg-gray-800 sm:aspect-[16/10] md:hidden" />
-    <div className="relative mx-auto hidden aspect-[21/9] w-full max-w-[2000px] animate-pulse bg-gray-800 md:block lg:aspect-[3/1]" />
+    <div
+      className="relative mx-auto w-full max-w-[2000px] animate-pulse bg-gray-800 md:hidden"
+      style={{ aspectRatio: HERO_BANNER_MOBILE_RATIO }}
+    />
+    <div
+      className="relative mx-auto hidden w-full max-w-[2000px] animate-pulse bg-gray-800 md:block"
+      style={{ aspectRatio: HERO_BANNER_DESKTOP_RATIO }}
+    />
   </section>
 );
 

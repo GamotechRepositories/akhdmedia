@@ -6,29 +6,59 @@ import OptimizedImage from '../ui/OptimizedImage';
 import { useCarousel } from '../../hooks/useCarousel';
 import { useInView } from '../../hooks/useInView';
 import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
+import {
+  HERO_BANNER_DESKTOP_RATIO,
+  HERO_BANNER_MOBILE_RATIO,
+  resolveImageFocus,
+} from '../../constants/heroBanner';
+import { resolveCtaTypography, resolveHeadlineTypography } from '../../constants/heroTypography';
+
+const DEFAULT_HEADLINE_POSITION = { x: 5, y: 62 };
+const DEFAULT_CTA_POSITION = { x: 5, y: 78 };
+
+const resolveOverlayPosition = (position, fallback) => ({
+  x: Number.isFinite(Number(position?.x)) ? Number(position.x) : fallback.x,
+  y: Number.isFinite(Number(position?.y)) ? Number(position.y) : fallback.y,
+});
 
 const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) => {
   const hasButton = Boolean(slide.cta?.trim());
   const hasLink = Boolean(slide.link?.trim());
   const hasOverlay = Boolean(slide.headline?.trim() || hasButton);
+  const headlinePosition = resolveOverlayPosition(slide.headlinePosition, DEFAULT_HEADLINE_POSITION);
+  const ctaPosition = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION);
+  const imageFocus = resolveImageFocus(slide.imageFocus);
+  const headlineStyle = resolveHeadlineTypography(slide, { compact });
+  const ctaStyle = resolveCtaTypography(slide, { compact });
   const slideClassName = `absolute inset-0 transition-opacity duration-700 ease-in-out ${
     isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
   }`;
 
   const content = (
     <>
-      <OptimizedImage
-        src={slide.image}
-        alt=""
-        width={compact ? 900 : 1400}
-        height={compact ? 675 : 560}
-        quality={80}
-        loading={isActive ? 'eager' : 'lazy'}
-        fetchPriority={isActive ? 'high' : undefined}
-        className={`absolute inset-0 h-full w-full object-cover ${
-          isActive && motionEnabled ? 'scale-105 hero-kenburns' : 'scale-100'
-        }`}
-      />
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `scale(${imageFocus.scale})`,
+            transformOrigin: `${imageFocus.x}% ${imageFocus.y}%`,
+          }}
+        >
+          <OptimizedImage
+            src={slide.image}
+            alt=""
+            width={compact ? 900 : 1400}
+            height={compact ? 675 : 560}
+            quality={80}
+            loading={isActive ? 'eager' : 'lazy'}
+            fetchPriority={isActive ? 'high' : undefined}
+            style={{ objectPosition: `${imageFocus.x}% ${imageFocus.y}%` }}
+            className={`absolute inset-0 h-full w-full object-cover ${
+              isActive && motionEnabled ? 'hero-kenburns' : ''
+            }`}
+          />
+        </div>
+      </div>
       {slide.showShadow ? (
         <>
           <div className={`absolute inset-0 bg-gradient-to-r ${slide.accent}`} />
@@ -36,29 +66,40 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
         </>
       ) : null}
 
-      <div
-        className={`relative z-10 flex h-full ${
-          compact
-            ? 'items-end px-5 pb-8 pt-16'
-            : 'items-end px-5 pb-4 sm:px-10 sm:pb-6 lg:px-20 lg:pb-8'
-        }`}
-      >
-        {hasOverlay ? (
-          <div className="max-w-2xl text-white">
-            {slide.headline ? (
-              <h2 className={`font-black leading-tight tracking-tight ${compact ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-4xl lg:text-5xl'}`}>
+      {hasOverlay ? (
+        <div className="absolute inset-0 z-10">
+          {slide.headline ? (
+            <div
+              className="absolute max-w-[75%] text-white sm:max-w-[70%]"
+              style={{
+                left: `${headlinePosition.x}%`,
+                top: `${headlinePosition.y}%`,
+              }}
+            >
+              <h2 className="text-white drop-shadow-lg" style={headlineStyle}>
                 {slide.headline}
               </h2>
-            ) : null}
-            {hasButton ? (
-              <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-900 sm:mt-6 sm:px-5 sm:py-2.5 sm:text-xs">
+            </div>
+          ) : null}
+          {hasButton ? (
+            <div
+              className="absolute"
+              style={{
+                left: `${ctaPosition.x}%`,
+                top: `${ctaPosition.y}%`,
+              }}
+            >
+              <span
+                className="inline-flex items-center gap-2 rounded-full bg-white text-gray-900 shadow-lg"
+                style={ctaStyle}
+              >
                 {slide.cta}
-                <IconChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <IconChevronRight className="shrink-0" style={{ width: '1em', height: '1em' }} />
               </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </>
   );
 
@@ -136,6 +177,13 @@ const mapSettingsHeroSlides = (slides = []) =>
       image: slide.image,
       accent: slide.accent || 'from-gray-900/80 via-black/50 to-transparent',
       showShadow: slide.showShadow === true,
+      headlinePosition: slide.headlinePosition || DEFAULT_HEADLINE_POSITION,
+      ctaPosition: slide.ctaPosition || DEFAULT_CTA_POSITION,
+      imageFocus: resolveImageFocus(slide.imageFocus),
+      headlineFontSize: slide.headlineFontSize,
+      headlineFontFamily: slide.headlineFontFamily,
+      ctaScale: slide.ctaScale,
+      ctaFontFamily: slide.ctaFontFamily,
     }));
 
 const HeroCarousel = () => {
@@ -186,7 +234,8 @@ const HeroCarousel = () => {
     >
       {/* Mobile & tablet carousel — swipe to change slide */}
       <div
-        className="relative mx-auto aspect-[4/3] w-full max-w-[2000px] touch-pan-y sm:aspect-[16/10] md:hidden"
+        className="relative mx-auto w-full max-w-[2000px] touch-pan-y md:hidden"
+        style={{ aspectRatio: HERO_BANNER_MOBILE_RATIO }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -209,8 +258,11 @@ const HeroCarousel = () => {
         />
       </div>
 
-      {/* Desktop carousel */}
-      <div className="relative mx-auto hidden aspect-[21/9] w-full max-w-[2000px] md:block lg:aspect-[3/1]">
+      {/* Desktop carousel — 3:1 matches admin preview & recommended upload size */}
+      <div
+        className="relative mx-auto hidden w-full max-w-[2000px] md:block"
+        style={{ aspectRatio: HERO_BANNER_DESKTOP_RATIO }}
+      >
         {heroSlides.map((slide, index) => (
           <HeroSlide
             key={slide.id}

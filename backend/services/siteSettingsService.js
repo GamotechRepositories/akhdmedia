@@ -8,6 +8,16 @@ import {
   validatePinnedProductsExist,
 } from '../utils/homePinnedProducts.js'
 
+const HERO_FONT_IDS = new Set([
+  'system',
+  'inter',
+  'montserrat',
+  'oswald',
+  'playfair',
+  'georgia',
+  'impact',
+])
+
 export const DEFAULT_SITE_SETTINGS = {
   key: 'homepage',
   tickerItems: [
@@ -32,6 +42,51 @@ const sanitizeTickerItems = (items = []) =>
     .filter(Boolean)
     .slice(0, 12)
 
+const clampOverlayPercent = (value, fallback) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.min(95, Math.max(2, Math.round(numeric)))
+}
+
+const sanitizeOverlayPosition = (position, fallback) => ({
+  x: clampOverlayPercent(position?.x, fallback.x),
+  y: clampOverlayPercent(position?.y, fallback.y),
+})
+
+const clampImageFocusPercent = (value, fallback) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.min(100, Math.max(0, Math.round(numeric)))
+}
+
+const sanitizeImageFocus = (focus) => {
+  const scale = Number(focus?.scale)
+  return {
+    scale: Number.isFinite(scale)
+      ? Math.min(3, Math.max(1, Math.round(scale * 100) / 100))
+      : 1,
+    x: clampImageFocusPercent(focus?.x, 50),
+    y: clampImageFocusPercent(focus?.y, 50),
+  }
+}
+
+const sanitizeHeroFontId = (value, fallback = 'system') => {
+  const id = String(value || '').trim()
+  return HERO_FONT_IDS.has(id) ? id : fallback
+}
+
+const sanitizeHeadlineFontSize = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 48
+  return Math.min(96, Math.max(20, Math.round(numeric)))
+}
+
+const sanitizeCtaScale = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 1
+  return Math.min(1.8, Math.max(0.6, Math.round(numeric * 100) / 100))
+}
+
 const sanitizeHeroSlides = (slides = []) =>
   slides
     .map((slide) => ({
@@ -43,6 +98,13 @@ const sanitizeHeroSlides = (slides = []) =>
       accent:
         String(slide?.accent || 'from-gray-900/80 via-black/50 to-transparent').trim() ||
         'from-gray-900/80 via-black/50 to-transparent',
+      headlinePosition: sanitizeOverlayPosition(slide?.headlinePosition, { x: 5, y: 62 }),
+      ctaPosition: sanitizeOverlayPosition(slide?.ctaPosition, { x: 5, y: 78 }),
+      imageFocus: sanitizeImageFocus(slide?.imageFocus),
+      headlineFontSize: sanitizeHeadlineFontSize(slide?.headlineFontSize),
+      headlineFontFamily: sanitizeHeroFontId(slide?.headlineFontFamily),
+      ctaScale: sanitizeCtaScale(slide?.ctaScale),
+      ctaFontFamily: sanitizeHeroFontId(slide?.ctaFontFamily),
       isActive: slide?.isActive !== false,
       showShadow: slide?.showShadow === true,
     }))
