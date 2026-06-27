@@ -16,7 +16,6 @@ import OrderConfirmingModal from '../components/OrderConfirmingModal';
 import PageLoader from '../components/ui/PageLoader';
 import { IconClose } from '../components/icons/Icons';
 import { formatCurrency } from '../utils/formatters';
-import { getWebmailInboxUrl } from '../utils/webmailInbox';
 import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
 
 const saveBlobDownload = (blob, filename) => {
@@ -86,7 +85,6 @@ const OrderSuccess = () => {
     '--------';
   const { total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
   const customerEmail = order?.billingAddress?.email || '';
-  const webmailInboxUrl = getWebmailInboxUrl(customerEmail);
   const orderItems = order?.items || [];
   const maxResends = order?.maxLicenseEmailResends ?? MAX_LICENSE_EMAIL_RESENDS;
   const resendCount = order?.licenseEmailResendCount ?? 0;
@@ -466,21 +464,7 @@ const OrderSuccess = () => {
                     </p>
                   </div>
                   <p className="mt-3 text-sm font-bold text-gray-900">
-                    Download link sent to your{' '}
-                    {webmailInboxUrl ? (
-                      <a
-                        href={webmailInboxUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open your email inbox"
-                        className="cursor-pointer text-blue-700 underline decoration-blue-400 underline-offset-2 hover:text-blue-800"
-                      >
-                        Email
-                      </a>
-                    ) : (
-                      <span className="text-blue-700">Email</span>
-                    )}{' '}
-                    only.
+                    Download link sent to your Email only.
                   </p>
                 </div>
               ))}
