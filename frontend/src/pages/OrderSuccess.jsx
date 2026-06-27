@@ -14,7 +14,9 @@ import {
 import OrderAmountSummary from '../components/OrderAmountSummary';
 import OrderConfirmingModal from '../components/OrderConfirmingModal';
 import PageLoader from '../components/ui/PageLoader';
+import { IconClose } from '../components/icons/Icons';
 import { formatCurrency } from '../utils/formatters';
+import { getWebmailInboxUrl } from '../utils/webmailInbox';
 import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
 
 const saveBlobDownload = (blob, filename) => {
@@ -36,7 +38,7 @@ const OrderSuccess = () => {
       return;
     }
 
-    navigate('/');
+    navigate('/videos');
   };
 
   const [searchParams] = useSearchParams();
@@ -84,6 +86,7 @@ const OrderSuccess = () => {
     '--------';
   const { total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
   const customerEmail = order?.billingAddress?.email || '';
+  const webmailInboxUrl = getWebmailInboxUrl(customerEmail);
   const orderItems = order?.items || [];
   const maxResends = order?.maxLicenseEmailResends ?? MAX_LICENSE_EMAIL_RESENDS;
   const resendCount = order?.licenseEmailResendCount ?? 0;
@@ -424,7 +427,15 @@ const OrderSuccess = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
-        <div className="bg-white px-6 pb-5 pt-6 text-center">
+        <div className="relative bg-white px-6 pb-5 pt-6 text-center">
+          <button
+            type="button"
+            onClick={handleContinue}
+            aria-label={location.state?.fromOrders ? 'Back to My Orders' : 'Continue shopping'}
+            className="absolute right-4 top-4 rounded-full p-1.5 text-red-500 transition hover:bg-red-50 hover:text-red-700"
+          >
+            <IconClose className="h-5 w-5" strokeWidth={3} />
+          </button>
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
             <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -456,7 +467,20 @@ const OrderSuccess = () => {
                   </div>
                   <p className="mt-3 text-sm font-bold text-gray-900">
                     Download link sent to your{' '}
-                    <span className="text-blue-700">Email</span> only.
+                    {webmailInboxUrl ? (
+                      <a
+                        href={webmailInboxUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open your email inbox"
+                        className="cursor-pointer text-blue-700 underline decoration-blue-400 underline-offset-2 hover:text-blue-800"
+                      >
+                        Email
+                      </a>
+                    ) : (
+                      <span className="text-blue-700">Email</span>
+                    )}{' '}
+                    only.
                   </p>
                 </div>
               ))}

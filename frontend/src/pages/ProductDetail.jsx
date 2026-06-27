@@ -339,7 +339,7 @@ const ProductDetail = () => {
                   onClick={handleAddToCart}
                   className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold shadow-md transition active:scale-[0.99] ${
                     isPurchasable
-                      ? 'bg-gray-900 text-white hover:bg-gray-800'
+                      ? 'cursor-pointer bg-gray-900 text-white hover:bg-gray-800'
                       : 'cursor-not-allowed bg-gray-400 text-white shadow-none'
                   }`}
                 >
@@ -353,7 +353,7 @@ const ProductDetail = () => {
                   onClick={handleBuyNow}
                   className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-semibold transition active:scale-[0.99] ${
                     isPurchasable
-                      ? 'border-gray-900 bg-white text-gray-900 hover:bg-gray-50'
+                      ? 'cursor-pointer border-gray-900 bg-white text-gray-900 hover:bg-gray-50'
                       : 'cursor-not-allowed border-gray-300 bg-white text-gray-400'
                   }`}
                 >
@@ -388,7 +388,7 @@ const ProductDetail = () => {
                       key={size}
                       type="button"
                       onClick={() => setSelectedImageSize(size)}
-                      className={`relative rounded-xl border px-3 py-2.5 text-left transition ${
+                      className={`relative cursor-pointer rounded-xl border px-3 py-2.5 text-left transition ${
                         isSelected
                           ? 'border-gray-900 bg-gray-900 text-white shadow-md ring-2 ring-gray-900/20'
                           : 'border-gray-200 bg-white text-gray-900 hover:border-gray-400 hover:shadow-sm'
