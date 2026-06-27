@@ -23,16 +23,19 @@ const badgePadClass = 'px-[0.3em] py-[0.14em]';
 const previewButtonClass =
   'min-h-[18px] px-1.5 py-0.5 sm:min-h-[22px] sm:px-2 sm:py-1';
 
+const previewActionTextClass =
+  'text-[8px] leading-none tracking-[0.04em] sm:text-[10px] md:text-[11px]';
+
 const previewActionButtonClass =
-  'min-h-[22px] px-2 py-1 sm:min-h-[26px] sm:px-2.5 sm:py-1.5';
+  'min-h-[22px] px-2 py-1 sm:min-h-[26px] sm:px-6 sm:py-1.5 md:px-8';
 
 const cardPillClass = `inline-flex items-center gap-0.5 ${badgeShellClass} ${previewButtonClass} ${badgeTextClass}`;
 
-const previewActionPillClass = `inline-flex max-w-full items-center gap-1 ${badgeShellClass} ${previewActionButtonClass} ${badgeTextClass}`;
+const previewActionPillClass = `inline-flex max-w-full items-center justify-center gap-1 sm:gap-1.5 sm:min-w-[9.5rem] md:min-w-[11rem] ${badgeShellClass} ${previewActionButtonClass} ${previewActionTextClass}`;
 
 const cardPillIconClass = 'h-2 w-2 shrink-0 sm:h-2.5 sm:w-2.5';
 
-const previewActionIconClass = 'h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5';
+const previewActionIconClass = 'h-3 w-3 shrink-0 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px]';
 
 const ProductCard = ({ product, compact = false }) => {
   const isVideo = isVideoProduct(product);
@@ -74,7 +77,7 @@ const ProductCard = ({ product, compact = false }) => {
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           />
 
-          <div className="absolute bottom-1.5 right-1.5 z-20 max-w-[65%] sm:bottom-[4%] sm:right-[4%]">
+          <div className="absolute bottom-1.5 left-1/2 z-20 max-w-[85%] -translate-x-1/2 sm:bottom-[4%]">
             <div className={`${previewActionPillClass} bg-black/90`}>
               {isVideo ? (
                 <>
