@@ -50,9 +50,8 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  min-width: 5.5rem;
-  padding: 0 0.75rem;
+  min-width: 6.75rem;
+  padding: 0;
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
   background: #fff;
@@ -64,15 +63,106 @@ body {
   box-shadow: 0 0 0 2px rgb(17 24 39 / 0.1);
 }
 
-.phone-country-input .PhoneInputCountrySelect {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
+.searchable-country-select__trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   width: 100%;
   height: 100%;
+  padding: 0.625rem 0.75rem;
   border: 0;
-  opacity: 0;
+  background: transparent;
   cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.searchable-country-select__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.searchable-country-select__code {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.searchable-country-select__dropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 40;
+  width: min(18rem, calc(100vw - 2rem));
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 0.12);
+}
+
+.searchable-country-select__search-wrap {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.searchable-country-select__search {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.searchable-country-select__search:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgb(17 24 39 / 0.1);
+}
+
+.searchable-country-select__list {
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.searchable-country-select__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 0;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.searchable-country-select__option:hover,
+.searchable-country-select__option--selected {
+  background: #f3f4f6;
+}
+
+.searchable-country-select__option-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.searchable-country-select__option-code {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.searchable-country-select__empty {
+  margin: 0;
+  padding: 0.875rem 0.75rem;
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 
 .phone-country-input .PhoneInputCountryIcon {
@@ -80,6 +170,7 @@ body {
   height: 1.25rem;
   overflow: hidden;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .phone-country-input .PhoneInputCountryIconImg {
@@ -92,16 +183,22 @@ body {
 .phone-country-input .PhoneInputCountrySelectArrow {
   width: 0.45rem;
   height: 0.45rem;
-  margin-left: 0.1rem;
+  margin-left: auto;
   border-style: solid;
   border-width: 0 1px 1px 0;
   border-color: #6b7280;
   transform: rotate(45deg) translateY(-1px);
+  flex-shrink: 0;
 }
 
 .phone-country-input .PhoneInputInput {
   flex: 1;
   min-width: 0;
+}
+
+.phone-country-input--rounded-xl .PhoneInputCountry,
+.phone-country-input--rounded-xl .PhoneInputInput {
+  border-radius: 0.75rem;
 }
 
 @keyframes marquee {

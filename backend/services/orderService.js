@@ -20,8 +20,8 @@ const VALID_PURCHASE_REASONS = new Set(['personal', 'digital', 'outlet', 'other'
 const REASONS_REQUIRING_DETAIL = new Set(['digital', 'outlet', 'other'])
 
 const REASON_DETAIL_MESSAGES = {
-  digital: 'Please fill your digital media company detail',
-  outlet: 'Please fill your media agency company detail',
+  digital: 'Please fill your Digital Media Details',
+  outlet: 'Please fill your media agency company details.',
   other: 'Please describe how you will use the video',
 }
 

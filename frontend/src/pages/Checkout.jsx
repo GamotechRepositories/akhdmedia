@@ -24,13 +24,13 @@ const REASONS_REQUIRING_DETAIL = ['digital', 'outlet', 'other'];
 const REASON_DETAIL_CONFIG = {
   digital: {
     label: 'Company details',
-    placeholder: 'please fill your digital medea company detail',
-    validationMessage: 'Please fill your digital media company detail',
+    placeholder: 'Please fill your Digital Media Details',
+    validationMessage: 'Please fill your Digital Media Details',
   },
   outlet: {
     label: 'Company details',
-    placeholder: 'please fill your media agency company detail',
-    validationMessage: 'Please fill your media agency company detail',
+    placeholder: 'Please fill your media agency company details.',
+    validationMessage: 'Please fill your media agency company details.',
   },
   other: {
     label: 'Please specify',

@@ -1,5 +1,6 @@
 import PhoneInput, { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
 import flags from 'react-phone-number-input/flags';
+import SearchableCountrySelect from './SearchableCountrySelect';
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
@@ -42,20 +43,29 @@ export const isPhoneNumberValid = (value = '') => {
   return isValidPhoneNumber(normalized);
 };
 
-const PhoneCountryInput = ({ value, onChange, disabled = false, id, name }) => (
+const PhoneCountryInput = ({
+  value,
+  onChange,
+  disabled = false,
+  id,
+  name,
+  className = 'phone-country-input',
+  inputClassName,
+}) => (
   <PhoneInput
     id={id}
     name={name}
     defaultCountry="IN"
-    international
+    international={false}
     countryCallingCodeEditable={false}
     flags={flags}
+    countrySelectComponent={SearchableCountrySelect}
     value={formatPhoneForDisplay(value)}
     onChange={(nextValue) => onChange(nextValue || '')}
     disabled={disabled}
-    className="phone-country-input"
+    className={className}
     numberInputProps={{
-      className: inputClass,
+      className: inputClassName || inputClass,
       placeholder: 'Mobile number',
     }}
   />

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AlertModal from '../components/AlertModal'
 import AuthModalShell from '../components/auth/AuthModalShell'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
+import PhoneCountryInput, { isPhoneNumberValid, normalizePhoneValue } from '../components/ui/PhoneCountryInput'
 import { GOOGLE_CLIENT_ID } from '../config/auth'
 import { useAuth } from '../context/AuthContext'
 
@@ -35,10 +36,15 @@ const Register = () => {
       return
     }
 
+    if (!isPhoneNumberValid(phone)) {
+      setError('Please enter a valid phone number')
+      return
+    }
+
     setSubmitting(true)
 
     try {
-      await register(name, email, phone, password)
+      await register(name, email, normalizePhoneValue(phone), password)
       navigate(redirectTo, {
         replace: true,
         state: location.state?.afterLoginAction
@@ -120,15 +126,14 @@ const Register = () => {
               <label htmlFor="phone" className="mb-1 block text-xs font-medium text-gray-700">
                 Phone Number
               </label>
-              <input
+              <PhoneCountryInput
                 id="phone"
-                type="tel"
+                name="phone"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                required
-                autoComplete="tel"
-                className={inputClass}
-                placeholder="10-digit mobile number"
+                onChange={setPhone}
+                disabled={submitting || loading}
+                className="phone-country-input phone-country-input--rounded-xl"
+                inputClassName={inputClass}
               />
             </div>
 
