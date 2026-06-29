@@ -17,6 +17,13 @@ import { validatePromoForOrder, incrementPromoUsage } from './promoCodeService.j
 const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
 
 const VALID_PURCHASE_REASONS = new Set(['personal', 'digital', 'outlet', 'other'])
+const REASONS_REQUIRING_DETAIL = new Set(['digital', 'outlet', 'other'])
+
+const REASON_DETAIL_MESSAGES = {
+  digital: 'Please fill your digital media company detail',
+  outlet: 'Please fill your media agency company detail',
+  other: 'Please describe how you will use the video',
+}
 
 const isValidEmail = (value = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
@@ -45,8 +52,9 @@ export const validateBillingAddress = (billingAddress = {}) => {
 
   const purchaseReasonOther = String(billingAddress.purchaseReasonOther || '').trim()
 
-  if (purchaseReasons.includes('other') && !purchaseReasonOther) {
-    throw new AppError('Please describe how you will use the video', 400)
+  const selectedReason = purchaseReasons[0]
+  if (REASONS_REQUIRING_DETAIL.has(selectedReason) && !purchaseReasonOther) {
+    throw new AppError(REASON_DETAIL_MESSAGES[selectedReason] || 'Please provide required details', 400)
   }
 
   return {
@@ -54,7 +62,7 @@ export const validateBillingAddress = (billingAddress = {}) => {
     email,
     phone: billingAddress.phone.trim(),
     purchaseReasons,
-    purchaseReasonOther: purchaseReasons.includes('other') ? purchaseReasonOther : '',
+    purchaseReasonOther: REASONS_REQUIRING_DETAIL.has(selectedReason) ? purchaseReasonOther : '',
   }
 }
 

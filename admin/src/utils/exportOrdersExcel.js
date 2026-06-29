@@ -16,8 +16,11 @@ const formatPurchaseReasons = (billingAddress = {}) => {
 
   return reasons
     .map((reason) => {
-      if (reason === 'other' && billingAddress.purchaseReasonOther?.trim()) {
-        return `Other: ${billingAddress.purchaseReasonOther.trim()}`
+      const detail = billingAddress.purchaseReasonOther?.trim()
+      if (detail) {
+        if (reason === 'other') return `Other: ${detail}`
+        if (reason === 'digital') return `Digital media: ${detail}`
+        if (reason === 'outlet') return `Media agency: ${detail}`
       }
       return PURCHASE_REASON_LABELS[reason] || reason
     })

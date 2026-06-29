@@ -7,6 +7,7 @@ import { openRazorpayCheckout } from '../utils/razorpay';
 import { formatPayableCurrency } from '../utils/formatters';
 import OrderAmountSummary from '../components/OrderAmountSummary';
 import PageLoader from '../components/ui/PageLoader';
+import PhoneCountryInput, { isPhoneNumberValid, normalizePhoneValue } from '../components/ui/PhoneCountryInput';
 import { BRAND } from '../config/brand';
 
 const STEPS = ['billing', 'summary'];
@@ -17,6 +18,26 @@ const PURCHASE_REASONS = [
   { id: 'outlet', label: 'Media agency' },
   { id: 'other', label: 'Other' },
 ];
+
+const REASONS_REQUIRING_DETAIL = ['digital', 'outlet', 'other'];
+
+const REASON_DETAIL_CONFIG = {
+  digital: {
+    label: 'Company details',
+    placeholder: 'please fill your digital medea company detail',
+    validationMessage: 'Please fill your digital media company detail',
+  },
+  outlet: {
+    label: 'Company details',
+    placeholder: 'please fill your media agency company detail',
+    validationMessage: 'Please fill your media agency company detail',
+  },
+  other: {
+    label: 'Please specify',
+    placeholder: 'Where will you use this video?',
+    validationMessage: 'Please describe how you will use the video',
+  },
+};
 
 const emptyBilling = {
   name: '',
@@ -156,7 +177,7 @@ const Checkout = () => {
             ...prev,
             name: user.name || prev.name,
             email: user.email || prev.email,
-            phone: user.phone || prev.phone,
+            phone: normalizePhoneValue(user.phone || prev.phone),
           }))
           return
         }
@@ -172,7 +193,7 @@ const Checkout = () => {
             ...emptyBilling,
             name: saved.name || '',
             email: saved.email || '',
-            phone: saved.phone || '',
+            phone: normalizePhoneValue(saved.phone || ''),
             purchaseReasons: savedReasons.length ? [savedReasons[0]] : [],
             purchaseReasonOther: saved.purchaseReasonOther || '',
           });
@@ -200,7 +221,7 @@ const Checkout = () => {
     setBillingDetails((prev) => ({
       ...prev,
       purchaseReasons: [reasonId],
-      purchaseReasonOther: reasonId === 'other' ? prev.purchaseReasonOther : '',
+      purchaseReasonOther: prev.purchaseReasons[0] === reasonId ? prev.purchaseReasonOther : '',
     }));
   };
 
@@ -212,14 +233,16 @@ const Checkout = () => {
     if (!billingDetails.name.trim()) return 'Please enter your full name';
     if (!billingDetails.email.trim()) return 'Please enter your email address';
     if (!billingDetails.phone.trim()) return 'Please enter your phone number';
+    if (!isPhoneNumberValid(billingDetails.phone)) return 'Please enter a valid phone number';
     if (!billingDetails.purchaseReasons.length) {
       return 'Please select where you will use the video';
     }
+    const selectedReason = billingDetails.purchaseReasons[0];
     if (
-      billingDetails.purchaseReasons.includes('other') &&
+      REASONS_REQUIRING_DETAIL.includes(selectedReason) &&
       !billingDetails.purchaseReasonOther.trim()
     ) {
-      return 'Please describe how you will use the video';
+      return REASON_DETAIL_CONFIG[selectedReason]?.validationMessage || 'Please provide required details';
     }
     if (!acceptedTerms) {
       return 'Please accept the terms and conditions to continue';
@@ -392,13 +415,13 @@ const Checkout = () => {
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
                     Phone <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneCountryInput
+                    id="checkout-phone"
                     name="phone"
                     value={billingDetails.phone}
-                    onChange={handleInputChange}
-                    className={inputClass}
-                    placeholder="10-digit mobile number"
+                    onChange={(nextPhone) =>
+                      setBillingDetails((prev) => ({ ...prev, phone: nextPhone }))
+                    }
                   />
                 </div>
 
@@ -432,10 +455,11 @@ const Checkout = () => {
                       );
                     })}
                   </div>
-                  {billingDetails.purchaseReasons.includes('other') && (
+                  {REASONS_REQUIRING_DETAIL.includes(billingDetails.purchaseReasons[0]) && (
                     <div className="mt-3">
                       <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                        Please specify <span className="text-red-500">*</span>
+                        {REASON_DETAIL_CONFIG[billingDetails.purchaseReasons[0]]?.label}{' '}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -443,7 +467,9 @@ const Checkout = () => {
                         value={billingDetails.purchaseReasonOther}
                         onChange={handleInputChange}
                         className={inputClass}
-                        placeholder="Where will you use this video?"
+                        placeholder={
+                          REASON_DETAIL_CONFIG[billingDetails.purchaseReasons[0]]?.placeholder
+                        }
                       />
                     </div>
                   )}

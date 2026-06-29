@@ -16,8 +16,11 @@ const PURCHASE_REASON_LABELS = {
 }
 
 const formatPurchaseReason = (reason, otherText = '') => {
-  if (reason === 'other' && otherText.trim()) {
-    return `Other: ${otherText.trim()}`
+  const detail = otherText.trim()
+  if (detail) {
+    if (reason === 'other') return `Other: ${detail}`
+    if (reason === 'digital') return `Digital media: ${detail}`
+    if (reason === 'outlet') return `Media agency: ${detail}`
   }
   return PURCHASE_REASON_LABELS[reason] || reason
 }
