@@ -3,9 +3,14 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { fetchOrders, fetchSupportRequest, replySupportRequest, updateSupportRequest } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import SupportConfirmationEmailPreview from '../components/SupportConfirmationEmailPreview'
+import SupportReplyEmailEditor from '../components/SupportReplyEmailEditor'
 import SupportReplyEmailPreview from '../components/SupportReplyEmailPreview'
 import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
 import PageLoader from '../components/ui/PageLoader'
+import {
+  buildSupportReplyEmailDraft,
+  isFullSupportReplyEmail,
+} from '../utils/supportReplyEmailDraft'
 
 const SUBJECT_LABELS = {
   download: 'Download issue',
@@ -74,7 +79,7 @@ const SupportDetail = () => {
     : undefined
   const [request, setRequest] = useState(null)
   const [status, setStatus] = useState('open')
-  const [replyMessage, setReplyMessage] = useState('')
+  const [emailDraft, setEmailDraft] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [sendingReply, setSendingReply] = useState(false)
@@ -114,6 +119,7 @@ const SupportDetail = () => {
         const nextRequest = response.data.data?.request
         setRequest(nextRequest)
         setStatus(nextRequest?.status || 'open')
+        setEmailDraft(buildSupportReplyEmailDraft(nextRequest))
 
         if (nextRequest?.orderNumber?.trim()) {
           const ordersResponse = await fetchOrders()
@@ -170,10 +176,15 @@ const SupportDetail = () => {
   }
 
   const handleSendReply = async () => {
-    const trimmedReply = replyMessage.trim()
+    const trimmedDraft = emailDraft.trim()
 
-    if (trimmedReply.length < 5) {
-      setError('Reply must be at least 5 characters.')
+    if (trimmedDraft.length < 5) {
+      setError('Email must be at least 5 characters.')
+      return
+    }
+
+    if (trimmedDraft.includes('Type your reply here')) {
+      setError('Please replace the placeholder text with your reply before sending.')
       return
     }
 
@@ -181,19 +192,24 @@ const SupportDetail = () => {
     setNotice('')
     try {
       const response = await replySupportRequest(id, {
-        replyMessage: trimmedReply,
+        emailBody: trimmedDraft,
         status,
       })
       const nextRequest = response.data.data?.request
       setRequest(nextRequest)
       setStatus(nextRequest?.status || status)
-      setReplyMessage('')
+      setEmailDraft(buildSupportReplyEmailDraft(nextRequest))
       setShowReplySuccess(true)
     } catch (err) {
       setError(err.message)
     } finally {
       setSendingReply(false)
     }
+  }
+
+  const handleResetEmailDraft = () => {
+    if (!request) return
+    setEmailDraft(buildSupportReplyEmailDraft(request))
   }
 
   if (loading) {
@@ -338,35 +354,38 @@ const SupportDetail = () => {
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Reply to customer</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Type your solution or update below. It will be emailed to {request.email} in a professional format.
+              Review and edit the full email below. It will be sent exactly as shown to {request.email}.
             </p>
           </div>
           <p className="text-xs font-medium text-slate-500">Ticket {request.ticketNumber}</p>
         </div>
 
         <div className="mt-4 space-y-4">
-          <div>
-            <label htmlFor="replyMessage" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Your reply
-            </label>
-            <textarea
-              id="replyMessage"
-              value={replyMessage}
-              onChange={(event) => setReplyMessage(event.target.value)}
-              rows={6}
-              className={inputClass}
-              placeholder="Explain the solution, next steps, or what the customer should do..."
-            />
-          </div>
+          <SupportReplyEmailEditor
+            value={emailDraft}
+            onChange={setEmailDraft}
+            recipientEmail={request.email}
+            request={request}
+          />
 
-          <button
-            type="button"
-            onClick={handleSendReply}
-            disabled={sendingReply || !replyMessage.trim()}
-            className={primaryBtnClass}
-          >
-            {sendingReply ? 'Sending...' : 'Send reply to customer'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleResetEmailDraft}
+              disabled={sendingReply}
+              className={secondaryBtnClass}
+            >
+              Reset to template
+            </button>
+            <button
+              type="button"
+              onClick={handleSendReply}
+              disabled={sendingReply || !emailDraft.trim()}
+              className={primaryBtnClass}
+            >
+              {sendingReply ? 'Sending...' : 'Send reply to customer'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -400,7 +419,11 @@ const SupportDetail = () => {
                 {entry.kind === 'confirmation' ? (
                   <SupportConfirmationEmailPreview request={request} />
                 ) : (
-                  <SupportReplyEmailPreview request={request} replyMessage={entry.message} />
+                  <SupportReplyEmailPreview
+                    request={request}
+                    replyMessage={entry.message}
+                    fullEmail={isFullSupportReplyEmail(entry.message)}
+                  />
                 )}
               </div>
             ))}

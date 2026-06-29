@@ -8,7 +8,20 @@ const SUBJECT_LABELS = {
   other: 'General inquiry',
 }
 
-const SupportReplyEmailPreview = ({ request, replyMessage }) => {
+const SupportReplyEmailPreview = ({ request, replyMessage, fullEmail = false }) => {
+  if (fullEmail) {
+    return (
+      <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <p className="text-[17px] font-bold tracking-wide text-slate-900">{BRAND.name}</p>
+        </div>
+        <div className="whitespace-pre-wrap px-5 py-6 text-[15px] leading-relaxed text-slate-900">
+          {replyMessage}
+        </div>
+      </div>
+    )
+  }
+
   const issueType = SUBJECT_LABELS[request.subject] || SUBJECT_LABELS.other
 
   return (

@@ -86,18 +86,24 @@ export const updateSupportRequestStatus = async (id, { status, adminNotes }) => 
   return request
 }
 
-export const replyToSupportRequest = async (id, { replyMessage, status }) => {
-  const message = replyMessage?.trim()
+export const replyToSupportRequest = async (id, { replyMessage, emailBody, status }) => {
+  const customBody = emailBody?.trim()
+  const message = customBody || replyMessage?.trim()
 
   if (!message || message.length < 5) {
     throw new AppError('Reply must be at least 5 characters', 400)
+  }
+
+  if (customBody && customBody.includes('Type your reply here')) {
+    throw new AppError('Please replace the placeholder text with your reply before sending', 400)
   }
 
   const request = await getSupportRequestById(id)
 
   const emailResult = await sendSupportReplyEmail({
     request,
-    replyMessage: message,
+    replyMessage: customBody ? '' : message,
+    emailBody: customBody,
   })
 
   if (!emailResult.sent) {

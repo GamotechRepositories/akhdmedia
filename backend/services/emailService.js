@@ -472,7 +472,7 @@ export const sendSupportRequestConfirmationEmail = async (request) => {
   return { sent: true }
 }
 
-export const sendSupportReplyEmail = async ({ request, replyMessage }) => {
+export const sendSupportReplyEmail = async ({ request, replyMessage, emailBody }) => {
   const customerEmail = request.email?.trim()
 
   if (!customerEmail) {
@@ -488,31 +488,50 @@ export const sendSupportReplyEmail = async ({ request, replyMessage }) => {
 
   const currentYear = new Date().getFullYear()
   const issueType = SUPPORT_SUBJECT_LABELS[request.subject] || SUPPORT_SUBJECT_LABELS.other
+  const customBody = emailBody?.trim()
 
-  const html = wrapBrandEmail({
-    title: 'Support reply',
-    currentYear,
-    bodyHtml: buildSupportReplyBody({
-      customerName: escapeHtml(request.name || 'there'),
-      ticketNumber: escapeHtml(request.ticketNumber),
-      issueType: escapeHtml(issueType),
-      replyMessage: formatPlainTextAsHtml(replyMessage),
-      originalMessage: formatPlainTextAsHtml(request.message),
-    }),
-  })
+  let html
+  let text
 
-  const text = [
-    `Hi ${request.name || 'there'},`,
-    '',
-    `Thank you for contacting ${BRAND_NAME} support regarding ${issueType}.`,
-    '',
-    replyMessage,
-    '',
-    'Your original message:',
-    request.message,
-    '',
-    `${BRAND_NAME} Support Team`,
-  ].join('\n')
+  if (customBody) {
+    text = customBody
+    html = wrapBrandEmail({
+      title: 'Support reply',
+      currentYear,
+      bodyHtml: customBody
+        .split(/\n\n+/)
+        .filter(Boolean)
+        .map((block) => brandParagraph(formatPlainTextAsHtml(block)))
+        .join(''),
+    })
+  } else {
+    const message = replyMessage?.trim() || ''
+
+    html = wrapBrandEmail({
+      title: 'Support reply',
+      currentYear,
+      bodyHtml: buildSupportReplyBody({
+        customerName: escapeHtml(request.name || 'there'),
+        ticketNumber: escapeHtml(request.ticketNumber),
+        issueType: escapeHtml(issueType),
+        replyMessage: formatPlainTextAsHtml(message),
+        originalMessage: formatPlainTextAsHtml(request.message),
+      }),
+    })
+
+    text = [
+      `Hi ${request.name || 'there'},`,
+      '',
+      `Thank you for contacting ${BRAND_NAME} support regarding ${issueType}.`,
+      '',
+      message,
+      '',
+      'Your original message:',
+      request.message,
+      '',
+      `${BRAND_NAME} Support Team`,
+    ].join('\n')
+  }
 
   const { error } = await resend.emails.send({
     from: getResendFrom(),
