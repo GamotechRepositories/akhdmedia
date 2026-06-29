@@ -3,6 +3,8 @@ import AppError from '../utils/AppError.js'
 import Admin from '../models/Admin.js'
 import Order from '../models/Order.js'
 import User from '../models/User.js'
+import { getOrdersForUser } from '../services/orderService.js'
+import { formatOrderResponse } from '../utils/formatCart.js'
 import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../utils/pagination.js'
 
 const USER_SEARCH_FIELDS = ['name', 'email', 'phone']
@@ -73,6 +75,42 @@ export const listUsers = asyncHandler(async (req, res) => {
     success: true,
     data: {
       users: users.map(formatUser),
+    },
+  })
+})
+
+export const getUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id)
+    .select('name email phone role createdAt updatedAt')
+    .lean()
+
+  if (!user) {
+    throw new AppError('User not found', 404)
+  }
+
+  if (user.role === 'admin') {
+    throw new AppError('Admin accounts are managed in Admin Team, not Users', 404)
+  }
+
+  const orders = await getOrdersForUser(user._id, user.email)
+  const formattedOrders = orders.map((order) => formatOrderResponse(order))
+  const paidOrders = formattedOrders.filter((order) => order.paymentStatus === 'paid')
+  const totalSpent = paidOrders.reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0)
+
+  res.json({
+    success: true,
+    data: {
+      user: formatUser(user),
+      orders: formattedOrders,
+      orderStats: {
+        totalOrders: formattedOrders.length,
+        paidOrders: paidOrders.length,
+        totalSpent,
+        firstOrderAt: formattedOrders.length
+          ? formattedOrders[formattedOrders.length - 1].createdAt
+          : null,
+        lastOrderAt: formattedOrders.length ? formattedOrders[0].createdAt : null,
+      },
     },
   })
 })

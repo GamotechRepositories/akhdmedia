@@ -15,6 +15,7 @@ import Transactions from './pages/Transactions'
 import TransactionDetail from './pages/TransactionDetail'
 import Revenue from './pages/Revenue'
 import Users from './pages/Users'
+import UserDetail from './pages/UserDetail'
 import Support from './pages/Support'
 import SupportDetail from './pages/SupportDetail'
 import HomeContent from './pages/HomeContent'
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="transactions/:id" element={<TransactionDetail />} />
           <Route path="revenue" element={<Revenue />} />
           <Route path="users" element={<Users />} />
+          <Route path="users/:id" element={<UserDetail />} />
           <Route path="support" element={<Support />} />
           <Route path="support/:id" element={<SupportDetail />} />
           <Route path="admins" element={<Admins />} />

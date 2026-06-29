@@ -158,6 +158,18 @@ const buildOrderPayloadFromCart = async (sessionId, billingAddress, userId = nul
   }
 }
 
+const buildOrderItemKey = (item) =>
+  `${item.productId}-${item.imageSize || ''}-${item.quantity}`
+
+const orderItemsMatch = (existingItems = [], newItems = []) => {
+  if (existingItems.length !== newItems.length) return false
+
+  const existingKeys = existingItems.map(buildOrderItemKey).sort()
+  const newKeys = newItems.map(buildOrderItemKey).sort()
+
+  return existingKeys.every((key, index) => key === newKeys[index])
+}
+
 export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress, userId = null }) => {
   const {
     normalizedAddress,
@@ -168,6 +180,33 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
     discountAmount,
     total,
   } = await buildOrderPayloadFromCart(sessionId, billingAddress, userId)
+
+  const reusableOrder = await Order.findOne({
+    sessionId,
+    paymentStatus: 'pending',
+    status: 'pending',
+    paymentMethod: 'online',
+  }).sort({ createdAt: -1 })
+
+  if (
+    reusableOrder &&
+    orderItemsMatch(reusableOrder.items, orderItems) &&
+    reusableOrder.totalAmount === total
+  ) {
+    reusableOrder.items = orderItems
+    reusableOrder.billingAddress = normalizedAddress
+    reusableOrder.subtotalAmount = subtotal
+    reusableOrder.gstAmount = gstTotal
+    reusableOrder.promoCode = promoCode
+    reusableOrder.discountAmount = discountAmount
+    reusableOrder.totalAmount = total
+    if (userId) {
+      reusableOrder.userId = userId
+    }
+    await reusableOrder.save()
+    await saveCheckoutProfile(sessionId, normalizedAddress)
+    return reusableOrder
+  }
 
   const order = await Order.create({
     sessionId,

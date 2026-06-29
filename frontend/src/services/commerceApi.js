@@ -67,6 +67,11 @@ export const orderAPI = {
     return data
   },
 
+  resumeOrderPayment: async (orderId) => {
+    const { data } = await api.post(`/orders/${orderId}/payment`)
+    return data
+  },
+
   getOrder: async (orderId) => {
     const { data } = await api.get(`/orders/${orderId}`)
     return data

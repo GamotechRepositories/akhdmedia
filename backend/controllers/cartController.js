@@ -11,7 +11,6 @@ import {
   fetchPopulatedCart,
   removeCartItem,
   removeCartPromoCode,
-  replaceCartWithItem,
   updateCartItemQuantity,
 } from '../services/cartService.js'
 
@@ -55,7 +54,7 @@ export const buyNow = asyncHandler(async (req, res) => {
     return
   }
 
-  const cart = await replaceCartWithItem(req.sessionId, { productId, quantity, imageSize })
+  const cart = await addCartItem(req.sessionId, { productId, quantity, imageSize })
   const categoryMap = await getCategoryMap()
 
   res.json({

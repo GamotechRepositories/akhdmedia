@@ -59,6 +59,7 @@ const pageTitles = {
 const getPageTitle = (pathname, titles) => {
   if (titles[pathname]) return titles[pathname]
   if (pathname.startsWith('/transactions/')) return 'Transaction Details'
+  if (pathname.startsWith('/users/')) return 'User Profile'
   if (pathname.startsWith('/support/')) return 'Support Request'
   if (pathname.startsWith('/admins/')) return 'Admin Account'
   if (pathname.includes('/edit')) return 'Edit'

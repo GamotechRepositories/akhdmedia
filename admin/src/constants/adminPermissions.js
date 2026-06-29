@@ -146,6 +146,7 @@ export const ROUTE_PERMISSIONS = [
   { path: '/transactions/:id', permission: ADMIN_PERMISSIONS.TRANSACTIONS_READ },
   { path: '/revenue', permission: ADMIN_PERMISSIONS.REVENUE_VIEW },
   { path: '/users', permission: ADMIN_PERMISSIONS.USERS_MANAGE },
+  { path: '/users/:id', permission: ADMIN_PERMISSIONS.USERS_MANAGE },
   { path: '/support', permission: ADMIN_PERMISSIONS.SUPPORT_MANAGE },
   { path: '/support/:id', permission: ADMIN_PERMISSIONS.SUPPORT_MANAGE },
   { path: '/admins', permission: ADMIN_PERMISSIONS.ADMINS_MANAGE },
@@ -162,6 +163,7 @@ export const matchRoutePermission = (pathname) => {
   if (pathname.startsWith('/orders/')) return ADMIN_PERMISSIONS.ORDERS_READ
   if (pathname.startsWith('/transactions/')) return ADMIN_PERMISSIONS.TRANSACTIONS_READ
   if (pathname.startsWith('/support/')) return ADMIN_PERMISSIONS.SUPPORT_MANAGE
+  if (pathname.startsWith('/users/')) return ADMIN_PERMISSIONS.USERS_MANAGE
   if (pathname.startsWith('/admins/')) return ADMIN_PERMISSIONS.ADMINS_MANAGE
   if (pathname.includes('/edit')) {
     if (pathname.startsWith('/products/')) return ADMIN_PERMISSIONS.PRODUCTS_WRITE

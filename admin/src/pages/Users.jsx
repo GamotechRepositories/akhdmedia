@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
@@ -42,7 +43,11 @@ const formatDate = (value) => {
 }
 
 const Users = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const tableContainerRef = useRef(null)
   const skipSearchResetRef = useRef(true)
+  const restore = location.state?.restore
 
   const [users, setUsers] = useState([])
   const [totalCount, setTotalCount] = useState(0)
@@ -51,9 +56,10 @@ const Users = () => {
   const [latestSignup, setLatestSignup] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState(restore?.search || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(restore?.search || '')
+  const [currentPage, setCurrentPage] = useState(restore?.page || 1)
+  const [highlightedId, setHighlightedId] = useState('')
   const [deletingUserId, setDeletingUserId] = useState('')
   const [exporting, setExporting] = useState(false)
 
@@ -119,6 +125,44 @@ const Users = () => {
   useEffect(() => {
     loadUsers()
   }, [loadUsers])
+
+  useEffect(() => {
+    const nextRestore = location.state?.restore
+    if (!nextRestore) return
+
+    usersLoader.clear()
+
+    if (nextRestore.search !== undefined) {
+      setSearch(nextRestore.search)
+      setDebouncedSearch(nextRestore.search)
+    }
+    if (nextRestore.page) setCurrentPage(nextRestore.page)
+
+    const frame = requestAnimationFrame(() => {
+      if (nextRestore.userId) {
+        setHighlightedId(nextRestore.userId)
+        const row = document.getElementById(`user-row-${nextRestore.userId}`)
+        row?.scrollIntoView({ block: 'center', behavior: 'auto' })
+        window.setTimeout(() => setHighlightedId(''), 2500)
+      }
+
+      navigate('/users', { replace: true, state: {} })
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [location.state, navigate])
+
+  const handleRowClick = (user) => {
+    navigate(`/users/${user.id}`, {
+      state: {
+        fromList: {
+          search,
+          page: currentPage,
+          userId: user.id,
+        },
+      },
+    })
+  }
 
   const handleExportExcel = async () => {
     setExporting(true)
@@ -225,7 +269,7 @@ const Users = () => {
         )}
       </div>
 
-      <AdminTable>
+      <AdminTable ref={tableContainerRef}>
         <thead className={tableHeadClass}>
           <tr>
             <th className={thClass}>Name</th>
@@ -251,7 +295,14 @@ const Users = () => {
           {!loading &&
             !error &&
             users.map((user) => (
-              <tr key={user.id} className={tableRowClass}>
+              <tr
+                key={user.id}
+                id={`user-row-${user.id}`}
+                className={`${tableRowClass} cursor-pointer ${
+                  highlightedId === user.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
+                }`}
+                onClick={() => handleRowClick(user)}
+              >
                 <td className={tdPrimaryClass}>{user.name || '—'}</td>
                 <td className={tdClass}>
                   <p className="break-all">{user.email || '—'}</p>
@@ -263,7 +314,10 @@ const Users = () => {
                   <div className={actionGroupClass}>
                     <button
                       type="button"
-                      onClick={() => handleDelete(user)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleDelete(user)
+                      }}
                       disabled={deletingUserId === user.id}
                       className={actionDeleteClass}
                     >
