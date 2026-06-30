@@ -45,9 +45,20 @@ const formatDate = (value) => {
 const OrderDetail = () => {
   const { id } = useParams()
   const location = useLocation()
-  const backState = location.state?.fromList
-    ? { restore: location.state.fromList }
-    : undefined
+  const fromList = location.state?.fromList
+  const backState = {
+    restore: {
+      orderId: fromList?.orderId || id,
+      page: fromList?.page || 1,
+      searchQuery: fromList?.searchQuery || '',
+      customerEmail: fromList?.customerEmail || '',
+      paymentFilter: fromList?.paymentFilter || 'all',
+      statusFilter: fromList?.statusFilter || 'all',
+      dateFrom: fromList?.dateFrom || '',
+      dateTo: fromList?.dateTo || '',
+      scrollTop: fromList?.scrollTop ?? 0,
+    },
+  }
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

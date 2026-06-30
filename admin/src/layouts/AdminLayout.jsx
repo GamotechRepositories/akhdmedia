@@ -12,6 +12,7 @@ import {
   IconRevenue,
   IconSupport,
   IconTransactions,
+  IconMail,
   IconUsers,
 } from '../components/icons/AdminIcons'
 import { NAV_ITEMS } from '../constants/adminPermissions'
@@ -30,6 +31,7 @@ const NAV_ICONS = {
   '/transactions': IconTransactions,
   '/revenue': IconRevenue,
   '/users': IconUsers,
+  '/user-mail': IconMail,
   '/support': IconSupport,
   '/admins': IconAdmins,
 }
@@ -50,6 +52,7 @@ const pageTitles = {
   '/transactions': 'Transactions',
   '/revenue': 'Revenue',
   '/users': 'Users',
+  '/user-mail': 'User Mail',
   '/support': 'Support',
   '/admins': 'Admin Team',
   '/admins/new': 'Add Admin',
@@ -59,6 +62,7 @@ const pageTitles = {
 const getPageTitle = (pathname, titles) => {
   if (titles[pathname]) return titles[pathname]
   if (pathname.startsWith('/transactions/')) return 'Transaction Details'
+  if (pathname.startsWith('/user-mail/')) return 'User Mail History'
   if (pathname.startsWith('/users/')) return 'User Profile'
   if (pathname.startsWith('/support/')) return 'Support Request'
   if (pathname.startsWith('/admins/')) return 'Admin Account'

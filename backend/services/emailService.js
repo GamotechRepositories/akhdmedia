@@ -549,3 +549,94 @@ export const sendSupportReplyEmail = async ({ request, replyMessage, emailBody }
   console.log(`[email] Support reply sent to ${customerEmail} (${request.ticketNumber})`)
   return { sent: true }
 }
+
+const chunkArray = (values = [], chunkSize = 25) => {
+  const chunks = []
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize))
+  }
+  return chunks
+}
+
+const normalizeRecipients = (recipients = []) =>
+  [...new Set(recipients.map((email) => String(email || '').trim().toLowerCase()).filter(Boolean))]
+
+export const sendAdminBroadcastEmail = async ({
+  recipients = [],
+  subject = '',
+  message = '',
+  title = '',
+}) => {
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — broadcast email not sent')
+    return { sent: false, reason: 'resend_not_configured' }
+  }
+
+  const normalizedRecipients = normalizeRecipients(recipients)
+  if (!normalizedRecipients.length) {
+    return { sent: false, reason: 'missing_recipients' }
+  }
+
+  const trimmedSubject = subject.trim()
+  const trimmedMessage = message.trim()
+  if (!trimmedSubject || !trimmedMessage) {
+    return { sent: false, reason: 'missing_subject_or_message' }
+  }
+
+  const currentYear = new Date().getFullYear()
+  const safeTitle = title?.trim() || trimmedSubject
+  const html = wrapBrandEmail({
+    title: safeTitle,
+    currentYear,
+    bodyHtml: trimmedMessage
+      .split(/\n\n+/)
+      .filter(Boolean)
+      .map((block) => brandParagraph(formatPlainTextAsHtml(block)))
+      .join(''),
+  })
+
+  const batches = chunkArray(normalizedRecipients, 25)
+  let sentCount = 0
+  const failed = []
+
+  for (const batch of batches) {
+    const results = await Promise.allSettled(
+      batch.map((recipient) =>
+        resend.emails.send({
+          from: getResendFrom(),
+          to: recipient,
+          subject: trimmedSubject,
+          html,
+          text: trimmedMessage,
+        }),
+      ),
+    )
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && !result.value?.error) {
+        sentCount += 1
+        return
+      }
+
+      const recipient = batch[index]
+      if (result.status === 'fulfilled') {
+        failed.push({ email: recipient, error: result.value?.error?.message || 'Unknown error' })
+        return
+      }
+      failed.push({ email: recipient, error: result.reason?.message || 'Unknown error' })
+    })
+  }
+
+  console.log(
+    `[email] Broadcast send completed: sent=${sentCount}, failed=${failed.length}, total=${normalizedRecipients.length}`,
+  )
+
+  return {
+    sent: sentCount > 0,
+    total: normalizedRecipients.length,
+    sentCount,
+    failedCount: failed.length,
+    failed,
+  }
+}

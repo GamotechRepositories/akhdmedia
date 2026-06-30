@@ -69,6 +69,8 @@ const Orders = () => {
   const navigate = useNavigate()
   const tableContainerRef = useRef(null)
   const skipSearchResetRef = useRef(true)
+  const pendingRestoreOrderIdRef = useRef('')
+  const pendingRestoreScrollTopRef = useRef(null)
   const restore = location.state?.restore
 
   const [orders, setOrders] = useState([])
@@ -179,6 +181,9 @@ const Orders = () => {
     if (!nextRestore) return
 
     ordersLoader.clear()
+    pendingRestoreOrderIdRef.current = nextRestore.orderId || ''
+    pendingRestoreScrollTopRef.current =
+      typeof nextRestore.scrollTop === 'number' ? nextRestore.scrollTop : null
 
     if (nextRestore.searchQuery !== undefined) {
       setSearchQuery(nextRestore.searchQuery)
@@ -195,23 +200,29 @@ const Orders = () => {
     if (nextRestore.dateTo !== undefined) setDateTo(nextRestore.dateTo)
     if (nextRestore.page) setCurrentPage(nextRestore.page)
 
-    const frame = requestAnimationFrame(() => {
-      if (tableContainerRef.current && typeof nextRestore.scrollTop === 'number') {
-        tableContainerRef.current.scrollTop = nextRestore.scrollTop
-      }
-
-      if (nextRestore.orderId) {
-        setHighlightedId(nextRestore.orderId)
-        const row = document.getElementById(`order-row-${nextRestore.orderId}`)
-        row?.scrollIntoView({ block: 'center', behavior: 'auto' })
-        window.setTimeout(() => setHighlightedId(''), 2500)
-      }
-
-      navigate('/orders', { replace: true, state: {} })
-    })
-
-    return () => cancelAnimationFrame(frame)
+    navigate('/orders', { replace: true, state: {} })
   }, [location.state, navigate])
+
+  useEffect(() => {
+    const orderId = pendingRestoreOrderIdRef.current
+    if (loading) return
+
+    if (tableContainerRef.current && pendingRestoreScrollTopRef.current !== null) {
+      tableContainerRef.current.scrollTop = pendingRestoreScrollTopRef.current
+      pendingRestoreScrollTopRef.current = null
+    }
+
+    if (!orderId) return
+
+    const row = document.getElementById(`order-row-${orderId}`)
+    if (!row) return
+
+    pendingRestoreOrderIdRef.current = ''
+    setHighlightedId(orderId)
+    row.scrollIntoView({ block: 'center', behavior: 'auto' })
+    const timer = window.setTimeout(() => setHighlightedId(''), 2500)
+    return () => window.clearTimeout(timer)
+  }, [loading, orders, currentPage])
 
   const hasActiveFilters =
     searchQuery.trim() ||

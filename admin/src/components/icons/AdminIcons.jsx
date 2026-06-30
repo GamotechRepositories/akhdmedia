@@ -41,6 +41,16 @@ export const IconSupport = ({ className = 'h-5 w-5' }) => (
   </svg>
 )
 
+export const IconMail = ({ className = 'h-5 w-5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+    />
+  </svg>
+)
+
 export const IconUsers = ({ className = 'h-5 w-5' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 7a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM21 20v-1a4 4 0 00-3-3.87M16.5 3.13a2.5 2.5 0 010 4.74" />

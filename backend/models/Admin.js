@@ -20,6 +20,16 @@ const adminSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    userEmailSelection: {
+      userIds: {
+        type: [mongoose.Schema.Types.ObjectId],
+        default: [],
+      },
+      updatedAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,

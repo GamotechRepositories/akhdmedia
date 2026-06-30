@@ -67,7 +67,14 @@ const UserDetail = () => {
   const location = useLocation()
   const { hasPermission } = useAuth()
   const canViewOrders = hasPermission(ADMIN_PERMISSIONS.ORDERS_READ)
-  const backState = location.state?.fromList ? { restore: location.state.fromList } : undefined
+  const fromList = location.state?.fromList
+  const backState = {
+    restore: {
+      userId: fromList?.userId || id,
+      page: fromList?.page || 1,
+      search: fromList?.search || '',
+    },
+  }
 
   const [user, setUser] = useState(null)
   const [orders, setOrders] = useState([])

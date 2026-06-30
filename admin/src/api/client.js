@@ -417,8 +417,13 @@ export const fetchAdminUsers = ({ page = 1, limit = 50, search = '' } = {}) =>
   })
 
 export const fetchUser = (id) => api.get(`/admin/users/${id}`)
+export const fetchUserEmailHistory = (id) => api.get(`/admin/users/${id}/email-history`)
 
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
+
+export const sendUsersEmail = (payload) => api.post('/admin/users/email', payload)
+export const fetchUsersSelection = () => api.get('/admin/users/selection')
+export const saveUsersSelection = (payload) => api.post('/admin/users/selection', payload)
 
 export const fetchSiteContent = () => api.get('/admin/site-content')
 

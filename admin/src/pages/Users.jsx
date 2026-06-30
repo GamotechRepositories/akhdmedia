@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
@@ -9,6 +9,7 @@ import {
   actionGroupClass,
   cardClass,
   exportBtnClass,
+  secondaryBtnClass,
   statGridClass,
   tableBodyClass,
   tableEmptyClass,
@@ -47,6 +48,7 @@ const Users = () => {
   const navigate = useNavigate()
   const tableContainerRef = useRef(null)
   const skipSearchResetRef = useRef(true)
+  const pendingRestoreUserIdRef = useRef('')
   const restore = location.state?.restore
 
   const [users, setUsers] = useState([])
@@ -131,6 +133,7 @@ const Users = () => {
     if (!nextRestore) return
 
     usersLoader.clear()
+    pendingRestoreUserIdRef.current = nextRestore.userId || ''
 
     if (nextRestore.search !== undefined) {
       setSearch(nextRestore.search)
@@ -138,19 +141,22 @@ const Users = () => {
     }
     if (nextRestore.page) setCurrentPage(nextRestore.page)
 
-    const frame = requestAnimationFrame(() => {
-      if (nextRestore.userId) {
-        setHighlightedId(nextRestore.userId)
-        const row = document.getElementById(`user-row-${nextRestore.userId}`)
-        row?.scrollIntoView({ block: 'center', behavior: 'auto' })
-        window.setTimeout(() => setHighlightedId(''), 2500)
-      }
-
-      navigate('/users', { replace: true, state: {} })
-    })
-
-    return () => cancelAnimationFrame(frame)
+    navigate('/users', { replace: true, state: {} })
   }, [location.state, navigate])
+
+  useEffect(() => {
+    const userId = pendingRestoreUserIdRef.current
+    if (!userId || loading) return
+
+    const row = document.getElementById(`user-row-${userId}`)
+    if (!row) return
+
+    pendingRestoreUserIdRef.current = ''
+    setHighlightedId(userId)
+    row.scrollIntoView({ block: 'center', behavior: 'auto' })
+    const timer = window.setTimeout(() => setHighlightedId(''), 2500)
+    return () => window.clearTimeout(timer)
+  }, [loading, users, currentPage])
 
   const handleRowClick = (user) => {
     navigate(`/users/${user.id}`, {
@@ -238,24 +244,29 @@ const Users = () => {
               className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
             />
           </label>
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={loading || exporting || grandTotal === 0}
-            className={`${exportBtnClass} shrink-0`}
-          >
-            <span className="inline-flex items-center gap-2">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              {exporting ? 'Exporting...' : 'Download Excel'}
-            </span>
-          </button>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <Link to="/user-mail" className={secondaryBtnClass}>
+              Send Email
+            </Link>
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={loading || exporting || grandTotal === 0}
+              className={exportBtnClass}
+            >
+              <span className="inline-flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                {exporting ? 'Exporting...' : 'Download Excel'}
+              </span>
+            </button>
+          </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
           Exports all {grandTotal} registered users (name, email, phone, role, joined date).
