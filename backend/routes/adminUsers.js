@@ -3,6 +3,7 @@ import {
   deleteUser,
   getSavedUserSelection,
   getUserEmailHistory,
+  getUserEmailSettings,
   getUser,
   listUsers,
   saveUserSelection,
@@ -12,6 +13,7 @@ import {
 const router = Router()
 
 router.get('/', listUsers)
+router.get('/email-settings', getUserEmailSettings)
 router.post('/email', sendUserEmail)
 router.get('/selection', getSavedUserSelection)
 router.post('/selection', saveUserSelection)

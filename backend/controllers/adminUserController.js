@@ -7,10 +7,25 @@ import User from '../models/User.js'
 import UserEmailLog from '../models/UserEmailLog.js'
 import { getOrdersForUser } from '../services/orderService.js'
 import { sendAdminBroadcastEmail } from '../services/emailService.js'
+import { getResendFrom } from '../config/email.js'
+import { prepareEmailAttachmentsForSend } from '../utils/userEmailAttachments.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
 import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../utils/pagination.js'
 
 const USER_SEARCH_FIELDS = ['name', 'email', 'phone']
+
+const normalizeFromAddress = (raw = '') => {
+  const trimmed = String(raw || '').trim()
+  if (!trimmed) return getResendFrom()
+
+  const emailMatch = trimmed.match(/<([^>]+)>/)
+  const email = (emailMatch ? emailMatch[1] : trimmed).trim()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new AppError('Invalid from email address', 400)
+  }
+
+  return trimmed
+}
 
 const buildUserListFilter = (query = {}) => {
   const filter = { role: { $ne: 'admin' } }
@@ -145,9 +160,19 @@ export const deleteUser = asyncHandler(async (req, res) => {
   })
 })
 
+export const getUserEmailSettings = asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      from: getResendFrom(),
+    },
+  })
+})
+
 export const sendUserEmail = asyncHandler(async (req, res) => {
   const subject = String(req.body?.subject || '').trim()
   const message = String(req.body?.message || '').trim()
+  const from = normalizeFromAddress(req.body?.from)
   const target = String(req.body?.target || '').trim()
   const userIds = Array.isArray(req.body?.userIds) ? req.body.userIds : []
   const userId = String(req.body?.userId || '').trim()
@@ -191,10 +216,16 @@ export const sendUserEmail = asyncHandler(async (req, res) => {
     throw new AppError('No valid recipients found', 400)
   }
 
+  const rawAttachments = Array.isArray(req.body?.attachments) ? req.body.attachments : []
+  const { stored: attachmentMeta, resend: resendAttachments } =
+    await prepareEmailAttachmentsForSend(rawAttachments)
+
   const result = await sendAdminBroadcastEmail({
     recipients,
     subject,
     message,
+    from,
+    attachments: resendAttachments,
   })
 
   if (!result.sent) {
@@ -220,6 +251,7 @@ export const sendUserEmail = asyncHandler(async (req, res) => {
         subject,
         message,
         target,
+        attachments: attachmentMeta,
         status: failedReason ? 'failed' : 'sent',
         errorMessage: failedReason || '',
         sentAt: now,
@@ -256,7 +288,7 @@ export const getUserEmailHistory = asyncHandler(async (req, res) => {
 
   const logs = await UserEmailLog.find({ userId: user._id })
     .sort({ sentAt: -1, createdAt: -1 })
-    .select('subject message target status errorMessage sentAt adminName')
+    .select('subject message target status errorMessage sentAt adminName attachments')
     .lean()
 
   res.json({
@@ -276,6 +308,12 @@ export const getUserEmailHistory = asyncHandler(async (req, res) => {
         errorMessage: log.errorMessage || '',
         sentAt: log.sentAt,
         adminName: log.adminName || '',
+        attachments: (log.attachments || []).map((attachment) => ({
+          filename: attachment.filename || '',
+          contentType: attachment.contentType || '',
+          url: attachment.url || '',
+          size: attachment.size || 0,
+        })),
       })),
     },
   })

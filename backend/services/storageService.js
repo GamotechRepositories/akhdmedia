@@ -309,6 +309,28 @@ export const getPrivateDownloadUrl = async (key, filename = '', options = {}) =>
   return `/api/files/download/${relativeKey}?name=${encodeURIComponent(downloadName)}`
 }
 
+export const readPublicFileBuffer = async (key = '') => {
+  const normalizedKey = key.replace(/^public\//, '')
+  const s3Key = key.startsWith(`${AWS_S3_PUBLIC_PREFIX}/`)
+    ? key
+    : `${AWS_S3_PUBLIC_PREFIX}/${normalizedKey}`
+
+  if (isAwsEnabled()) {
+    const response = await getS3().send(
+      new GetObjectCommand({ Bucket: getAwsS3Bucket(), Key: s3Key }),
+    )
+    const body = await response.Body.transformToByteArray()
+    return {
+      buffer: Buffer.from(body),
+      contentType: response.ContentType || 'application/octet-stream',
+    }
+  }
+
+  const filePath = path.join(LOCAL_PUBLIC_DIR, normalizedKey.replace(/^public\//, ''))
+  const buffer = await fsPromises.readFile(filePath)
+  return { buffer, contentType: 'application/octet-stream' }
+}
+
 export const readPrivateFile = async (key) => {
   const relativeKey = key.replace(/^private\//, '').replace(`${AWS_S3_PRIVATE_PREFIX}/`, '')
 

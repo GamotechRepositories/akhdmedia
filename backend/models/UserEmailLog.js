@@ -62,6 +62,15 @@ const userEmailLogSchema = new mongoose.Schema(
       default: Date.now,
       index: true,
     },
+    attachments: [
+      {
+        filename: { type: String, default: '', trim: true },
+        contentType: { type: String, default: '', trim: true },
+        url: { type: String, default: '', trim: true },
+        key: { type: String, default: '', trim: true },
+        size: { type: Number, default: 0 },
+      },
+    ],
   },
   { timestamps: true },
 )

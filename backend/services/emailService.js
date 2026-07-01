@@ -566,6 +566,8 @@ export const sendAdminBroadcastEmail = async ({
   subject = '',
   message = '',
   title = '',
+  from = '',
+  attachments = [],
 }) => {
   const resend = getResendClient()
   if (!resend || !isEmailConfigured()) {
@@ -584,6 +586,8 @@ export const sendAdminBroadcastEmail = async ({
     return { sent: false, reason: 'missing_subject_or_message' }
   }
 
+  const fromAddress = from?.trim() || getResendFrom()
+
   const currentYear = new Date().getFullYear()
   const safeTitle = title?.trim() || trimmedSubject
   const html = wrapBrandEmail({
@@ -599,16 +603,23 @@ export const sendAdminBroadcastEmail = async ({
   const batches = chunkArray(normalizedRecipients, 25)
   let sentCount = 0
   const failed = []
+  const resendAttachments = attachments.length
+    ? attachments.map((item) => ({
+        filename: item.filename,
+        content: item.content,
+      }))
+    : undefined
 
   for (const batch of batches) {
     const results = await Promise.allSettled(
       batch.map((recipient) =>
         resend.emails.send({
-          from: getResendFrom(),
+          from: fromAddress,
           to: recipient,
           subject: trimmedSubject,
           html,
           text: trimmedMessage,
+          ...(resendAttachments?.length ? { attachments: resendAttachments } : {}),
         }),
       ),
     )

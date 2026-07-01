@@ -71,6 +71,18 @@ export const resolveUploadTarget = ({
     }
   }
 
+  if (type === 'email-attachment') {
+    const ext = getExtension(filename, '.bin')
+    const objectName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`
+    const s3Key = `${AWS_S3_PUBLIC_PREFIX}/email-attachments/${objectName}`
+    return {
+      scope: 'public',
+      s3Key,
+      key: s3Key,
+      filename: originalFilename,
+    }
+  }
+
   if (type === 'actor-image') {
     const slug = sanitizeCategorySlug(actorSlug || '')
     if (!slug) {
@@ -178,4 +190,5 @@ export const isPublicUploadType = (type) =>
   type === 'video-poster' ||
   type === 'category-cover' ||
   type === 'hero-slide' ||
-  type === 'actor-image'
+  type === 'actor-image' ||
+  type === 'email-attachment'

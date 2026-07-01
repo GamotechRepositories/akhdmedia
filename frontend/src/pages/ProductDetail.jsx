@@ -42,7 +42,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { getProductById, getRelatedProducts, loading: catalogLoading } = useCatalog();
-  const { addToCart, buyNow } = useCart();
+  const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const { success, error: showError } = useToast();
   const processedAuthIntentRef = useRef(false);
@@ -89,9 +89,9 @@ const ProductDetail = () => {
           return;
         }
 
-        if (intent.type === 'buyNow') {
-          await buyNow(product, 1, intent.imageSize || selectedImageSize);
-          navigate('/cart');
+        if (intent.type === 'addToCartGoCart') {
+          await addToCart(product, 1, intent.imageSize || selectedImageSize);
+          navigate('/cart', { replace: true });
           return;
         }
       } catch (actionError) {
@@ -104,7 +104,6 @@ const ProductDetail = () => {
     runIntent();
   }, [
     addToCart,
-    buyNow,
     isAuthenticated,
     location.pathname,
     location.state,
@@ -176,9 +175,9 @@ const ProductDetail = () => {
     }
   };
 
-  const handleBuyNow = async () => {
+  const handleDownloadLicensed = async () => {
     if (!isAuthenticated) {
-      redirectToLogin('buyNow');
+      redirectToLogin('addToCartGoCart');
       return;
     }
 
@@ -188,10 +187,10 @@ const ProductDetail = () => {
     }
 
     try {
-      await buyNow(product, 1, selectedImageSize);
+      await addToCart(product, 1, selectedImageSize);
       navigate('/cart');
     } catch (error) {
-      showError(error.message || 'Could not start checkout');
+      showError(error.message || 'Could not add to cart');
     }
   };
 
@@ -350,7 +349,7 @@ const ProductDetail = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleBuyNow}
+                  onClick={handleDownloadLicensed}
                   className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3.5 text-sm font-semibold transition active:scale-[0.99] ${
                     isPurchasable
                       ? 'cursor-pointer border-gray-900 bg-white text-gray-900 hover:bg-gray-50'

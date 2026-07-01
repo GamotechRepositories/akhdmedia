@@ -422,6 +422,7 @@ export const fetchUserEmailHistory = (id) => api.get(`/admin/users/${id}/email-h
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
 
 export const sendUsersEmail = (payload) => api.post('/admin/users/email', payload)
+export const fetchUserEmailSettings = () => api.get('/admin/users/email-settings')
 export const fetchUsersSelection = () => api.get('/admin/users/selection')
 export const saveUsersSelection = (payload) => api.post('/admin/users/selection', payload)
 

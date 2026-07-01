@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
+import UserMailComposer from '../components/UserMailComposer'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
 import TableLoader from '../components/ui/TableLoader'
 import {
   cardClass,
-  inputClass,
   primaryBtnClass,
   secondaryBtnClass,
   statGridClass,
@@ -24,15 +24,41 @@ import {
 } from '../components/ui/adminUi'
 import {
   fetchAdminUsers,
+  fetchUserEmailSettings,
   fetchUsers,
   fetchUsersSelection,
   saveUsersSelection,
   sendUsersEmail,
 } from '../api/client'
 import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
+import {
+  MESSAGE_PLACEHOLDER,
+  buildUserBroadcastEmailDraft,
+} from '../utils/userBroadcastEmailDraft'
 
 const PAGE_SIZE = 50
 const usersLoader = createPaginatedLoader()
+const MAX_ATTACHMENTS = 5
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+])
+
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      const base64 = result.includes(',') ? result.split(',')[1] : result
+      resolve(base64)
+    }
+    reader.onerror = () => reject(new Error('Could not read file'))
+    reader.readAsDataURL(file)
+  })
 
 const formatDate = (value) => {
   if (!value) return '—'
@@ -52,6 +78,7 @@ const UserMail = () => {
   const skipSearchResetRef = useRef(true)
   const saveSelectionTimeoutRef = useRef(null)
   const pendingRestoreUserIdRef = useRef('')
+  const attachmentsRef = useRef([])
   const restore = location.state?.restore
 
   const [users, setUsers] = useState([])
@@ -65,8 +92,10 @@ const UserMail = () => {
   const [currentPage, setCurrentPage] = useState(restore?.page || 1)
   const [highlightedId, setHighlightedId] = useState('')
   const [selectedUserIds, setSelectedUserIds] = useState([])
+  const [emailFrom, setEmailFrom] = useState('')
   const [emailSubject, setEmailSubject] = useState('')
-  const [emailMessage, setEmailMessage] = useState('')
+  const [emailDraft, setEmailDraft] = useState(() => buildUserBroadcastEmailDraft())
+  const [attachments, setAttachments] = useState([])
   const [mailing, setMailing] = useState(false)
   const [selectionReady, setSelectionReady] = useState(false)
   const [selectingAll, setSelectingAll] = useState(false)
@@ -184,6 +213,25 @@ const UserMail = () => {
   }, [])
 
   useEffect(() => {
+    let active = true
+
+    const loadEmailSettings = async () => {
+      try {
+        const response = await fetchUserEmailSettings()
+        if (!active) return
+        setEmailFrom(response.data?.data?.from || '')
+      } catch {
+        // keep empty — backend will use default on send
+      }
+    }
+
+    loadEmailSettings()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
     if (!selectionReady) return
 
     if (saveSelectionTimeoutRef.current) {
@@ -205,10 +253,35 @@ const UserMail = () => {
     }
   }, [selectedUserIds, selectionReady])
 
+  useEffect(() => {
+    attachmentsRef.current = attachments
+  }, [attachments])
+
+  useEffect(
+    () => () => {
+      attachmentsRef.current.forEach((item) => {
+        if (item.previewUrl?.startsWith('blob:')) {
+          URL.revokeObjectURL(item.previewUrl)
+        }
+      })
+    },
+    [],
+  )
+
   const allPageUserIds = users.map((user) => user.id)
   const selectedOnPageCount = allPageUserIds.filter((id) => selectedUserIds.includes(id)).length
   const allOnPageSelected = users.length > 0 && selectedOnPageCount === users.length
   const allUsersSelected = grandTotal > 0 && selectedUserIds.length === grandTotal
+
+  const selectedUsersOnPage = users.filter((user) => selectedUserIds.includes(user.id))
+  const toLabel = useMemo(() => {
+    if (selectedUserIds.length === 0) return 'No recipients selected'
+    if (selectedUserIds.length === 1) {
+      const user = selectedUsersOnPage[0]
+      return user?.email || '1 selected user'
+    }
+    return `${selectedUserIds.length} selected users`
+  }, [selectedUserIds.length, selectedUsersOnPage])
 
   const toggleUserSelection = (userId) => {
     setSelectedUserIds((prev) =>
@@ -253,16 +326,86 @@ const UserMail = () => {
     }
   }
 
+  const removeAttachment = (attachmentId) => {
+    setAttachments((prev) => {
+      const target = prev.find((item) => item.id === attachmentId)
+      if (target?.previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(target.previewUrl)
+      }
+      return prev.filter((item) => item.id !== attachmentId)
+    })
+  }
+
+  const clearAttachments = () => {
+    setAttachments((prev) => {
+      prev.forEach((item) => {
+        if (item.previewUrl?.startsWith('blob:')) {
+          URL.revokeObjectURL(item.previewUrl)
+        }
+      })
+      return []
+    })
+  }
+
+  const handleAttachmentSelect = (event) => {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+
+    if (!files.length) return
+
+    if (attachments.length + files.length > MAX_ATTACHMENTS) {
+      setError(`You can attach up to ${MAX_ATTACHMENTS} files per email.`)
+      return
+    }
+
+    setError('')
+
+    try {
+      const nextItems = files.map((file) => {
+        if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
+          throw new Error('Only JPEG, PNG, WebP, GIF images or PDF files are allowed.')
+        }
+
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          throw new Error(`"${file.name}" is too large. Maximum size is 10MB per file.`)
+        }
+
+        return {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          file,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          previewUrl: URL.createObjectURL(file),
+        }
+      })
+
+      setAttachments((prev) => [...prev, ...nextItems])
+    } catch (selectError) {
+      setError(selectError.message || 'Could not attach file')
+    }
+  }
+
   const validateEmailDraft = () => {
     if (emailSubject.trim().length < 3) {
       setError('Email subject must be at least 3 characters.')
       return false
     }
-    if (emailMessage.trim().length < 5) {
-      setError('Email message must be at least 5 characters.')
+    const trimmedDraft = emailDraft.trim()
+    if (trimmedDraft.length < 5) {
+      setError('Email must be at least 5 characters.')
+      return false
+    }
+    if (trimmedDraft.includes(MESSAGE_PLACEHOLDER)) {
+      setError('Please replace the placeholder text with your message before sending.')
       return false
     }
     return true
+  }
+
+  const handleResetEmailDraft = () => {
+    setEmailDraft(buildUserBroadcastEmailDraft())
+    setEmailSubject('')
   }
 
   const sendEmail = async (payload, confirmMessage) => {
@@ -272,10 +415,21 @@ const UserMail = () => {
     setMailing(true)
     setError('')
     try {
+      const encodedAttachments = await Promise.all(
+        attachments.map(async (item) => ({
+          filename: item.filename,
+          contentType: item.contentType,
+          size: item.size,
+          content: await fileToBase64(item.file),
+        })),
+      )
+
       const response = await sendUsersEmail({
         ...payload,
+        from: emailFrom.trim(),
         subject: emailSubject.trim(),
-        message: emailMessage.trim(),
+        message: emailDraft.trim(),
+        attachments: encodedAttachments,
       })
       const summary = response.data?.message || 'Email sent successfully.'
       const failedCount = Number(response.data?.data?.failedCount || 0)
@@ -284,7 +438,8 @@ const UserMail = () => {
       await loadUsers({ force: true })
       setSelectedUserIds([])
       setEmailSubject('')
-      setEmailMessage('')
+      setEmailDraft(buildUserBroadcastEmailDraft())
+      clearAttachments()
 
       if (failedCount > 0) {
         setError(`${summary} ${failedCount} failed. Please check logs.`)
@@ -329,53 +484,54 @@ const UserMail = () => {
         </div>
       </div>
 
-      <div className={`${cardClass} space-y-3 p-4`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Compose email
-          </p>
-          <p className="text-xs text-slate-500">
+      <div className={`${cardClass} space-y-4 p-5`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Compose email</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Review and edit the full email below. It will be sent exactly as shown to your selected
+              users.
+            </p>
+          </div>
+          <p className="text-xs font-medium text-slate-500">
             Selected: <span className="font-semibold text-slate-700">{selectedUserIds.length}</span>
           </p>
         </div>
 
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</span>
-          <input
-            type="text"
-            value={emailSubject}
-            onChange={(event) => setEmailSubject(event.target.value)}
-            placeholder="Enter email subject"
-            className={inputClass}
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message</span>
-          <textarea
-            value={emailMessage}
-            onChange={(event) => setEmailMessage(event.target.value)}
-            rows={6}
-            placeholder="Type email message..."
-            className={inputClass}
-          />
-        </label>
-
-        <p className="text-xs text-slate-500">
-          {selectedUserIds.length > 0
-            ? `Send Mail will email ${selectedUserIds.length} selected user(s).`
-            : 'No users selected — Send Mail count is 0.'}
-        </p>
+        <UserMailComposer
+          emailFrom={emailFrom}
+          onEmailFromChange={setEmailFrom}
+          toLabel={toLabel}
+          emailSubject={emailSubject}
+          onEmailSubjectChange={setEmailSubject}
+          emailDraft={emailDraft}
+          onEmailDraftChange={setEmailDraft}
+          attachments={attachments}
+          maxAttachments={MAX_ATTACHMENTS}
+          onAttachmentSelect={handleAttachmentSelect}
+          onRemoveAttachment={removeAttachment}
+          mailing={mailing}
+        />
 
         <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={clearSelectedUsers}
-            disabled={mailing || selectedUserIds.length === 0}
-            className={secondaryBtnClass}
-          >
-            Clear Selected
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={clearSelectedUsers}
+              disabled={mailing || selectedUserIds.length === 0}
+              className={secondaryBtnClass}
+            >
+              Clear Selected
+            </button>
+            <button
+              type="button"
+              onClick={handleResetEmailDraft}
+              disabled={mailing}
+              className={secondaryBtnClass}
+            >
+              Reset to template
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleSendMail}

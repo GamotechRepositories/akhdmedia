@@ -45,8 +45,8 @@ app.use(
   }),
 )
 app.use(cookieParser())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: '60mb' }))
+app.use(express.urlencoded({ extended: true, limit: '60mb' }))
 app.use('/uploads/public', express.static(LOCAL_PUBLIC_DIR))
 
 app.use('/share', shareRoutes)

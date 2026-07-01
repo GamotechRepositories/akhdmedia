@@ -17,6 +17,7 @@ const storage = multer.diskStorage({
 })
 
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const emailAttachmentTypes = [...imageTypes, 'application/pdf']
 const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime']
 
 const isDeliveryUpload = (type) =>
@@ -36,7 +37,12 @@ export const uploadSingle = multer({
       return
     }
 
-    if (type.startsWith('preview-image') || type === 'preview-image' || type === 'video-poster') {
+    if (type === 'email-attachment') {
+      if (!emailAttachmentTypes.includes(file.mimetype)) {
+        cb(new Error('Only JPEG, PNG, WebP, GIF images or PDF files are allowed'))
+        return
+      }
+    } else if (type.startsWith('preview-image') || type === 'preview-image' || type === 'video-poster') {
       if (!imageTypes.includes(file.mimetype)) {
         cb(new Error('Only JPEG, PNG, WebP, or GIF images are allowed'))
         return
