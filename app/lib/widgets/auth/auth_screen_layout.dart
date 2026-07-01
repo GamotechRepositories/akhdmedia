@@ -391,6 +391,139 @@ class AuthFooterLink extends StatelessWidget {
   }
 }
 
+class AuthFormCard extends StatelessWidget {
+  const AuthFormCard({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class AuthSectionLabel extends StatelessWidget {
+  const AuthSectionLabel({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: Colors.grey.shade500,
+        ),
+      ),
+    );
+  }
+}
+
+class AuthTermsCheckbox extends StatelessWidget {
+  const AuthTermsCheckbox({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required this.onTermsTap,
+    required this.onPrivacyTap,
+    this.enabled = true,
+  });
+
+  final bool value;
+  final ValueChanged<bool?>? onChanged;
+  final VoidCallback onTermsTap;
+  final VoidCallback onPrivacyTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 20,
+          width: 20,
+          child: Checkbox(
+            value: value,
+            onChanged: enabled ? onChanged : null,
+            activeColor: AuthScreenColors.primaryBlue,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            side: BorderSide(color: Colors.grey.shade400),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GestureDetector(
+            onTap: enabled ? () => onChanged?.call(!value) : null,
+            child: Text.rich(
+              TextSpan(
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.4),
+                children: [
+                  const TextSpan(text: 'I agree to the '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: enabled ? onTermsTap : null,
+                      child: const Text(
+                        'Terms & Conditions',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AuthScreenColors.primaryBlue,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const TextSpan(text: ' and '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: enabled ? onPrivacyTap : null,
+                      child: const Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AuthScreenColors.primaryBlue,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class AuthWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

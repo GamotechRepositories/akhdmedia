@@ -203,6 +203,10 @@ const verifyGoogleCredential = async (credential) => {
   if (androidClientId) {
     audiences.push(androidClientId)
   }
+  const iosClientId = process.env.GOOGLE_IOS_CLIENT_ID?.trim()
+  if (iosClientId) {
+    audiences.push(iosClientId)
+  }
 
   try {
     const ticket = await client.verifyIdToken({

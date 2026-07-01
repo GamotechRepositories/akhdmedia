@@ -32,6 +32,7 @@ export const getAuthConfig = asyncHandler(async (req, res) => {
     success: true,
     data: {
       googleClientId: GOOGLE_CLIENT_ID,
+      googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID?.trim() || '',
     },
   })
 })

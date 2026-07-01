@@ -7,9 +7,10 @@ import '../core/config/app_config.dart';
 import '../core/errors/api_exception.dart';
 
 class ApiClient {
-  ApiClient._(this._dio);
+  ApiClient._(this._dio, this._cookieJar);
 
   final Dio _dio;
+  final CookieJar _cookieJar;
   static ApiClient? _instance;
 
   static Future<ApiClient> create() async {
@@ -46,11 +47,15 @@ class ApiClient {
       ),
     );
 
-    _instance = ApiClient._(dio);
+    _instance = ApiClient._(dio, cookieJar);
     return _instance!;
   }
 
   Dio get dio => _dio;
+
+  Future<void> clearSessionCookies() async {
+    await _cookieJar.deleteAll();
+  }
 
   Future<Map<String, dynamic>> getJson(String path, {Map<String, dynamic>? query}) async {
     return _unwrap(await _dio.get<Map<String, dynamic>>(path, queryParameters: query));

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/google_sign_in_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider(this._authService);
@@ -22,9 +23,10 @@ class AuthProvider extends ChangeNotifier {
     try {
       user = await _authService.getMe();
       error = null;
-    } catch (e) {
+    } catch (_) {
+      // Mirror web `refreshAuth`: failed session check just means signed out.
       user = null;
-      error = ApiClient.unwrapError(e).toString();
+      error = null;
     } finally {
       loading = false;
       notifyListeners();
@@ -65,16 +67,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String> getGoogleClientId() => _authService.getGoogleClientId();
-
-  Future<void> loginWithGoogleCredential(String credential) async {
+  Future<GoogleSignInOutcome> signInWithGoogle() async {
     error = null;
     try {
-      if (kDebugMode) {
-        debugPrint('[Auth] Google credential received (${credential.length} chars)');
+      final result = await GoogleSignInService.instance.requestIdToken(
+        _authService.googleAuthConfig,
+      );
+      if (result.outcome == GoogleSignInOutcome.cancelled) {
+        return GoogleSignInOutcome.cancelled;
       }
-      user = await _authService.loginWithGoogle(credential);
-      notifyListeners();
+
+      await loginWithGoogle(result.idToken!);
+      return GoogleSignInOutcome.success;
     } catch (e, stack) {
       if (kDebugMode) {
         debugPrint('[Auth] Google sign-in failed: $e');
@@ -86,10 +90,24 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Mirrors web `loginWithGoogle(credential)` → `POST /user/auth/google`.
+  Future<void> loginWithGoogle(String credential) async {
+    error = null;
+    try {
+      user = await _authService.loginWithGoogle(credential);
+      notifyListeners();
+    } catch (e) {
+      error = ApiClient.unwrapError(e).toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<String> requestPasswordReset(String email) async {
     return _authService.requestPasswordReset(email);
   }
 
+  /// Mirrors web `logout()` → `POST /user/auth/logout`, then clear local user.
   Future<void> logout() async {
     try {
       await _authService.logout();

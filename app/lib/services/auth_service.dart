@@ -1,4 +1,6 @@
+import '../core/constants/auth_config.dart';
 import '../core/errors/api_exception.dart';
+import '../models/google_auth_config.dart';
 import '../models/user.dart';
 import 'api_client.dart';
 
@@ -33,14 +35,10 @@ class AuthService {
     return _parseUser(response);
   }
 
-  Future<String> getGoogleClientId() async {
-    final response = await _api.getJson('/user/auth/config');
-    final clientId = response['data']?['googleClientId']?.toString().trim() ?? '';
-    if (clientId.isEmpty) {
-      throw const ApiException('Google sign-in is not configured on the server');
-    }
-    return clientId;
-  }
+  /// Same source as the website's `GOOGLE_CLIENT_ID` in `config/auth.js`.
+  GoogleAuthConfig get googleAuthConfig => GoogleAuthConfig(
+        webClientId: AuthConfig.googleClientId,
+      );
 
   Future<AppUser> loginWithGoogle(String credential) async {
     final response = await _api.postJson('/user/auth/google', data: {
@@ -58,7 +56,11 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    await _api.postJson('/user/auth/logout');
+    try {
+      await _api.postJson('/user/auth/logout');
+    } finally {
+      await _api.clearSessionCookies();
+    }
   }
 
   Future<AppUser?> getMe() async {

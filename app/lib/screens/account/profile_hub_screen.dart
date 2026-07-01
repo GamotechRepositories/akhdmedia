@@ -71,7 +71,11 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
     );
     if (confirmed == true && mounted) {
       await context.read<AuthProvider>().logout();
-      if (mounted) setState(() => _orders = []);
+      if (!mounted) return;
+      setState(() => _orders = []);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Signed out')),
+      );
     }
   }
 

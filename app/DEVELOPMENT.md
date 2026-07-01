@@ -50,8 +50,14 @@ flutter pub get
 flutter run
 ```
 
-Override API URL:
+Override API URL (mirrors `VITE_API_URL` on the website):
 
 ```bash
-flutter run --dart-define=API_BASE_URL=https://api.akhdmedia.com/api
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10:5008/api
+```
+
+Override Google client ID (mirrors `VITE_GOOGLE_CLIENT_ID`):
+
+```bash
+flutter run --dart-define=GOOGLE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
 ```
