@@ -15,11 +15,13 @@ class CatalogScreen extends StatefulWidget {
     this.initialCategory,
     this.initialSubCategory,
     this.initialSearch,
+    this.initialActor,
   });
 
   final String? initialCategory;
   final String? initialSubCategory;
   final String? initialSearch;
+  final String? initialActor;
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -28,6 +30,7 @@ class CatalogScreen extends StatefulWidget {
 class _CatalogScreenState extends State<CatalogScreen> {
   late String? _category = widget.initialCategory;
   late String? _subCategory = widget.initialSubCategory;
+  late String? _actor = widget.initialActor;
   late final TextEditingController _searchController =
       TextEditingController(text: widget.initialSearch ?? '');
 
@@ -61,15 +64,51 @@ class _CatalogScreenState extends State<CatalogScreen> {
             );
           }
 
+          final selectedActor =
+              _actor != null ? catalog.getActorById(_actor!) : null;
+          final pageTitle = selectedActor != null
+              ? '${selectedActor.name} Footage'
+              : 'Videos';
+
           final filtered = catalog.filterProducts(
-            categorySlug: _category,
-            subCategorySlug: _subCategory,
+            categorySlug: _actor != null ? null : _category,
+            subCategorySlug: _actor != null ? null : _subCategory,
             searchQuery: _searchController.text,
+            actorId: _actor,
           );
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (selectedActor != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, size: 20),
+                        onPressed: () => context.go('/actors'),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          pageTitle,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
@@ -95,33 +134,35 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
               ),
-              SizedBox(
-                height: 34,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  children: [
-                    _FilterChip(
-                      label: 'All',
-                      selected: _category == null,
-                      onTap: () => setState(() {
-                        _category = null;
-                        _subCategory = null;
-                      }),
-                    ),
-                    ...catalog.categories.map((category) {
-                      return _FilterChip(
-                        label: category.navLabel,
-                        selected: _category == category.slug,
+              if (_actor == null)
+                SizedBox(
+                  height: 34,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    children: [
+                      _FilterChip(
+                        label: 'All',
+                        selected: _category == null,
                         onTap: () => setState(() {
-                          _category = category.slug;
+                          _category = null;
                           _subCategory = null;
                         }),
-                      );
-                    }),
-                  ],
+                      ),
+                      ...catalog.categories.map((category) {
+                        return _FilterChip(
+                          label: category.navLabel,
+                          selected: _category == category.slug,
+                          onTap: () => setState(() {
+                            _category = category.slug;
+                            _subCategory = null;
+                          }),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
-              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
@@ -148,7 +189,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: AppSpacing.sm,
                           mainAxisSpacing: AppSpacing.sm,
-                          childAspectRatio: 0.62,
+                          childAspectRatio: 0.56,
                         ),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {

@@ -1,4 +1,5 @@
 import asyncHandler from '../utils/asyncHandler.js'
+import { GOOGLE_CLIENT_ID } from '../config/google.js'
 import {
   authenticateUser,
   authenticateWithGoogle,
@@ -25,6 +26,15 @@ const sendAuthResponse = (res, user, message) => {
     },
   })
 }
+
+export const getAuthConfig = asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      googleClientId: GOOGLE_CLIENT_ID,
+    },
+  })
+})
 
 export const register = asyncHandler(async (req, res) => {
   const user = await registerUser(req.body)

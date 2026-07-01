@@ -33,6 +33,30 @@ class AuthService {
     return _parseUser(response);
   }
 
+  Future<String> getGoogleClientId() async {
+    final response = await _api.getJson('/user/auth/config');
+    final clientId = response['data']?['googleClientId']?.toString().trim() ?? '';
+    if (clientId.isEmpty) {
+      throw const ApiException('Google sign-in is not configured on the server');
+    }
+    return clientId;
+  }
+
+  Future<AppUser> loginWithGoogle(String credential) async {
+    final response = await _api.postJson('/user/auth/google', data: {
+      'credential': credential,
+    });
+    return _parseUser(response);
+  }
+
+  Future<String> requestPasswordReset(String email) async {
+    final response = await _api.postJson('/user/auth/forgot-password', data: {
+      'email': email.trim(),
+    });
+    return response['message']?.toString() ??
+        'Check your email for a reset link.';
+  }
+
   Future<void> logout() async {
     await _api.postJson('/user/auth/logout');
   }

@@ -4,15 +4,22 @@ import '../../core/constants/brand.dart';
 import '../../core/theme/app_spacing.dart';
 
 class NewsTicker extends StatefulWidget {
-  const NewsTicker({super.key});
+  const NewsTicker({super.key, this.items});
+
+  final List<String>? items;
 
   @override
   State<NewsTicker> createState() => _NewsTickerState();
 }
 
 class _NewsTickerState extends State<NewsTicker> {
-  static const _items = Brand.tickerItems;
   int _index = 0;
+
+  List<String> get _items {
+    final source = widget.items;
+    if (source != null && source.isNotEmpty) return source;
+    return Brand.tickerItems;
+  }
 
   @override
   void initState() {
@@ -37,9 +44,9 @@ class _NewsTickerState extends State<NewsTicker> {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
-      color: const Color(0xFF0F172A),
+      color: Colors.black,
       child: Text(
-        _items[_index],
+        '◆ ${_items[_index]}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(

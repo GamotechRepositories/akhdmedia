@@ -225,6 +225,28 @@ const Support = () => {
           </button>
       </form>
 
+      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <h2 className="text-lg font-bold text-gray-900">Policies & Legal</h2>
+        <p className="mt-2 text-sm text-gray-600">Review our policies before purchasing or requesting support.</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Link to="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
+            Privacy Policy
+          </Link>
+          <Link to="/refund-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
+            Refund Policy
+          </Link>
+          <Link to="/terms-and-conditions" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
+            Terms & Conditions
+          </Link>
+          <Link to="/license-information-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
+            License Information Policy
+          </Link>
+          <Link to="/editorial-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900 sm:col-span-2">
+            Editorial Policy
+          </Link>
+        </div>
+      </div>
+
       <AlertModal
         open={Boolean(error)}
         title="Could not submit request"

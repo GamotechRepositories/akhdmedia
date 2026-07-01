@@ -1,9 +1,10 @@
 import { Router } from 'express'
-import { forgotPassword, getMe, googleAuth, login, logout, register, resetPassword, updateProfile } from '../controllers/userAuthController.js'
+import { forgotPassword, getAuthConfig, getMe, googleAuth, login, logout, register, resetPassword, updateProfile } from '../controllers/userAuthController.js'
 import { requireUser } from '../middleware/requireUser.js'
 
 const router = Router()
 
+router.get('/config', getAuthConfig)
 router.post('/register', register)
 router.post('/login', login)
 router.post('/google', googleAuth)

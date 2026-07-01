@@ -7,6 +7,10 @@ class CatalogCategory {
     required this.breadcrumb,
     required this.isActive,
     required this.subCategories,
+    this.coverImage = '',
+    this.showInBrowseSection = false,
+    this.sortOrder = 0,
+    this.homePinnedProductIds = const [],
   });
 
   final String id;
@@ -16,6 +20,10 @@ class CatalogCategory {
   final String breadcrumb;
   final bool isActive;
   final List<SubCategory> subCategories;
+  final String coverImage;
+  final bool showInBrowseSection;
+  final int sortOrder;
+  final List<String> homePinnedProductIds;
 
   factory CatalogCategory.fromJson(Map<String, dynamic> json) {
     final subs = (json['subCategories'] as List<dynamic>? ?? [])
@@ -23,13 +31,20 @@ class CatalogCategory {
         .toList();
 
     return CatalogCategory(
-      id: json['_id']?.toString() ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
       label: json['label']?.toString() ?? '',
       navLabel: json['navLabel']?.toString() ?? '',
       breadcrumb: json['breadcrumb']?.toString() ?? '',
       isActive: json['isActive'] != false,
       subCategories: subs,
+      coverImage: json['coverImage']?.toString() ?? '',
+      showInBrowseSection: json['showInBrowseSection'] == true,
+      sortOrder: json['sortOrder'] is num ? (json['sortOrder'] as num).toInt() : 0,
+      homePinnedProductIds:
+          (json['homePinnedProductIds'] as List<dynamic>? ?? [])
+              .map((id) => id.toString())
+              .toList(),
     );
   }
 }

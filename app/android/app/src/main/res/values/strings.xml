@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AKHD Media</string>
+    <!-- Web OAuth client ID — required for Google Sign-In id tokens on Android. -->
+    <string name="default_web_client_id">581422572984-eiv7vs7tdl744g2pnd5m4jh95d6p054t.apps.googleusercontent.com</string>
+</resources>

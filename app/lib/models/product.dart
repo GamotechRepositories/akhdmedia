@@ -1,3 +1,6 @@
+import '../core/utils/image_sizes.dart';
+import 'image_size_info.dart';
+
 class Product {
   const Product({
     required this.id,
@@ -15,8 +18,11 @@ class Product {
     required this.videoPoster,
     required this.isActive,
     required this.isPurchasable,
+    this.imageSizes = const {},
     this.rating,
     this.videoInfo,
+    this.actorId,
+    this.actorName = '',
   });
 
   final String id;
@@ -34,8 +40,11 @@ class Product {
   final String videoPoster;
   final bool isActive;
   final bool isPurchasable;
+  final Map<String, ProductImageSize> imageSizes;
   final num? rating;
   final Map<String, dynamic>? videoInfo;
+  final String? actorId;
+  final String actorName;
 
   bool get isVideo => mediaType == 'video';
 
@@ -47,18 +56,44 @@ class Product {
     return '';
   }
 
-  String get qualityLabel {
-    final info = videoInfo;
-    if (info != null) {
-      final quality = info['quality']?.toString();
-      if (quality != null && quality.isNotEmpty) {
-        return quality.split(' ').first.toUpperCase();
-      }
+  String get qualityLabel => resolveQualityBadgeLabel(
+        imageSizes: imageSizes,
+        videoInfo: videoInfo,
+      );
+
+  String get durationLabel {
+    final duration = videoInfo?['duration']?.toString().trim() ?? '';
+    return duration;
+  }
+
+  String get categoryLabel {
+    if (category.trim().isNotEmpty) return category.trim();
+    if (categorySlug.trim().isNotEmpty) {
+      return categorySlug
+          .split('-')
+          .map(
+            (part) => part.isEmpty
+                ? part
+                : '${part[0].toUpperCase()}${part.substring(1)}',
+          )
+          .join(' ');
     }
-    return 'HD';
+    return isVideo ? 'Video' : 'Image';
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    final rawSizes = json['imageSizes'];
+    final imageSizes = <String, ProductImageSize>{};
+    if (rawSizes is Map) {
+      for (final entry in rawSizes.entries) {
+        if (entry.value is Map) {
+          imageSizes[entry.key.toString()] = ProductImageSize.fromJson(
+            Map<String, dynamic>.from(entry.value as Map),
+          );
+        }
+      }
+    }
+
     return Product(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -77,10 +112,13 @@ class Product {
       videoPoster: json['videoPoster']?.toString() ?? '',
       isActive: json['isActive'] != false,
       isPurchasable: json['isPurchasable'] != false,
+      imageSizes: imageSizes,
       rating: json['rating'] is num ? json['rating'] as num : null,
       videoInfo: json['videoInfo'] is Map<String, dynamic>
           ? json['videoInfo'] as Map<String, dynamic>
           : null,
+      actorId: json['actorId']?.toString(),
+      actorName: json['actorName']?.toString() ?? '',
     );
   }
 }

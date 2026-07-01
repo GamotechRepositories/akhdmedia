@@ -198,11 +198,16 @@ const getGoogleClientId = () => GOOGLE_CLIENT_ID
 
 const verifyGoogleCredential = async (credential) => {
   const client = new OAuth2Client(getGoogleClientId())
+  const audiences = [getGoogleClientId()]
+  const androidClientId = process.env.GOOGLE_ANDROID_CLIENT_ID?.trim()
+  if (androidClientId) {
+    audiences.push(androidClientId)
+  }
 
   try {
     const ticket = await client.verifyIdToken({
       idToken: credential,
-      audience: getGoogleClientId(),
+      audience: audiences,
     })
     return ticket.getPayload()
   } catch {

@@ -91,7 +91,7 @@ const ProductDetail = () => {
 
         if (intent.type === 'buyNow') {
           await buyNow(product, 1, intent.imageSize || selectedImageSize);
-          navigate('/checkout');
+          navigate('/cart');
           return;
         }
       } catch (actionError) {
@@ -189,7 +189,7 @@ const ProductDetail = () => {
 
     try {
       await buyNow(product, 1, selectedImageSize);
-      navigate('/checkout');
+      navigate('/cart');
     } catch (error) {
       showError(error.message || 'Could not start checkout');
     }

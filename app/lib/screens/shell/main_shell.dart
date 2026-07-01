@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/constants/brand.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../providers/cart_provider.dart';
+import '../../widgets/shell/shell_bottom_bar.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.navigationShell});
@@ -16,67 +16,104 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  void _onTap(int index) {
+  int _trackedTabIndex = 0;
+  int _previousTabIndex = 0;
+  DateTime? _lastBackPressAt;
+  bool _handlingBackNavigation = false;
+
+  void _noteTabIndex(int currentIndex) {
+    ShellTabState.noteTabIndex(currentIndex);
+    if (_handlingBackNavigation) return;
+    if (currentIndex != _trackedTabIndex) {
+      _previousTabIndex = _trackedTabIndex;
+      _trackedTabIndex = currentIndex;
+    }
+  }
+
+  void _selectTab(int index) {
+    _noteTabIndex(widget.navigationShell.currentIndex);
+    ShellTabState.noteTabIndex(index);
     widget.navigationShell.goBranch(
       index,
       initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: widget.navigationShell,
-      bottomNavigationBar: Consumer<CartProvider>(
-        builder: (context, cart, _) {
-          final count = cart.cart.itemCount;
-          return NavigationBar(
-            height: 60,
-            selectedIndex: widget.navigationShell.currentIndex,
-            onDestinationSelected: _onTap,
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.video_library_outlined),
-                selectedIcon: Icon(Icons.video_library_rounded),
-                label: 'Videos',
-              ),
-              NavigationDestination(
-                icon: _CartNavIcon(count: count, selected: false),
-                selectedIcon: _CartNavIcon(count: count, selected: true),
-                label: 'Cart',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'Account',
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  void _goToPreviousTab() {
+    final shell = widget.navigationShell;
+    var target = _previousTabIndex.clamp(0, 3);
+
+    // Avoid looping on the same tab when history is stale.
+    if (target == shell.currentIndex) {
+      target = 0;
+    }
+
+    _handlingBackNavigation = true;
+    shell.goBranch(target, initialLocation: true);
+    _trackedTabIndex = target;
+    ShellTabState.noteTabIndex(target);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _handlingBackNavigation = false;
+    });
   }
-}
 
-class _CartNavIcon extends StatelessWidget {
-  const _CartNavIcon({required this.count, required this.selected});
-
-  final int count;
-  final bool selected;
+  bool _isShellTabPath(String path) {
+    return path == '/' ||
+        path == '/videos' ||
+        path == '/cart' ||
+        path == '/account';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final icon = Icon(selected ? Icons.shopping_cart_rounded : Icons.shopping_cart_outlined);
-    if (count <= 0) return icon;
+    final shell = widget.navigationShell;
+    _noteTabIndex(shell.currentIndex);
+    final onHomeTab = shell.currentIndex == 0;
+    final currentPath = GoRouterState.of(context).uri.path;
 
-    return Badge(
-      label: Text('$count'),
-      child: icon,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        final navigator = Navigator.of(context, rootNavigator: true);
+        if (navigator.canPop() && !_isShellTabPath(currentPath)) {
+          navigator.pop();
+          return;
+        }
+
+        if (!onHomeTab) {
+          _goToPreviousTab();
+          return;
+        }
+
+        final now = DateTime.now();
+        final lastPress = _lastBackPressAt;
+        if (lastPress == null ||
+            now.difference(lastPress) > const Duration(seconds: 2)) {
+          _lastBackPressAt = now;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('Tap again to exit'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          return;
+        }
+
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: shell,
+        bottomNavigationBar: ShellBottomBar(
+          selectedIndex: shell.currentIndex,
+          onTabSelected: _selectTab,
+        ),
+      ),
     );
   }
 }
@@ -119,35 +156,59 @@ class StoreAppBar extends StatelessWidget implements PreferredSizeWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) {
-        final controller = TextEditingController();
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.lg,
-            AppSpacing.lg,
-            MediaQuery.viewInsetsOf(ctx).bottom + AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: controller,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search clips, categories...',
-                  prefixIcon: Icon(Icons.search),
-                ),
-                onSubmitted: (value) {
-                  Navigator.pop(ctx);
-                  context.go('/videos?search=${Uri.encodeComponent(value.trim())}');
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      useRootNavigator: true,
+      builder: (ctx) => _StoreSearchSheet(
+        onSubmitted: (query) {
+          Navigator.pop(ctx);
+          context.go('/videos?search=${Uri.encodeComponent(query)}');
+        },
+      ),
+    );
+  }
+}
+
+class _StoreSearchSheet extends StatefulWidget {
+  const _StoreSearchSheet({required this.onSubmitted});
+
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  State<_StoreSearchSheet> createState() => _StoreSearchSheetState();
+}
+
+class _StoreSearchSheetState extends State<_StoreSearchSheet> {
+  late final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+    widget.onSubmitted(query);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
+      ),
+      child: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: 'Search clips, categories...',
+          prefixIcon: Icon(Icons.search),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
     );
   }
 }

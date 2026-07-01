@@ -1,16 +1,19 @@
 import 'package:go_router/go_router.dart';
 
+import '../../screens/account/forgot_password_screen.dart';
 import '../../screens/account/login_screen.dart';
 import '../../screens/account/orders_screen.dart';
 import '../../screens/account/profile_hub_screen.dart';
 import '../../screens/account/profile_screen.dart';
 import '../../screens/account/register_screen.dart';
+import '../../screens/catalog/actors_screen.dart';
 import '../../screens/catalog/catalog_screen.dart';
 import '../../screens/commerce/cart_screen.dart';
 import '../../screens/commerce/checkout_screen.dart';
 import '../../screens/commerce/order_detail_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/info/info_screens.dart';
+import '../../screens/info/support_screen.dart';
 import '../../screens/product/product_detail_screen.dart';
 import '../../screens/shell/main_shell.dart';
 
@@ -39,6 +42,7 @@ final appRouter = GoRouter(
                   initialCategory: state.uri.queryParameters['category'],
                   initialSubCategory: state.uri.queryParameters['subCategory'],
                   initialSearch: state.uri.queryParameters['search'],
+                  initialActor: state.uri.queryParameters['actor'],
                 );
               },
             ),
@@ -61,6 +65,10 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/actors',
+      builder: (context, state) => const ActorsScreen(),
     ),
     GoRoute(
       path: '/product/:id',
@@ -96,6 +104,14 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) {
+        return ForgotPasswordScreen(
+          redirectTo: state.uri.queryParameters['redirect'],
+        );
+      },
+    ),
+    GoRoute(
       path: '/register',
       builder: (context, state) {
         return RegisterScreen(redirectTo: state.uri.queryParameters['redirect']);
@@ -122,35 +138,35 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/privacy-policy',
       builder: (context, state) => const PolicyScreen(
-        title: 'Privacy policy',
+        title: 'Privacy Policy',
         policySlug: 'privacy-policy',
       ),
     ),
     GoRoute(
       path: '/terms-and-conditions',
       builder: (context, state) => const PolicyScreen(
-        title: 'Terms & conditions',
+        title: 'Terms & Conditions',
         policySlug: 'terms-and-conditions',
       ),
     ),
     GoRoute(
       path: '/refund-policy',
       builder: (context, state) => const PolicyScreen(
-        title: 'Refund policy',
+        title: 'Refund Policy',
         policySlug: 'refund-policy',
       ),
     ),
     GoRoute(
       path: '/editorial-policy',
       builder: (context, state) => const PolicyScreen(
-        title: 'Editorial policy',
+        title: 'Editorial Policy',
         policySlug: 'editorial-policy',
       ),
     ),
     GoRoute(
       path: '/license-information-policy',
       builder: (context, state) => const PolicyScreen(
-        title: 'License information',
+        title: 'License Information Policy',
         policySlug: 'license-information-policy',
       ),
     ),

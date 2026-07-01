@@ -1,15 +1,17 @@
 import { Link } from 'react-router-dom'
+import { getPolicyLastUpdatedLabel } from '../utils/policyDate'
 
 const RefundPolicy = () => {
+  const lastUpdated = getPolicyLastUpdatedLabel()
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
           <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">REFUND POLICY</h1>
-          <p className="mt-2 text-sm text-gray-600">Last Updated: [16/06/2026]</p>
+          <p className="mt-2 text-sm text-gray-600">{lastUpdated}</p>
 
           <p className="mt-6 text-sm leading-relaxed text-gray-800">
-            Thank you for purchasing digital content from [AKHD MEDIA & CO / www.akhdmedia.com ].
+            Thank you for purchasing digital content from AKHD MEDIA & CO / www.akhdmedia.com.
           </p>
 
           <section className="mt-6">
@@ -89,8 +91,8 @@ const RefundPolicy = () => {
             <h2 className="text-base font-semibold text-gray-900">7. CONTACT INFORMATION</h2>
             <p className="mt-2 text-sm text-gray-800">For refund-related inquiries, please contact:</p>
             <div className="mt-2 space-y-2 text-sm text-gray-800">
-              <p>Email: [akhdmedia@gmail.com]</p>
-              <p>Only WhatsApp : [+918591443501]</p>
+              <p>Email: akhdmedia@gmail.com</p>
+              <p>Only WhatsApp: +91 85914 43501</p>
               <p>
                 Support:{' '}
                 <Link to="/support" className="font-medium text-gray-900 underline underline-offset-2">

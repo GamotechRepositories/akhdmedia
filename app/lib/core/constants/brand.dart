@@ -1,5 +1,6 @@
 class Brand {
   static const name = 'AKHD MEDIA & CO';
+  static const displayName = 'AKHD Media';
   static const tagline = 'Premium Video Marketplace';
   static const currencySymbol = '₹';
   static const supportEmail = 'akhdmedia@gmail.com';

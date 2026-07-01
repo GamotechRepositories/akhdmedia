@@ -68,7 +68,10 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               _CartSummary(
-                total: cart.total,
+                subtotal: cart.displaySubtotal,
+                gstTotal: cart.displayGstTotal,
+                discountAmount: cart.discountAmount,
+                total: cart.displayTotal,
                 itemCount: cart.itemCount,
                 onCheckout: () => context.push('/checkout'),
               ),
@@ -202,12 +205,16 @@ class _CartItemCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      Formatters.currency(item.price),
+                      Formatters.currency(item.basePrice > 0 ? item.basePrice : item.price),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF059669),
                       ),
+                    ),
+                    Text(
+                      'excl. GST',
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -268,11 +275,17 @@ class _QtyButton extends StatelessWidget {
 
 class _CartSummary extends StatelessWidget {
   const _CartSummary({
+    required this.subtotal,
+    required this.gstTotal,
+    required this.discountAmount,
     required this.total,
     required this.itemCount,
     required this.onCheckout,
   });
 
+  final num subtotal;
+  final num gstTotal;
+  final num discountAmount;
   final num total;
   final int itemCount;
   final VoidCallback onCheckout;
@@ -297,15 +310,40 @@ class _CartSummary extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('$itemCount items', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                Text(
-                  Formatters.currency(total),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-                ),
-              ],
+            Text(
+              '$itemCount items',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _SummaryRow(
+              label: 'Subtotal',
+              value: Formatters.currency(subtotal),
+            ),
+            if (discountAmount > 0) ...[
+              const SizedBox(height: 6),
+              _SummaryRow(
+                label: 'Discount',
+                value: '-${Formatters.currency(discountAmount)}',
+                valueColor: const Color(0xFF059669),
+              ),
+            ],
+            const SizedBox(height: 6),
+            _SummaryRow(
+              label: 'GST',
+              value: Formatters.currency(gstTotal),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.sm),
+            _SummaryRow(
+              label: 'Total payable',
+              value: Formatters.currency(total),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w800),
+              valueStyle: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF059669),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             FilledButton(
@@ -318,6 +356,44 @@ class _CartSummary extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.labelStyle,
+    this.valueStyle,
+    this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final TextStyle? labelStyle;
+  final TextStyle? valueStyle;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: labelStyle ?? TextStyle(fontSize: 13, color: Colors.grey.shade700),
+        ),
+        Text(
+          value,
+          style: valueStyle ??
+              TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? const Color(0xFF111827),
+              ),
+        ),
+      ],
     );
   }
 }

@@ -65,6 +65,31 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<String> getGoogleClientId() => _authService.getGoogleClientId();
+
+  Future<void> loginWithGoogleCredential(String credential) async {
+    error = null;
+    try {
+      if (kDebugMode) {
+        debugPrint('[Auth] Google credential received (${credential.length} chars)');
+      }
+      user = await _authService.loginWithGoogle(credential);
+      notifyListeners();
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('[Auth] Google sign-in failed: $e');
+        debugPrintStack(stackTrace: stack);
+      }
+      error = ApiClient.unwrapError(e).toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<String> requestPasswordReset(String email) async {
+    return _authService.requestPasswordReset(email);
+  }
+
   Future<void> logout() async {
     try {
       await _authService.logout();

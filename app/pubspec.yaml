@@ -1,5 +1,5 @@
 name: akhdmedia_app
-description: AKHD Media mobile storefront — mirrors the web frontend.
+description: AKHD Media — premium video marketplace mobile app.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -21,11 +21,40 @@ dependencies:
   razorpay_flutter: ^1.4.5
   pdf: ^3.12.0
   printing: ^5.14.3
+  video_player: ^2.10.0
+  share_plus: ^12.0.0
+  webview_flutter: ^4.13.0
+  flutter_svg: ^2.3.0
+  url_launcher: ^6.3.2
+  screen_protector: ^1.5.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/IMG_1577.jpg
+  adaptive_icon_background: "#2563EB"
+  adaptive_icon_foreground: assets/IMG_1577.jpg
+  web:
+    generate: true
+    image_path: assets/IMG_1577.jpg
+    background_color: "#2563EB"
+    theme_color: "#2563EB"
+  windows:
+    generate: true
+    image_path: assets/IMG_1577.jpg
+  macos:
+    generate: true
+    image_path: assets/IMG_1577.jpg
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/google_sign_in.html
+    - assets/IMG_1577.jpg
+    - assets/Google_Favicon_2025.svg

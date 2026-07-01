@@ -1,10 +1,13 @@
+import { getPolicyLastUpdatedLabel } from '../utils/policyDate'
+
 const TermsAndConditions = () => {
+  const lastUpdated = getPolicyLastUpdatedLabel()
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
           <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">TERMS AND CONDITIONS</h1>
-          <p className="mt-2 text-sm text-gray-600">Last Updated: 16/06/2026</p>
+          <p className="mt-2 text-sm text-gray-600">{lastUpdated}</p>
 
           <p className="mt-6 text-sm leading-relaxed text-gray-800">
             Welcome to AKHD MEDIA & CO. By accessing or using this website, purchasing content, or downloading any

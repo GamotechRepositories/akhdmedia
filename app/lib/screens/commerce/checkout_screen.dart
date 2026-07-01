@@ -31,6 +31,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _loadingProfile = true;
   bool _processing = false;
   bool _acceptedTerms = false;
+  bool _acceptedLicensePolicy = false;
   String? _selectedReason;
   String? _error;
 
@@ -106,6 +107,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return 'Please describe how you will use the video';
     }
     if (!_acceptedTerms) return 'Please accept the terms and conditions';
+    if (!_acceptedLicensePolicy) {
+      return 'Please accept the License Information Policy';
+    }
     return null;
   }
 
@@ -287,11 +291,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
         title: Wrap(
           children: [
-            const Text('I agree to the ', style: TextStyle(fontSize: 12)),
+            const Text('I have read ', style: TextStyle(fontSize: 12)),
             GestureDetector(
               onTap: () => context.push('/terms-and-conditions'),
-              child: const Text('terms & conditions', style: TextStyle(fontSize: 12, decoration: TextDecoration.underline)),
+              child: const Text(
+                'Terms & Conditions',
+                style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+              ),
             ),
+            const Text(' and agree', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _acceptedLicensePolicy,
+        onChanged: (v) => setState(() => _acceptedLicensePolicy = v ?? false),
+        title: Wrap(
+          children: [
+            const Text('I have read ', style: TextStyle(fontSize: 12)),
+            GestureDetector(
+              onTap: () => context.push('/license-information-policy'),
+              child: const Text(
+                'License Information Policy',
+                style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+              ),
+            ),
+            const Text(' and agree', style: TextStyle(fontSize: 12)),
           ],
         ),
         controlAffinity: ListTileControlAffinity.leading,

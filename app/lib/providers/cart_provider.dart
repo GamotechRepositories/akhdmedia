@@ -29,13 +29,29 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addToCart(String productId, {int quantity = 1}) async {
-    cart = await _cartService.addItem(productId: productId, quantity: quantity);
+  Future<void> addToCart(
+    String productId, {
+    int quantity = 1,
+    String imageSize = '',
+  }) async {
+    cart = await _cartService.addItem(
+      productId: productId,
+      quantity: quantity,
+      imageSize: imageSize,
+    );
     notifyListeners();
   }
 
-  Future<void> buyNow(String productId, {int quantity = 1}) async {
-    cart = await _cartService.buyNow(productId: productId, quantity: quantity);
+  Future<void> buyNow(
+    String productId, {
+    int quantity = 1,
+    String imageSize = '',
+  }) async {
+    cart = await _cartService.buyNow(
+      productId: productId,
+      quantity: quantity,
+      imageSize: imageSize,
+    );
     notifyListeners();
   }
 

@@ -279,9 +279,6 @@ const Cart = () => {
                   }}
                   totalLabel="Total payable"
                 />
-                <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-                  License price plus applicable GST. Final amount is rounded to the nearest rupee.
-                </p>
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-100">
