@@ -28,6 +28,7 @@ dependencies:
   url_launcher: ^6.3.2
   screen_protector: ^1.5.2
   google_sign_in: ^7.2.0
+  country_picker: ^2.0.27
 
 dev_dependencies:
   flutter_test:

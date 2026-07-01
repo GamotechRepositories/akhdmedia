@@ -8,24 +8,48 @@ abstract final class AuthScreenColors {
 }
 
 abstract final class AuthScreenMetrics {
-  static const fieldRadius = 28.0;
-  static const fieldHeight = 46.0;
+  static const fieldRadius = 12.0;
+  static const fieldHeight = 48.0;
   static const fieldGap = 10.0;
   static const sectionGap = 14.0;
+}
+
+OutlineInputBorder authFieldBorder({Color? color, double width = 1}) {
+  return OutlineInputBorder(
+    borderRadius: BorderRadius.circular(AuthScreenMetrics.fieldRadius),
+    borderSide: BorderSide(color: color ?? const Color(0xFFE2E8F0), width: width),
+  );
+}
+
+InputDecoration authFieldInputDecoration({
+  required String hint,
+  required IconData prefixIcon,
+  Widget? suffixIcon,
+}) {
+  return InputDecoration(
+    counterText: '',
+    isDense: true,
+    filled: true,
+    fillColor: Colors.white,
+    hintText: hint,
+    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+    prefixIcon: Icon(prefixIcon, color: Colors.grey.shade400, size: 20),
+    prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 40),
+    suffixIcon: suffixIcon,
+    suffixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    enabledBorder: authFieldBorder(),
+    focusedBorder: authFieldBorder(color: AuthScreenColors.primaryBlue, width: 1.5),
+    disabledBorder: authFieldBorder(color: const Color(0xFFF1F5F9)),
+    border: authFieldBorder(),
+  );
 }
 
 BoxDecoration authFieldDecoration() {
   return BoxDecoration(
     color: Colors.white,
     borderRadius: BorderRadius.circular(AuthScreenMetrics.fieldRadius),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.04),
-        blurRadius: 10,
-        offset: const Offset(0, 3),
-      ),
-    ],
-    border: Border.all(color: Colors.grey.shade200),
+    border: Border.all(color: const Color(0xFFE2E8F0)),
   );
 }
 
@@ -35,12 +59,14 @@ class AuthScreenShell extends StatelessWidget {
     required this.onBack,
     required this.child,
     this.backEnabled = true,
+    this.showBack = true,
     this.scrollable = true,
   });
 
   final VoidCallback? onBack;
   final Widget child;
   final bool backEnabled;
+  final bool showBack;
   final bool scrollable;
 
   @override
@@ -51,24 +77,25 @@ class AuthScreenShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: backEnabled ? onBack : null,
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: Colors.grey.shade600,
-                size: 18,
-              ),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.7),
-                padding: const EdgeInsets.all(8),
-                minimumSize: const Size(36, 36),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          if (showBack)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                onPressed: backEnabled ? onBack : null,
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.grey.shade600,
+                  size: 18,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.7),
+                  padding: const EdgeInsets.all(8),
+                  minimumSize: const Size(36, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
+          if (showBack) const SizedBox(height: 4),
           child,
         ],
       ),
@@ -265,32 +292,20 @@ class AuthStyledField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        Container(
-          height: AuthScreenMetrics.fieldHeight,
-          decoration: authFieldDecoration(),
-          alignment: Alignment.center,
-          child: TextField(
-            controller: controller,
-            enabled: enabled,
-            keyboardType: keyboardType,
-            obscureText: obscureText,
-            textInputAction: textInputAction,
-            onSubmitted: onSubmitted,
-            inputFormatters: inputFormatters,
-            maxLength: maxLength,
-            style: const TextStyle(fontSize: 14, color: AuthScreenColors.textDark),
-            decoration: InputDecoration(
-              counterText: '',
-              isDense: true,
-              hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(prefixIcon, color: Colors.grey.shade400, size: 20),
-              prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 40),
-              suffixIcon: suffixIcon,
-              suffixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-            ),
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          keyboardType: keyboardType,
+          obscureText: obscureText,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength,
+          style: const TextStyle(fontSize: 14, color: AuthScreenColors.textDark),
+          decoration: authFieldInputDecoration(
+            hint: hint,
+            prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
           ),
         ),
       ],

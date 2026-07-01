@@ -27,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     with WidgetsBindingObserver {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneFieldKey = GlobalKey<PhoneCountryFieldState>();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
@@ -137,7 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       return;
     }
 
-    final phone = normalizePhoneValue(_phoneCtrl.text);
+    final phone = _phoneFieldKey.currentState?.internationalPhone ?? '';
     if (!isPhoneNumberValid(phone)) {
       await showAuthErrorDialog(
         context,
@@ -280,7 +281,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                   enabled: !loading,
                 ),
                 const SizedBox(height: AuthScreenMetrics.fieldGap),
-                PhoneCountryField(controller: _phoneCtrl, enabled: !loading),
+                PhoneCountryField(
+                  key: _phoneFieldKey,
+                  controller: _phoneCtrl,
+                  enabled: !loading,
+                ),
                 const SizedBox(height: 14),
                 const AuthSectionLabel(label: 'Security'),
                 AuthStyledField(

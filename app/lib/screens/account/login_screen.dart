@@ -13,9 +13,10 @@ import '../../widgets/auth/auth_screen_layout.dart';
 import '../../widgets/auth/google_sign_in_button.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.redirectTo});
+  const LoginScreen({super.key, this.redirectTo, this.embedded = false});
 
   final String? redirectTo;
+  final bool embedded;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -156,6 +157,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
     return AuthScreenShell(
       scrollable: false,
+      showBack: !widget.embedded,
       backEnabled: !loading,
       onBack: () => context.pop(),
       child: Column(

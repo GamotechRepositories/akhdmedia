@@ -7,6 +7,7 @@ import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
+import 'login_screen.dart';
 
 class ProfileHubScreen extends StatefulWidget {
   const ProfileHubScreen({super.key});
@@ -82,8 +83,20 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+
+    if (auth.loading && !auth.isAuthenticated) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF1F5F9),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!auth.isAuthenticated) {
+      return const LoginScreen(redirectTo: '/account', embedded: true);
+    }
+
     final cart = context.watch<CartProvider>();
-    final user = auth.user;
+    final user = auth.user!;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
@@ -98,18 +111,15 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
               _ProfilePageHeader(
-                onSettings: user == null
-                    ? null
-                    : () => context.push('/profile'),
+                onSettings: () => context.push('/profile'),
               ),
               const SizedBox(height: 16),
-              if (user != null) ...[
-                _ProfileHeroCard(
-                  name: user.name,
-                  email: user.email,
-                  phone: _formatPhone(user.phone),
-                  onEdit: () => context.push('/profile'),
-                ),
+              _ProfileHeroCard(
+                name: user.name,
+                email: user.email,
+                phone: _formatPhone(user.phone),
+                onEdit: () => context.push('/profile'),
+              ),
                 const SizedBox(height: 0),
                 _ProfileStatsCard(
                   loading: _loadingOrders,
@@ -199,59 +209,6 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                     ),
                   ],
                 ),
-              ] else ...[
-                _GuestHeroCard(
-                  onLogin: () => context.push('/login?redirect=${Uri.encodeComponent('/account')}'),
-                  onRegister: () => context.push('/register?redirect=${Uri.encodeComponent('/account')}'),
-                ),
-                const SizedBox(height: 20),
-                _ProfileMenuCard(
-                  children: [
-                    _ProfileMenuItem(
-                      icon: Icons.login_rounded,
-                      iconColor: const Color(0xFF2563EB),
-                      iconBg: const Color(0xFFEFF6FF),
-                      title: 'Login',
-                      subtitle: 'Access your orders and licenses',
-                      onTap: () => context.push('/login?redirect=${Uri.encodeComponent('/account')}'),
-                    ),
-                    _ProfileMenuItem(
-                      icon: Icons.person_add_alt_1_rounded,
-                      iconColor: const Color(0xFF16A34A),
-                      iconBg: const Color(0xFFECFDF5),
-                      title: 'Create Account',
-                      subtitle: 'Register to start purchasing',
-                      onTap: () => context.push('/register?redirect=${Uri.encodeComponent('/account')}'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _ProfileMenuCard(
-                  children: [
-                    _ProfileMenuItem(
-                      icon: Icons.support_agent_outlined,
-                      iconColor: const Color(0xFF0EA5E9),
-                      iconBg: const Color(0xFFF0F9FF),
-                      title: 'Help & Support',
-                      onTap: () => context.push('/support'),
-                    ),
-                    _ProfileMenuItem(
-                      icon: Icons.policy_outlined,
-                      iconColor: const Color(0xFF64748B),
-                      iconBg: const Color(0xFFF8FAFC),
-                      title: 'Privacy Policy',
-                      onTap: () => context.push('/privacy-policy'),
-                    ),
-                    _ProfileMenuItem(
-                      icon: Icons.gavel_outlined,
-                      iconColor: const Color(0xFF64748B),
-                      iconBg: const Color(0xFFF8FAFC),
-                      title: 'Terms & Conditions',
-                      onTap: () => context.push('/terms-and-conditions'),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
@@ -488,75 +445,6 @@ class _HeroInfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _GuestHeroCard extends StatelessWidget {
-  const _GuestHeroCard({required this.onLogin, required this.onRegister});
-
-  final VoidCallback onLogin;
-  final VoidCallback onRegister;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1D4ED8), Color(0xFF2563EB), Color(0xFF3B82F6)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.asset('assets/IMG_1577.jpg', width: 64, height: 64, fit: BoxFit.cover),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Welcome to ${Brand.name}',
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            Brand.tagline,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: onLogin,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF2563EB),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w700)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onRegister,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white70),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Sign Up', style: TextStyle(fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
