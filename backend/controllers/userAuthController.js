@@ -4,6 +4,7 @@ import {
   authenticateUser,
   authenticateWithGoogle,
   formatUserResponse,
+  getGoogleAuthStatus,
   getUserById,
   getUserCookieName,
   getUserCookieOptions,
@@ -51,6 +52,13 @@ export const login = asyncHandler(async (req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
   const user = await authenticateWithGoogle(req.body.credential)
   sendAuthResponse(res, user, 'Logged in with Google successfully')
+})
+
+export const googleAuthStatus = asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: getGoogleAuthStatus(),
+  })
 })
 
 export const forgotPassword = asyncHandler(async (req, res) => {

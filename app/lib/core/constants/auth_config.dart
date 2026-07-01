@@ -1,7 +1,7 @@
 /// Mirrors `frontend/src/config/auth.js`.
 class AuthConfig {
   /// Must match `applicationId` in `android/app/build.gradle.kts`.
-  static const androidPackageName = 'com.example.app';
+  static const androidPackageName = 'com.akhdmedia.app';
 
   /// Origin registered for the web OAuth client in Google Cloud Console.
   static const googleAuthOrigin = 'https://akhdmedia.com';

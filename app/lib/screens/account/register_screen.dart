@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/utils/auth_navigation.dart';
 import '../../core/utils/phone_utils.dart';
+import '../../core/utils/google_sign_in_setup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_client.dart';
@@ -191,6 +192,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       if (outcome == GoogleSignInOutcome.cancelled) {
         _googleSignInInFlight = false;
+        await showAuthErrorDialog(
+          context,
+          title: 'Google sign-in not completed',
+          message: GoogleSignInSetup.cancelledAfterAccountSelection(),
+        );
       }
     } catch (e) {
       if (!mounted) return;

@@ -196,30 +196,56 @@ export const updateUserProfile = async (userId, { name, phone }) => {
 
 const getGoogleClientId = () => GOOGLE_CLIENT_ID
 
+const getAllowedGoogleAudiences = () => {
+  const audiences = new Set()
+  const webClientId = getGoogleClientId()
+  if (webClientId) audiences.add(webClientId)
+
+  for (const envKey of ['GOOGLE_ANDROID_CLIENT_ID', 'GOOGLE_IOS_CLIENT_ID']) {
+    const value = process.env[envKey]?.trim()
+    if (value) audiences.add(value)
+  }
+
+  return [...audiences]
+}
+
 const verifyGoogleCredential = async (credential) => {
-  const client = new OAuth2Client(getGoogleClientId())
-  const audiences = [getGoogleClientId()]
-  const androidClientId = process.env.GOOGLE_ANDROID_CLIENT_ID?.trim()
-  if (androidClientId) {
-    audiences.push(androidClientId)
+  const webClientId = getGoogleClientId()
+  if (!webClientId) {
+    throw new AppError('Google sign-in is not configured on the server', 503)
   }
-  const iosClientId = process.env.GOOGLE_IOS_CLIENT_ID?.trim()
-  if (iosClientId) {
-    audiences.push(iosClientId)
-  }
+
+  const audiences = getAllowedGoogleAudiences()
+  const client = new OAuth2Client(webClientId)
 
   try {
     const ticket = await client.verifyIdToken({
-      idToken: credential,
+      idToken: credential.trim(),
       audience: audiences,
     })
     return ticket.getPayload()
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[auth] Google ID token verification failed:', error?.message)
+    }
     throw new AppError('Google sign-in failed. Please try again.', 401)
   }
 }
 
+export const getGoogleAuthStatus = () => {
+  const webClientId = getGoogleClientId()
+  return {
+    serverConfigured: Boolean(webClientId),
+    hasAndroidClientId: Boolean(process.env.GOOGLE_ANDROID_CLIENT_ID?.trim()),
+    hasIosClientId: Boolean(process.env.GOOGLE_IOS_CLIENT_ID?.trim()),
+  }
+}
+
 export const authenticateWithGoogle = async (credential) => {
+  if (!getGoogleClientId()) {
+    throw new AppError('Google sign-in is not configured on the server', 503)
+  }
+
   if (!credential?.trim()) {
     throw new AppError('Google credential is required', 400)
   }

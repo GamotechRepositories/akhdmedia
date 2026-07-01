@@ -1,4 +1,4 @@
-package com.example.app
+package com.akhdmedia.app
 
 import android.os.Bundle
 import android.view.WindowManager

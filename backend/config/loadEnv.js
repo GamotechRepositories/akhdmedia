@@ -8,4 +8,8 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') })
 
 if (!process.env.GOOGLE_CLIENT_ID?.trim()) {
   console.warn('[env] GOOGLE_CLIENT_ID is not set — Google sign-in will be disabled')
+} else if (!process.env.GOOGLE_ANDROID_CLIENT_ID?.trim()) {
+  console.warn(
+    '[env] GOOGLE_ANDROID_CLIENT_ID is not set — native Android Google Sign-In may fail token verification',
+  )
 }

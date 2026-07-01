@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/utils/auth_navigation.dart';
+import '../../core/utils/google_sign_in_setup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_client.dart';
@@ -127,6 +128,11 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
       if (outcome == GoogleSignInOutcome.cancelled) {
         _googleSignInInFlight = false;
+        await showAuthErrorDialog(
+          context,
+          title: 'Google sign-in not completed',
+          message: GoogleSignInSetup.cancelledAfterAccountSelection(),
+        );
       }
     } catch (e) {
       if (!mounted) return;

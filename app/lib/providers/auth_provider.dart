@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
+import '../core/utils/google_sign_in_setup.dart';
+import '../core/utils/jwt_debug.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -74,10 +77,31 @@ class AuthProvider extends ChangeNotifier {
         _authService.googleAuthConfig,
       );
       if (result.outcome == GoogleSignInOutcome.cancelled) {
+        if (kDebugMode) {
+          debugPrint(
+            '[Auth] Google sign-in returned cancelled after account picker — '
+            'check Android OAuth client (package + SHA-1) in Google Cloud Console.',
+          );
+        }
         return GoogleSignInOutcome.cancelled;
       }
 
-      await loginWithGoogle(result.idToken!);
+      final idToken = result.idToken!;
+      if (kDebugMode) {
+        debugPrint('[Auth] Google ID token aud: ${jwtAudience(idToken) ?? 'unknown'}');
+      }
+
+      try {
+        await loginWithGoogle(idToken);
+      } on ApiException catch (e) {
+        if (e.statusCode == 401) {
+          throw ApiException(
+            GoogleSignInSetup.serverRejectedToken(jwtAudience(idToken)),
+            statusCode: e.statusCode,
+          );
+        }
+        rethrow;
+      }
       return GoogleSignInOutcome.success;
     } catch (e, stack) {
       if (kDebugMode) {
