@@ -170,5 +170,19 @@ final appRouter = GoRouter(
         policySlug: 'license-information-policy',
       ),
     ),
+    GoRoute(
+      path: '/legal-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'Legal Policy',
+        policySlug: 'legal-policy',
+      ),
+    ),
+    GoRoute(
+      path: '/media-accreditation-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'Media Accreditation Policy',
+        policySlug: 'media-accreditation-policy',
+      ),
+    ),
   ],
 );

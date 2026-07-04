@@ -1,3 +1,5 @@
+import { BRAND } from '../config/brand'
+
 const AboutUs = () => {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -62,7 +64,7 @@ const AboutUs = () => {
             <h2 className="text-base font-semibold text-gray-900">CONTACT US</h2>
             <div className="mt-2 space-y-1 text-sm text-gray-800">
               <p>AKHD MEDIA & CO</p>
-              <p>Email: support@akhdmedia.com</p>
+              <p>Email: {BRAND.supportEmail}</p>
               <p>WhatsApp: +91 8591443501</p>
             </div>
           </section>

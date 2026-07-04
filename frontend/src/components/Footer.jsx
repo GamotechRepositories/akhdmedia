@@ -24,6 +24,8 @@ const Footer = () => {
             <li><Link to="/privacy-policy" className="transition hover:text-white">Privacy Policy</Link></li>
             <li><Link to="/editorial-policy" className="transition hover:text-white">Editorial Policy</Link></li>
             <li><Link to="/license-information-policy" className="transition hover:text-white">License Information Policy</Link></li>
+            <li><Link to="/legal-policy" className="transition hover:text-white">Legal Policy</Link></li>
+            <li><Link to="/media-accreditation-policy" className="transition hover:text-white">Media Accreditation Policy</Link></li>
             <li><Link to="/terms-and-conditions" className="transition hover:text-white">Terms and Conditions</Link></li>
           </ul>
         </div>

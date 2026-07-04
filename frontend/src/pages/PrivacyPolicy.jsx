@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BRAND } from '../config/brand'
 import { getPolicyLastUpdatedLabel } from '../utils/policyDate'
 
 const PrivacyPolicy = () => {
@@ -156,7 +157,7 @@ const PrivacyPolicy = () => {
             </p>
             <div className="mt-2 space-y-1 text-sm text-gray-800">
               <p>Business Name: AKHD MEDIA & CO</p>
-              <p>Email: akhdmedia@gmail.com</p>
+              <p>Email: {BRAND.supportEmail}</p>
               <p>Only WhatsApp: +91 85914 43501</p>
               <p>
                 Support :{' '}

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BRAND } from '../config/brand'
 import { getPolicyLastUpdatedLabel } from '../utils/policyDate'
 
 const RefundPolicy = () => {
@@ -91,7 +92,7 @@ const RefundPolicy = () => {
             <h2 className="text-base font-semibold text-gray-900">7. CONTACT INFORMATION</h2>
             <p className="mt-2 text-sm text-gray-800">For refund-related inquiries, please contact:</p>
             <div className="mt-2 space-y-2 text-sm text-gray-800">
-              <p>Email: akhdmedia@gmail.com</p>
+              <p>Email: {BRAND.supportEmail}</p>
               <p>Only WhatsApp: +91 85914 43501</p>
               <p>
                 Support:{' '}

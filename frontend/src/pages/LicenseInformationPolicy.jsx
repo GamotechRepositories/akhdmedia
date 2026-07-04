@@ -1,3 +1,4 @@
+import { BRAND } from '../config/brand'
 import { getPolicyLastUpdatedLabel } from '../utils/policyDate'
 
 const LicenseInformationPolicy = () => {
@@ -150,7 +151,7 @@ const LicenseInformationPolicy = () => {
             </p>
             <div className="mt-2 space-y-1 text-sm text-gray-800">
               <p>Company Name: AKHD MEDIA & CO .</p>
-              <p>Email: Akhdmedia@gmail.com</p>
+              <p>Email: {BRAND.supportEmail}</p>
               <p>only WhatsApp : +918591443501</p>
               <p className="pt-2">Address: GR/RC/C3 NEW VIDARBHA SRA CHSL BLDG. NO.13</p>
               <p>NEHRU NAGAR GOLIBAR ROAD</p>

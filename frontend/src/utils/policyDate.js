@@ -4,3 +4,10 @@ export function getPolicyLastUpdatedLabel(date = new Date()) {
   const year = date.getFullYear();
   return `Last Updated: ${day}/${month}/${year}`;
 }
+
+export function getPolicyEffectiveDateLabel(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = date.toLocaleString('en-GB', { month: 'long' });
+  const year = date.getFullYear();
+  return `Effective Date: ${day} ${month} ${year}`;
+}

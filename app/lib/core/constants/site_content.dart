@@ -77,6 +77,10 @@ class SiteContent {
     return 'Last updated: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}';
   }
 
+  static String get policyEffectiveDateLabel {
+    return 'Effective Date: ${DateFormat('dd MMMM yyyy').format(DateTime.now())}';
+  }
+
   static List<ContentSection> policySections(String slug) {
     final sections = _policies[slug] ?? [
       const ContentSection(
@@ -94,8 +98,11 @@ class SiteContent {
     if (first.paragraphs.isEmpty) return sections;
 
     final paragraphs = List<String>.from(first.paragraphs);
-    if (paragraphs.first.toLowerCase().startsWith('last updated:')) {
+    final firstLine = paragraphs.first.toLowerCase();
+    if (firstLine.startsWith('last updated:')) {
       paragraphs[0] = policyLastUpdatedLabel;
+    } else if (firstLine.startsWith('effective date:')) {
+      paragraphs[0] = policyEffectiveDateLabel;
     }
 
     return [
@@ -236,7 +243,7 @@ class SiteContent {
         paragraphs: [
           'If you have questions regarding this Privacy Policy, please contact:',
           'Business Name: AKHD MEDIA & CO',
-          'Email: akhdmedia@gmail.com',
+          'Email: support@akhdmedia.com',
           'Only WhatsApp: +91 85914 43501',
           'Support: available through the Support page in the app.',
           'Address: GR/RC/C3 NEW VIDARBHA SRA CHSL BLDG. NO.13',
@@ -334,7 +341,7 @@ class SiteContent {
         title: '11. Copyright infringement claims',
         paragraphs: [
           'If you believe any content on this website infringes your copyright or other legal rights, please contact:',
-          'Email: Akhdmedia@gmail.com',
+          'Email: support@akhdmedia.com',
           'We will review legitimate complaints and take appropriate action where required.',
         ],
       ),
@@ -383,7 +390,7 @@ class SiteContent {
         title: '18. Contact information',
         paragraphs: [
           'AKHD MEDIA & CO',
-          'Email: Akhdmedia@gmail.com',
+          'Email: support@akhdmedia.com',
           'Only WhatsApp: +91 85914 43501',
           'Address: GR/RC/C3 NEW VIDARBHA SRA CHSL BLDG. NO.13',
           'NEHRU NAGAR GOLIBAR ROAD',
@@ -455,7 +462,7 @@ class SiteContent {
         title: '7. Contact information',
         paragraphs: [
           'For refund-related inquiries, please contact:',
-          'Email: akhdmedia@gmail.com',
+          'Email: support@akhdmedia.com',
           'Only WhatsApp: +91 85914 43501',
           'Support: available through the Support page in the app.',
           'Address: GR/RC/C3 NEW VIDARBHA SRA CHSL BLDG. NO.13',
@@ -637,7 +644,7 @@ class SiteContent {
         paragraphs: [
           'For licensing inquiries, exclusive rights requests, or legal questions, please contact:',
           'Company Name: AKHD MEDIA & CO',
-          'Email: Akhdmedia@gmail.com',
+          'Email: support@akhdmedia.com',
           'Only WhatsApp: +91 85914 43501',
           'Address: GR/RC/C3 NEW VIDARBHA SRA CHSL BLDG. NO.13',
           'NEHRU NAGAR GOLIBAR ROAD',
@@ -645,10 +652,144 @@ class SiteContent {
         ],
       ),
     ],
+    'legal-policy': [
+      ContentSection(
+        title: 'Legal policy',
+        paragraphs: [
+          'Effective Date: 04 July 2026',
+          'This Legal Policy governs the use of the AKHD MEDIA & CO website, mobile applications, digital platforms, and services. By accessing or using our services, you agree to comply with this Legal Policy and all applicable laws.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Ownership',
+        paragraphs: [
+          'All content published by AKHD MEDIA & CO, including but not limited to articles, videos, photographs, graphics, logos, trademarks, designs, source code, and other intellectual property, is owned by or licensed to AKHD MEDIA & CO and is protected under applicable copyright, trademark, and intellectual property laws.',
+        ],
+      ),
+      ContentSection(
+        title: '3. Editorial content',
+        paragraphs: [
+          'AKHD MEDIA & CO publishes news, media reports, interviews, and editorial content in good faith. While reasonable efforts are made to ensure accuracy, we do not guarantee that all information is complete, current, or error-free.',
+        ],
+      ),
+      ContentSection(
+        title: '4. Media coverage',
+        paragraphs: [
+          'Photographs and videos published by AKHD MEDIA & CO may be captured at officially organized media events, press conferences, public appearances, and other events where accredited media organizations are invited for editorial reporting. Such content is used solely for legitimate journalistic and editorial purposes.',
+        ],
+      ),
+      ContentSection(
+        title: '5. User responsibilities',
+        paragraphs: ['Users agree not to:'],
+        bullets: [
+          'Violate any applicable law.',
+          'Copy, reproduce, distribute, or commercially exploit our content without prior written permission.',
+          'Upload malicious software or interfere with our services.',
+          'Impersonate another person or provide false information.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Third-party links',
+        paragraphs: [
+          'Our website may contain links to third-party websites. AKHD MEDIA & CO is not responsible for the content, policies, or practices of external websites.',
+        ],
+      ),
+      ContentSection(
+        title: '7. Limitation of liability',
+        paragraphs: [
+          'AKHD MEDIA & CO shall not be liable for any direct, indirect, incidental, consequential, or special damages arising from the use of our website, applications, services, or published content.',
+        ],
+      ),
+      ContentSection(
+        title: '8. Intellectual property infringement',
+        paragraphs: [
+          'If you believe your copyright or intellectual property has been infringed, please contact us with sufficient details. Valid complaints will be reviewed promptly, and appropriate action will be taken where required.',
+        ],
+      ),
+      ContentSection(
+        title: '9. Governing law',
+        paragraphs: [
+          'This Legal Policy shall be governed by and interpreted in accordance with the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts located in Mumbai, Maharashtra, India.',
+        ],
+      ),
+      ContentSection(
+        title: '10. Changes to this policy',
+        paragraphs: [
+          'AKHD MEDIA & CO reserves the right to modify or update this Legal Policy at any time. Changes become effective immediately upon publication on our website.',
+        ],
+      ),
+      ContentSection(
+        title: '11. Contact',
+        paragraphs: [
+          'For legal inquiries, copyright matters, or compliance-related questions, please contact AKHD MEDIA & CO using the official contact details published on our website.',
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Email: support@akhdmedia.com',
+          'Only WhatsApp: +918591443501',
+        ],
+      ),
+    ],
+    'media-accreditation-policy': [
+      ContentSection(
+        title: 'Media accreditation & editorial event coverage policy',
+        paragraphs: [
+          'Last updated: 04/07/2026',
+          'AKHD MEDIA & CO is an independent editorial media organization that captures original photos and videos at entertainment events, award ceremonies, film promotions, press conferences, red carpet events, and other public media events.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Media accreditation and event access',
+        paragraphs: [
+          'Our photographers and videographers attend events only after receiving media accreditation, official invitations, press access, or authorization from event organizers, public relations (PR) agencies, or other authorized representatives. We do not obtain unauthorized access to private events.',
+        ],
+      ),
+      ContentSection(
+        title: '3. Original content',
+        paragraphs: [
+          'All photos, videos, and digital media distributed through our platform are created by our own production team using our own equipment. We do not copy, scrape, download, or redistribute third-party copyrighted content.',
+        ],
+      ),
+      ContentSection(
+        title: '4. Editorial purpose',
+        paragraphs: [
+          'Content captured at accredited media events is produced exclusively for editorial, journalistic, and news-reporting purposes. Our licensed customers may use such content in accordance with our Editorial Policy and License Information Policy.',
+        ],
+      ),
+      ContentSection(
+        title: '5. No commercial endorsement',
+        paragraphs: [
+          'The availability or licensing of editorial content through our platform does not imply that any individual, celebrity, public figure, organizer, or brand endorses AKHD MEDIA & CO or any purchaser of the content. Any commercial advertising, promotional use, or implied endorsement requires separate legal rights and permissions where applicable.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Compliance with event rules',
+        paragraphs: [
+          'Our media team complies with all applicable event rules, accreditation requirements, venue policies, and applicable laws while covering events. We respect restrictions imposed by organizers regarding photography, videography, or content distribution.',
+        ],
+      ),
+      ContentSection(
+        title: '7. Rights management',
+        paragraphs: [
+          'Copyright in all original content remains with AKHD MEDIA & CO unless otherwise agreed in writing. Customers receive only the rights expressly granted under our License Information Policy.',
+        ],
+      ),
+      ContentSection(
+        title: '8. Questions',
+        paragraphs: [
+          'For questions regarding media accreditation, editorial licensing, or event coverage, please contact:',
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Email: support@akhdmedia.com',
+          'WhatsApp: +91 8591443501',
+        ],
+      ),
+    ],
   };
 
   static String policySlugFromPath(String path) {
     if (path.contains('privacy')) return 'privacy-policy';
+    if (path.contains('legal')) return 'legal-policy';
+    if (path.contains('media-accreditation')) return 'media-accreditation-policy';
     if (path.contains('terms')) return 'terms-and-conditions';
     if (path.contains('refund')) return 'refund-policy';
     if (path.contains('editorial')) return 'editorial-policy';

@@ -1,3 +1,4 @@
+import { BRAND } from '../config/brand'
 import { getPolicyLastUpdatedLabel } from '../utils/policyDate'
 
 const TermsAndConditions = () => {
@@ -128,7 +129,7 @@ const TermsAndConditions = () => {
             <p className="mt-2 text-sm leading-relaxed text-gray-800">
               If you believe any content on this website infringes your copyright or other legal rights, please contact:
             </p>
-            <p className="mt-2 text-sm text-gray-800">Email: Akhdmedia@gmail.com</p>
+            <p className="mt-2 text-sm text-gray-800">Email: {BRAND.supportEmail}</p>
             <p className="mt-2 text-sm leading-relaxed text-gray-800">
               We will review legitimate complaints and take appropriate action where required.
             </p>
@@ -203,7 +204,7 @@ const TermsAndConditions = () => {
             <h2 className="text-base font-semibold text-gray-900">18. CONTACT INFORMATION</h2>
             <div className="mt-2 space-y-1 text-sm text-gray-800">
               <p>AKHD MEDIA & CO</p>
-              <p>Email: Akhdmedia@gmail.com</p>
+              <p>Email: {BRAND.supportEmail}</p>
               <p>Only WhatsApp: +91 85914 43501</p>
               <p className="pt-2">Address: GR/RC/C3 NEW VIDARBHA SRA CHSL BLDG. NO.13</p>
               <p>NEHRU NAGAR GOLIBAR ROAD</p>

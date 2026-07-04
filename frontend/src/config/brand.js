@@ -2,7 +2,7 @@ export const BRAND = {
   name: 'AKHD MEDIA & CO',
   tagline: 'Premium Video Marketplace',
   domain: 'akhdmedia.com',
-  supportEmail: 'akhdmedia@gmail.com',
+  supportEmail: 'support@akhdmedia.com',
   supportPhone: '+918591443501',
   gstNumber: '27ACNFA2803Q1ZZ',
   companyAddress:

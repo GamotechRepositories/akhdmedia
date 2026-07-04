@@ -16,6 +16,8 @@ import RefundPolicy from './pages/RefundPolicy';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import EditorialPolicy from './pages/EditorialPolicy';
 import LicenseInformationPolicy from './pages/LicenseInformationPolicy';
+import LegalPolicy from './pages/LegalPolicy';
+import MediaAccreditationPolicy from './pages/MediaAccreditationPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import AboutUs from './pages/AboutUs';
 import Login from './pages/Login';
@@ -47,6 +49,8 @@ function AppContent() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/editorial-policy" element={<EditorialPolicy />} />
           <Route path="/license-information-policy" element={<LicenseInformationPolicy />} />
+          <Route path="/legal-policy" element={<LegalPolicy />} />
+          <Route path="/media-accreditation-policy" element={<MediaAccreditationPolicy />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/about-us" element={<AboutUs />} />
           <Route path="/login" element={<Login />} />

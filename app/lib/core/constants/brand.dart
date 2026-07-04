@@ -3,7 +3,7 @@ class Brand {
   static const displayName = 'AKHD Media';
   static const tagline = 'Premium Video Marketplace';
   static const currencySymbol = '₹';
-  static const supportEmail = 'akhdmedia@gmail.com';
+  static const supportEmail = 'support@akhdmedia.com';
   static const supportPhone = '+918591443501';
   static const gstNumber = '27ACNFA2803Q1ZZ';
   static const companyAddress =
