@@ -180,7 +180,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/media-accreditation-policy',
       builder: (context, state) => const PolicyScreen(
-        title: 'Media Accreditation Policy',
+        title: 'MEDIA ACCREDITATION & EDITORIAL EVENT COVERAGE POLICY',
         policySlug: 'media-accreditation-policy',
       ),
     ),

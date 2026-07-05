@@ -731,7 +731,7 @@ class SiteContent {
     ],
     'media-accreditation-policy': [
       ContentSection(
-        title: 'Media accreditation & editorial event coverage policy',
+        title: 'MEDIA ACCREDITATION & EDITORIAL EVENT COVERAGE POLICY',
         paragraphs: [
           'Last updated: 04/07/2026',
           'AKHD MEDIA & CO is an independent editorial media organization that captures original photos and videos at entertainment events, award ceremonies, film promotions, press conferences, red carpet events, and other public media events.',

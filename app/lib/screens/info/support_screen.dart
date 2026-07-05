@@ -240,7 +240,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 ),
                 _ContactRow(
                   icon: Icons.badge_outlined,
-                  title: 'Media Accreditation Policy',
+                  title: 'MEDIA ACCREDITATION & EDITORIAL EVENT COVERAGE POLICY',
                   subtitle: 'Editorial event coverage and accreditation',
                   showAction: false,
                   showChevron: true,
