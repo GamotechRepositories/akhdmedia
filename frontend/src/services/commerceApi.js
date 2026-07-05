@@ -112,4 +112,9 @@ export const supportAPI = {
     const { data } = await api.post('/support', payload)
     return data
   },
+
+  getMyTickets: async () => {
+    const { data } = await api.get('/support/mine')
+    return data
+  },
 }

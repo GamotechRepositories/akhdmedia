@@ -167,7 +167,31 @@ const SupportDetail = () => {
       const response = await updateSupportRequest(id, { status })
       const nextRequest = response.data.data?.request
       setRequest(nextRequest)
+      setStatus(nextRequest?.status || status)
       setNotice('Support request updated.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleQuickStatus = async (nextStatus) => {
+    setStatus(nextStatus)
+    setSaving(true)
+    setNotice('')
+    try {
+      const response = await updateSupportRequest(id, { status: nextStatus })
+      const nextRequest = response.data.data?.request
+      setRequest(nextRequest)
+      setStatus(nextRequest?.status || nextStatus)
+      setNotice(
+        nextStatus === 'resolved'
+          ? 'Ticket marked as resolved.'
+          : nextStatus === 'in_progress'
+            ? 'Ticket marked as in progress.'
+            : 'Support request updated.',
+      )
     } catch (err) {
       setError(err.message)
     } finally {
@@ -323,6 +347,33 @@ const SupportDetail = () => {
       <div className={`${cardClass} p-5`}>
         <h2 className="text-sm font-semibold text-slate-900">Admin actions</h2>
         <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickStatus('in_progress')}
+              disabled={saving || status === 'in_progress'}
+              className={secondaryBtnClass}
+            >
+              Mark in progress
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickStatus('resolved')}
+              disabled={saving || status === 'resolved'}
+              className={primaryBtnClass}
+            >
+              Mark resolved
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickStatus('closed')}
+              disabled={saving || status === 'closed'}
+              className={secondaryBtnClass}
+            >
+              Close ticket
+            </button>
+          </div>
+
           <div>
             <label htmlFor="status" className="mb-1.5 block text-sm font-medium text-slate-700">
               Status

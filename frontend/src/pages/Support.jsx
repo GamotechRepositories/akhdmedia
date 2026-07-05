@@ -3,6 +3,37 @@ import { Link, useSearchParams } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
 import { supportAPI, checkoutAPI } from '../services/commerceApi';
 
+const STATUS_LABELS = {
+  open: 'Open',
+  in_progress: 'In progress',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+const SUBJECT_LABELS = {
+  license_email: 'License / download email issue',
+  download: 'Video download problem',
+  payment: 'Payment issue',
+  license: 'License verification',
+  other: 'Other',
+};
+
+const statusStyles = {
+  open: 'bg-amber-50 text-amber-700 ring-amber-200',
+  in_progress: 'bg-blue-50 text-blue-700 ring-blue-200',
+  resolved: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  closed: 'bg-slate-100 text-slate-600 ring-slate-200',
+};
+
+const formatTicketDate = (value) => {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 const SUBJECT_OPTIONS = [
   { id: 'license_email', label: 'License / download email issue' },
   { id: 'download', label: 'Video download problem' },
@@ -29,6 +60,27 @@ const Support = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState('');
   const [error, setError] = useState('');
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [ticketsError, setTicketsError] = useState('');
+  const [selectedTicket, setSelectedTicket] = useState(null);
+
+  const loadTickets = async () => {
+    setLoadingTickets(true);
+    setTicketsError('');
+    try {
+      const response = await supportAPI.getMyTickets();
+      setTickets(response.data?.requests || []);
+    } catch (err) {
+      setTicketsError(err.message || 'Could not load your tickets.');
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTickets();
+  }, []);
 
   useEffect(() => {
     const prefill = async () => {
@@ -73,6 +125,7 @@ const Support = () => {
       if (response.success) {
         setSubmittedTicket(response.data.request.ticketNumber);
         setForm(emptyForm);
+        loadTickets();
       }
     } catch (err) {
       setError(err.message || 'Could not submit support request.');
@@ -96,9 +149,17 @@ const Support = () => {
             Our team will review your issue and respond as quickly as possible.
           </p>
           <p className="mt-4 font-mono text-sm font-semibold text-gray-900">Ticket #{submittedTicket}</p>
+          <p className="mt-2 text-sm text-gray-500">Track status anytime in the My Tickets section below.</p>
+          <button
+            type="button"
+            onClick={() => setSubmittedTicket('')}
+            className="mt-6 inline-flex rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+          >
+            View My Tickets
+          </button>
           <Link
             to="/"
-            className="mt-6 inline-flex rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+            className="mt-3 inline-flex rounded-xl border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:border-gray-900"
           >
             Back to Home
           </Link>
@@ -224,6 +285,171 @@ const Support = () => {
             {submitting ? 'Submitting...' : 'Submit Support Request'}
           </button>
       </form>
+
+      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">My Tickets</h2>
+            <p className="mt-1 text-sm text-gray-600">Track your support requests and team replies.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadTickets}
+            disabled={loadingTickets}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-900 disabled:opacity-60"
+          >
+            {loadingTickets ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+
+        {loadingTickets && tickets.length === 0 ? (
+          <p className="mt-5 text-sm text-gray-500">Loading tickets…</p>
+        ) : ticketsError && tickets.length === 0 ? (
+          <div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            {ticketsError}
+          </div>
+        ) : tickets.length === 0 ? (
+          <p className="mt-5 text-sm text-gray-500">No tickets yet. Submit a request above to get started.</p>
+        ) : (
+          <div className="mt-5 space-y-3">
+            {tickets.map((ticket) => (
+              <button
+                key={ticket.id}
+                type="button"
+                onClick={() => setSelectedTicket(ticket)}
+                className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-gray-900"
+              >
+                <div className="min-w-0">
+                  <p className="font-mono text-sm font-semibold text-gray-900">#{ticket.ticketNumber}</p>
+                  <p className="mt-1 text-sm text-gray-700">
+                    {SUBJECT_LABELS[ticket.subject] || ticket.subject}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Updated {formatTicketDate(ticket.lastReplyAt || ticket.updatedAt || ticket.createdAt)}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+                    statusStyles[ticket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
+                  }`}
+                >
+                  {STATUS_LABELS[ticket.status] || ticket.status}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedTicket && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-lg font-bold text-gray-900">#{selectedTicket.ticketNumber}</p>
+                <p className="mt-1 text-sm text-gray-600">
+                  {SUBJECT_LABELS[selectedTicket.subject] || selectedTicket.subject}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+                  statusStyles[selectedTicket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
+                }`}
+              >
+                {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-3 border-t border-gray-100 pt-5">
+              <div className="flex gap-3">
+                <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Submitted</p>
+                  <p className="text-xs text-gray-500">{formatTicketDate(selectedTicket.createdAt)}</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div
+                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                    ['in_progress', 'resolved', 'closed'].includes(selectedTicket.status)
+                      ? 'bg-blue-500'
+                      : 'bg-gray-300'
+                  }`}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">In review</p>
+                  <p className="text-xs text-gray-500">
+                    {['in_progress', 'resolved', 'closed'].includes(selectedTicket.status)
+                      ? formatTicketDate(selectedTicket.updatedAt)
+                      : 'Waiting for our team'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div
+                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                    selectedTicket.replies?.length ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Team replied</p>
+                  <p className="text-xs text-gray-500">
+                    {selectedTicket.replies?.length
+                      ? formatTicketDate(selectedTicket.lastReplyAt)
+                      : 'No reply yet'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div
+                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                    ['resolved', 'closed'].includes(selectedTicket.status) ? 'bg-emerald-500' : 'bg-gray-300'
+                  }`}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedTicket.status === 'closed' ? 'Closed' : 'Resolved'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {['resolved', 'closed'].includes(selectedTicket.status)
+                      ? formatTicketDate(selectedTicket.updatedAt)
+                      : 'Pending resolution'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <p className="text-sm font-semibold text-gray-900">Your message</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                {selectedTicket.message}
+              </p>
+            </div>
+
+            {selectedTicket.replies?.length > 0 && (
+              <div className="mt-5 space-y-3">
+                <p className="text-sm font-semibold text-gray-900">Team replies</p>
+                {selectedTicket.replies.map((reply, index) => (
+                  <div key={`${reply.sentAt}-${index}`} className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+                    <p className="whitespace-pre-wrap leading-relaxed">{reply.message}</p>
+                    {reply.sentAt && (
+                      <p className="mt-2 text-xs text-blue-700/70">{formatTicketDate(reply.sentAt)}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setSelectedTicket(null)}
+              className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
         <h2 className="text-lg font-bold text-gray-900">Policies & Legal</h2>
