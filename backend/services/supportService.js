@@ -59,6 +59,25 @@ export const createSupportRequest = async (payload, sessionId = '') => {
   return request
 }
 
+export const getMySupportRequests = async ({ email = '', sessionId = '' }) => {
+  const normalizedEmail = email.trim().toLowerCase()
+  const filters = []
+
+  if (normalizedEmail) {
+    filters.push({ email: normalizedEmail })
+  }
+
+  if (sessionId) {
+    filters.push({ sessionId })
+  }
+
+  if (filters.length === 0) {
+    return []
+  }
+
+  return SupportRequest.find({ $or: filters }).sort({ createdAt: -1 })
+}
+
 export const getAllSupportRequests = async () =>
   SupportRequest.find().sort({ createdAt: -1 })
 

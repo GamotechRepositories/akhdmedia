@@ -4,6 +4,7 @@ import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../
 import {
   createSupportRequest,
   getAllSupportRequests,
+  getMySupportRequests,
   getSupportRequestById,
   replyToSupportRequest,
   updateSupportRequestStatus,
@@ -35,6 +36,28 @@ const buildSupportListFilter = (query = {}) => {
   return filter
 }
 
+const formatCustomerSupportRequest = (request) => {
+  const formatted = formatSupportRequest(request)
+
+  return {
+    id: formatted.id,
+    ticketNumber: formatted.ticketNumber,
+    name: formatted.name,
+    email: formatted.email,
+    phone: formatted.phone,
+    orderNumber: formatted.orderNumber,
+    subject: formatted.subject,
+    message: formatted.message,
+    status: formatted.status,
+    replies: formatted.replies.filter(
+      (reply) => reply.kind === 'admin_reply' && reply.message?.trim(),
+    ),
+    lastReplyAt: formatted.lastReplyAt,
+    createdAt: formatted.createdAt,
+    updatedAt: formatted.updatedAt,
+  }
+}
+
 export const submitSupportRequest = asyncHandler(async (req, res) => {
   const request = await createSupportRequest(req.body, req.sessionId)
 
@@ -42,7 +65,21 @@ export const submitSupportRequest = asyncHandler(async (req, res) => {
     success: true,
     message: 'Support request submitted successfully',
     data: {
-      request: formatSupportRequest(request),
+      request: formatCustomerSupportRequest(request),
+    },
+  })
+})
+
+export const listMySupportRequests = asyncHandler(async (req, res) => {
+  const email = req.user?.email?.trim().toLowerCase() || ''
+  const sessionId = req.sessionId || ''
+
+  const requests = await getMySupportRequests({ email, sessionId })
+
+  res.json({
+    success: true,
+    data: {
+      requests: requests.map(formatCustomerSupportRequest),
     },
   })
 })

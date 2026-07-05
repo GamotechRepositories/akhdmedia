@@ -41,14 +41,6 @@ class TightProductCard extends StatelessWidget {
                       child: _Badge(label: 'IMAGE'),
                     ),
                   Positioned(
-                    right: 6,
-                    top: 6,
-                    child: _Badge(
-                      label: product.qualityLabel,
-                      icon: product.isVideo ? Icons.play_arrow_rounded : null,
-                    ),
-                  ),
-                  Positioned(
                     left: 0,
                     right: 0,
                     bottom: 8,
@@ -61,45 +53,46 @@ class TightProductCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                    if (showCategory) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        product.categoryLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (product.isVideo && product.durationLabel.isNotEmpty) ...[
-                const SizedBox(width: 4),
-                _Badge(label: product.durationLabel),
-              ],
-            ],
+          Text(
+            product.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              height: 1.25,
+              color: Color(0xFF111827),
+            ),
           ),
+          if (showCategory) ...[
+            const SizedBox(height: 2),
+            Text(
+              product.categoryLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+          if (product.qualityLabel.isNotEmpty ||
+              (product.isVideo && product.durationLabel.isNotEmpty)) ...[
+            const SizedBox(height: 5),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                if (product.qualityLabel.isNotEmpty)
+                  _MetaBadge(
+                    label: product.qualityLabel,
+                    icon: product.isVideo ? Icons.play_arrow_rounded : null,
+                  ),
+                if (product.isVideo && product.durationLabel.isNotEmpty)
+                  _MetaBadge(label: product.durationLabel),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -169,6 +162,45 @@ class _Thumbnail extends StatelessWidget {
       errorWidget: (_, __, ___) => Container(
         color: const Color(0xFF111827),
         child: const Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF)),
+      ),
+    );
+  }
+}
+
+class _MetaBadge extends StatelessWidget {
+  const _MetaBadge({required this.label, this.icon});
+
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: Colors.white),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+              height: 1.1,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -169,10 +169,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             subtitle: 'Login to continue to your account',
           ),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
-          GoogleSignInButton(disabled: loading, onPressed: _googleSignIn),
-          const SizedBox(height: AuthScreenMetrics.fieldGap),
-          const AuthOrDivider(),
-          const SizedBox(height: AuthScreenMetrics.fieldGap),
           AuthStyledField(
             label: 'Email Address',
             controller: _emailCtrl,
@@ -250,6 +246,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
           AuthActionButton(label: 'Login', loading: loading, onPressed: _submit),
+          const SizedBox(height: AuthScreenMetrics.fieldGap),
+          const AuthOrDivider(),
+          const SizedBox(height: AuthScreenMetrics.fieldGap),
+          GoogleSignInButton(disabled: loading, onPressed: _googleSignIn),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
           AuthFooterLink(
             prompt: "Don't have an account? ",

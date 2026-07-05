@@ -104,8 +104,8 @@ class HomeProductSection extends StatelessWidget {
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: AppSpacing.sm,
-                  mainAxisSpacing: AppSpacing.sm,
-                  childAspectRatio: 0.56,
+                  mainAxisSpacing: AppSpacing.xs,
+                  childAspectRatio: 0.54,
                 ),
                 itemCount: products.length,
                 itemBuilder: (context, index) {
@@ -136,8 +136,8 @@ class _ProductGridSkeleton extends StatelessWidget {
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: AppSpacing.sm,
-          mainAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 0.56,
+          mainAxisSpacing: AppSpacing.xs,
+          childAspectRatio: 0.54,
         ),
         itemCount: 4,
         itemBuilder: (_, __) => Container(

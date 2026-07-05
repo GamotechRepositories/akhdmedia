@@ -257,11 +257,9 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
               height: frameHeight,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111827),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
+                clipBehavior: Clip.antiAlias,
+                child: ColoredBox(
+                  color: Colors.black,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -283,6 +281,10 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                           ),
                         ),
                       const Positioned.fill(child: PreviewMediaWatermark()),
+                      if (_selectedItem.isVideo)
+                        const Positioned.fill(
+                          child: VideoPreviewDemoBadge(),
+                        ),
                       if (_selectedItem.isVideo &&
                           _videoController != null &&
                           !_isInitializing) ...[
@@ -426,21 +428,22 @@ class _VideoLayer extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         if (ready)
-          Center(
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: SizedBox(
-                width: controller!.value.size.width,
-                height: controller!.value.size.height,
-                child: VideoPlayer(controller!),
+          ColoredBox(
+            color: Colors.black,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: controller!.value.aspectRatio,
+                child: ClipRect(
+                  clipBehavior: Clip.hardEdge,
+                  child: VideoPlayer(controller!),
+                ),
               ),
             ),
           )
         else if (poster != null && poster!.isNotEmpty)
           _ImageLayer(url: poster!, fit: BoxFit.contain)
         else
-          const ColoredBox(color: Color(0xFF111827)),
-        const Positioned.fill(child: PreviewMediaWatermark()),
+          const ColoredBox(color: Colors.black),
         if (_showLoading)
           Container(
             color: Colors.black.withValues(alpha: 0.45),
@@ -793,13 +796,15 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
         fit: StackFit.expand,
         children: [
           if (ready)
-            Center(
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: SizedBox(
-                  width: controller!.value.size.width,
-                  height: controller.value.size.height,
-                  child: VideoPlayer(controller),
+            ColoredBox(
+              color: Colors.black,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: controller!.value.aspectRatio,
+                  child: ClipRect(
+                    clipBehavior: Clip.hardEdge,
+                    child: VideoPlayer(controller!),
+                  ),
                 ),
               ),
             )
@@ -807,6 +812,7 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
             _ImageLayer(url: widget.item.poster!, fit: BoxFit.contain)
           else
             const ColoredBox(color: Colors.black),
+          const Positioned.fill(child: VideoPreviewDemoBadge(compact: true)),
           if (showLoading)
             Container(
               color: Colors.black.withValues(alpha: 0.45),
@@ -995,13 +1001,15 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
             fit: StackFit.expand,
             children: [
               if (ready)
-                Center(
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: SizedBox(
-                      width: controller!.value.size.width,
-                      height: controller.value.size.height,
-                      child: VideoPlayer(controller),
+                ColoredBox(
+                  color: Colors.black,
+                  child: Center(
+                    child: AspectRatio(
+                      aspectRatio: controller!.value.aspectRatio,
+                      child: ClipRect(
+                        clipBehavior: Clip.hardEdge,
+                        child: VideoPlayer(controller),
+                      ),
                     ),
                   ),
                 )
@@ -1010,6 +1018,7 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
               else
                 const ColoredBox(color: Colors.black),
               const Positioned.fill(child: PreviewMediaWatermark()),
+              const Positioned.fill(child: VideoPreviewDemoBadge(compact: true)),
               if (showLoading)
                 Container(
                   color: Colors.black.withValues(alpha: 0.45),

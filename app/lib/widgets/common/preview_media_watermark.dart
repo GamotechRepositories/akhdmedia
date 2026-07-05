@@ -1,5 +1,46 @@
 import 'package:flutter/material.dart';
 
+/// Top-left badge shown on demo video previews.
+class VideoPreviewDemoBadge extends StatelessWidget {
+  const VideoPreviewDemoBadge({super.key, this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 10 : 14),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 10 : 12,
+                vertical: compact ? 5 : 6,
+              ),
+              child: Text(
+                '40 Sec Preview Demo Only!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 10 : 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Repeating diagonal "AKHD MEDIA PREVIEW" overlay for protected media.
 class PreviewMediaWatermark extends StatelessWidget {
   const PreviewMediaWatermark({super.key, this.compact = false});

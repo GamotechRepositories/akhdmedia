@@ -5,6 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/brand.dart';
 import '../../core/constants/site_content.dart';
+import '../../core/utils/order_formatters.dart';
+import '../../models/support_ticket.dart';
+import '../../services/api_client.dart';
 import '../../services/order_service.dart';
 import '../../services/support_service.dart';
 
@@ -16,13 +19,15 @@ class SupportScreen extends StatefulWidget {
 }
 
 class _SupportScreenState extends State<SupportScreen> {
-  final _searchCtrl = TextEditingController();
-  String _searchQuery = '';
+  List<SupportTicket> _tickets = [];
+  bool _loadingTickets = true;
+  String? _ticketsError;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTickets();
       final params = GoRouterState.of(context).uri.queryParameters;
       if (params.containsKey('email') ||
           params.containsKey('message') ||
@@ -35,52 +40,22 @@ class _SupportScreenState extends State<SupportScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
+  Future<void> _loadTickets() async {
+    setState(() {
+      _loadingTickets = true;
+      _ticketsError = null;
+    });
 
-  List<_QuickHelpItem> get _quickHelpItems => [
-        _QuickHelpItem(
-          icon: Icons.menu_book_outlined,
-          title: 'Help Center',
-          description: 'Find answers to common questions',
-          keywords: 'help center about policies',
-          onTap: (context) => context.push('/about-us'),
-        ),
-        _QuickHelpItem(
-          icon: Icons.forum_outlined,
-          title: 'FAQs',
-          description: 'Browse frequently asked questions',
-          keywords: 'faq refund license payment',
-          onTap: (context) => context.push('/refund-policy'),
-        ),
-        _QuickHelpItem(
-          icon: Icons.description_outlined,
-          title: 'Guides',
-          description: 'Step-by-step guides & tutorials',
-          keywords: 'guides license editorial terms',
-          onTap: (context) => context.push('/license-information-policy'),
-        ),
-        _QuickHelpItem(
-          icon: Icons.play_circle_outline_rounded,
-          title: 'Video Support',
-          description: 'Watch helpful video tutorials',
-          keywords: 'video browse catalog footage',
-          onTap: (context) => context.go('/videos'),
-        ),
-      ];
-
-  List<_QuickHelpItem> get _filteredQuickHelp {
-    final q = _searchQuery.trim().toLowerCase();
-    if (q.isEmpty) return _quickHelpItems;
-    return _quickHelpItems
-        .where((item) =>
-            item.title.toLowerCase().contains(q) ||
-            item.description.toLowerCase().contains(q) ||
-            item.keywords.toLowerCase().contains(q))
-        .toList();
+    try {
+      final tickets = await context.read<SupportService>().getMyTickets();
+      if (!mounted) return;
+      setState(() => _tickets = tickets);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _ticketsError = ApiClient.unwrapError(e).toString());
+    } finally {
+      if (mounted) setState(() => _loadingTickets = false);
+    }
   }
 
   Future<void> _openContactSheet({String? subject, String? messageHint}) {
@@ -92,7 +67,18 @@ class _SupportScreenState extends State<SupportScreen> {
       builder: (context) => _SupportContactSheet(
         initialSubject: subject,
         initialMessage: messageHint,
+        onSubmitted: _loadTickets,
       ),
+    );
+  }
+
+  void _openTicketDetail(SupportTicket ticket) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _SupportTicketDetailSheet(ticket: ticket),
     );
   }
 
@@ -122,35 +108,16 @@ class _SupportScreenState extends State<SupportScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          children: [
+        child: RefreshIndicator(
+          onRefresh: _loadTickets,
+          color: const Color(0xFF2563EB),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            children: [
             _SupportHeader(onBack: () => context.pop()),
             const SizedBox(height: 16),
-            _SupportHeroBanner(
-              searchController: _searchCtrl,
-              onSearchChanged: (value) => setState(() => _searchQuery = value),
-            ),
-            const SizedBox(height: 22),
-            const _SectionTitle('Quick Help'),
-            const SizedBox(height: 12),
-            if (_filteredQuickHelp.isEmpty)
-              _EmptySearchState(query: _searchQuery)
-            else
-              SizedBox(
-                height: 148,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _filteredQuickHelp.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    return SizedBox(
-                      width: 132,
-                      child: _QuickHelpCard(item: _filteredQuickHelp[index]),
-                    );
-                  },
-                ),
-              ),
+            const _SupportHeroBanner(),
             const SizedBox(height: 22),
             const _SectionTitle('Contact Us'),
             const SizedBox(height: 12),
@@ -252,11 +219,12 @@ class _SupportScreenState extends State<SupportScreen> {
             const SizedBox(height: 22),
             Row(
               children: [
-                const Expanded(child: _SectionTitle('Your Support Activity')),
-                TextButton(
+                const Expanded(child: _SectionTitle('My Tickets')),
+                TextButton.icon(
                   onPressed: () => _openContactSheet(),
-                  child: const Text(
-                    'View All',
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text(
+                    'New ticket',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -267,26 +235,268 @@ class _SupportScreenState extends State<SupportScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            _ContactCard(
-              children: [
-                _ContactRow(
-                  icon: Icons.confirmation_number_outlined,
-                  title: 'My Tickets',
-                  subtitle: 'Track your support requests and their status',
-                  actionLabel: '',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => _openContactSheet(),
-                  showDivider: false,
-                ),
-              ],
+            _MyTicketsSection(
+              tickets: _tickets,
+              loading: _loadingTickets,
+              error: _ticketsError,
+              onRetry: _loadTickets,
+              onTicketTap: _openTicketDetail,
+              onNewTicket: () => _openContactSheet(),
             ),
             const SizedBox(height: 20),
             const _ExperienceBanner(),
           ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _MyTicketsSection extends StatelessWidget {
+  const _MyTicketsSection({
+    required this.tickets,
+    required this.loading,
+    required this.onRetry,
+    required this.onTicketTap,
+    required this.onNewTicket,
+    this.error,
+  });
+
+  final List<SupportTicket> tickets;
+  final bool loading;
+  final String? error;
+  final VoidCallback onRetry;
+  final ValueChanged<SupportTicket> onTicketTap;
+  final VoidCallback onNewTicket;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading && tickets.isEmpty) {
+      return const _ContactCard(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 28),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF2563EB)),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (error != null && tickets.isEmpty) {
+      return _ContactCard(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Color(0xFF94A3B8)),
+                const SizedBox(height: 8),
+                Text(
+                  'Could not load tickets',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                ),
+                const SizedBox(height: 12),
+                TextButton(onPressed: onRetry, child: const Text('Try again')),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (tickets.isEmpty) {
+      return _ContactCard(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.confirmation_number_outlined, color: Color(0xFF2563EB)),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'No tickets yet',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Submit a support request and track its status here.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: onNewTicket,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Create ticket'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _ContactCard(
+      children: [
+        for (var i = 0; i < tickets.length; i++)
+          _TicketRow(
+            ticket: tickets[i],
+            onTap: () => onTicketTap(tickets[i]),
+            showDivider: i < tickets.length - 1,
+          ),
+      ],
+    );
+  }
+}
+
+class _TicketRow extends StatelessWidget {
+  const _TicketRow({
+    required this.ticket,
+    required this.onTap,
+    this.showDivider = true,
+  });
+
+  final SupportTicket ticket;
+  final VoidCallback onTap;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColors = _ticketStatusColors(ticket.status);
+    final updated = ticket.lastReplyAt ?? ticket.updatedAt ?? ticket.createdAt;
+
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.confirmation_number_outlined, color: Color(0xFF2563EB), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '#${ticket.ticketNumber}',
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: statusColors.bg,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: statusColors.border),
+                              ),
+                              child: Text(
+                                supportStatusLabel(ticket.status),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: statusColors.text,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          supportSubjectLabel(ticket.subject),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Updated ${OrderFormatters.formatDateShort(updated)}',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDivider) Divider(height: 1, color: Colors.grey.shade100, indent: 70),
+      ],
+    );
+  }
+}
+
+({Color bg, Color text, Color border}) _ticketStatusColors(String status) {
+  switch (status) {
+    case 'in_progress':
+      return (
+        bg: const Color(0xFFEFF6FF),
+        text: const Color(0xFF1D4ED8),
+        border: const Color(0xFFBFDBFE),
+      );
+    case 'resolved':
+      return (
+        bg: const Color(0xFFF0FDF4),
+        text: const Color(0xFF15803D),
+        border: const Color(0xFFBBF7D0),
+      );
+    case 'closed':
+      return (
+        bg: const Color(0xFFF8FAFC),
+        text: const Color(0xFF64748B),
+        border: const Color(0xFFE2E8F0),
+      );
+    case 'open':
+    default:
+      return (
+        bg: const Color(0xFFFFFBEB),
+        text: const Color(0xFFB45309),
+        border: const Color(0xFFFDE68A),
+      );
   }
 }
 
@@ -322,28 +532,13 @@ class _SupportHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.headset_mic_outlined, color: Color(0xFF2563EB)),
-        ),
       ],
     );
   }
 }
 
 class _SupportHeroBanner extends StatelessWidget {
-  const _SupportHeroBanner({
-    required this.searchController,
-    required this.onSearchChanged,
-  });
-
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearchChanged;
+  const _SupportHeroBanner();
 
   @override
   Widget build(BuildContext context) {
@@ -364,128 +559,35 @@ class _SupportHeroBanner extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset('assets/IMG_1577.jpg', width: 48, height: 48, fit: BoxFit.cover),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hi, how can we help you?',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Search for answers, browse help topics or contact our support team.',
-                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset('assets/IMG_1577.jpg', width: 48, height: 48, fit: BoxFit.cover),
           ),
-          const SizedBox(height: 16),
-          Container(
-            height: 46,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: TextField(
-              controller: searchController,
-              onChanged: onSearchChanged,
-              style: const TextStyle(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Search for help articles...',
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF2563EB), size: 22),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hi, how can we help you?',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Browse our policies below or contact our support team.',
+                  style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                ),
+              ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuickHelpItem {
-  const _QuickHelpItem({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.keywords,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final String keywords;
-  final void Function(BuildContext context) onTap;
-}
-
-class _QuickHelpCard extends StatelessWidget {
-  const _QuickHelpCard({required this.item});
-
-  final _QuickHelpItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: () => item.onTap(context),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          height: 148,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(item.icon, color: const Color(0xFF2563EB), size: 20),
-              ),
-              const Spacer(),
-              Text(
-                item.title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), height: 1.3),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -703,35 +805,16 @@ class _ExperienceBanner extends StatelessWidget {
   }
 }
 
-class _EmptySearchState extends StatelessWidget {
-  const _EmptySearchState({required this.query});
-
-  final String query;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Text(
-        'No help topics match "$query".',
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-      ),
-    );
-  }
-}
-
 class _SupportContactSheet extends StatefulWidget {
-  const _SupportContactSheet({this.initialSubject, this.initialMessage});
+  const _SupportContactSheet({
+    this.initialSubject,
+    this.initialMessage,
+    this.onSubmitted,
+  });
 
   final String? initialSubject;
   final String? initialMessage;
+  final Future<void> Function()? onSubmitted;
 
   @override
   State<_SupportContactSheet> createState() => _SupportContactSheetState();
@@ -803,7 +886,10 @@ class _SupportContactSheetState extends State<_SupportContactSheet> {
             subject: _subject,
             message: _messageCtrl.text.trim(),
           );
-      if (mounted) setState(() => _ticket = ticket);
+      if (mounted) {
+        setState(() => _ticket = ticket);
+        await widget.onSubmitted?.call();
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -969,4 +1055,329 @@ InputDecoration _inputDecoration(String label) {
       borderSide: const BorderSide(color: Color(0xFF2563EB)),
     ),
   );
+}
+
+class _SupportTicketDetailSheet extends StatelessWidget {
+  const _SupportTicketDetailSheet({required this.ticket});
+
+  final SupportTicket ticket;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final statusColors = _ticketStatusColors(ticket.status);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 48),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Ticket #${ticket.ticketNumber}',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColors.bg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: statusColors.border),
+                    ),
+                    child: Text(
+                      supportStatusLabel(ticket.status),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: statusColors.text,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                supportSubjectLabel(ticket.subject),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              ),
+              if (ticket.orderNumber.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Order ${ticket.orderNumber}',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                ),
+              ],
+              const SizedBox(height: 20),
+              const Text(
+                'Tracking',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 12),
+              _TicketTimeline(ticket: ticket),
+              const SizedBox(height: 20),
+              const Text(
+                'Your message',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Text(
+                  ticket.message,
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF334155), height: 1.45),
+                ),
+              ),
+              if (ticket.replies.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  'Team replies',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 8),
+                for (final reply in ticket.replies)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          reply.message,
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF1E3A8A), height: 1.45),
+                        ),
+                        if (reply.sentAt != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            OrderFormatters.formatDate(reply.sentAt),
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TicketTimeline extends StatelessWidget {
+  const _TicketTimeline({required this.ticket});
+
+  final SupportTicket ticket;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = _buildSteps(ticket);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < steps.length; i++)
+            _TimelineStep(
+              title: steps[i].title,
+              subtitle: steps[i].subtitle,
+              isComplete: steps[i].isComplete,
+              isActive: steps[i].isActive,
+              isLast: i == steps.length - 1,
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<_TimelineStepData> _buildSteps(SupportTicket ticket) {
+    final submitted = ticket.createdAt;
+    final inProgress = ticket.status == 'in_progress' ||
+        ticket.status == 'resolved' ||
+        ticket.status == 'closed';
+    final hasReply = ticket.hasTeamReply;
+    final resolved = ticket.status == 'resolved' || ticket.status == 'closed';
+
+    return [
+      _TimelineStepData(
+        title: 'Submitted',
+        subtitle: OrderFormatters.formatDate(submitted),
+        isComplete: true,
+        isActive: ticket.status == 'open',
+      ),
+      _TimelineStepData(
+        title: 'In review',
+        subtitle: inProgress
+            ? OrderFormatters.formatDate(ticket.updatedAt ?? submitted)
+            : 'Waiting for our team',
+        isComplete: inProgress,
+        isActive: ticket.status == 'in_progress',
+      ),
+      _TimelineStepData(
+        title: 'Team replied',
+        subtitle: hasReply
+            ? OrderFormatters.formatDate(ticket.lastReplyAt)
+            : 'No reply yet',
+        isComplete: hasReply,
+        isActive: hasReply && !resolved,
+      ),
+      _TimelineStepData(
+        title: ticket.status == 'closed' ? 'Closed' : 'Resolved',
+        subtitle: resolved
+            ? OrderFormatters.formatDate(ticket.updatedAt)
+            : 'Pending resolution',
+        isComplete: resolved,
+        isActive: resolved,
+      ),
+    ];
+  }
+}
+
+class _TimelineStepData {
+  const _TimelineStepData({
+    required this.title,
+    required this.subtitle,
+    required this.isComplete,
+    required this.isActive,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool isComplete;
+  final bool isActive;
+}
+
+class _TimelineStep extends StatelessWidget {
+  const _TimelineStep({
+    required this.title,
+    required this.subtitle,
+    required this.isComplete,
+    required this.isActive,
+    required this.isLast,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool isComplete;
+  final bool isActive;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final dotColor = isComplete
+        ? (isActive ? const Color(0xFF2563EB) : const Color(0xFF16A34A))
+        : const Color(0xFFCBD5E1);
+    final lineColor = isComplete ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: dotColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: isActive
+                    ? [BoxShadow(color: dotColor.withValues(alpha: 0.35), blurRadius: 8)]
+                    : null,
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 34,
+                color: lineColor,
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isComplete ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isComplete ? const Color(0xFF64748B) : const Color(0xFFCBD5E1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
