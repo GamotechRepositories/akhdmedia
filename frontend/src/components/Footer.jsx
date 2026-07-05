@@ -26,7 +26,7 @@ const Footer = () => {
             <li><Link to="/license-information-policy" className="transition hover:text-white">License Information Policy</Link></li>
             <li><Link to="/legal-policy" className="transition hover:text-white">Legal Policy</Link></li>
             <li><Link to="/terms-and-conditions" className="transition hover:text-white">Terms and Conditions</Link></li>
-            <li><Link to="/media-accreditation-policy" className="transition hover:text-white">MEDIA ACCREDITATION &amp; EDITORIAL EVENT COVERAGE POLICY</Link></li>
+            <li><Link to="/media-accreditation-policy" className="capitalize transition hover:text-white">media accreditation &amp; editorial event coverage policy</Link></li>
           </ul>
         </div>
 

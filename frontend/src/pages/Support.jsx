@@ -247,8 +247,8 @@ const Support = () => {
           <Link to="/legal-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
             Legal Policy
           </Link>
-          <Link to="/media-accreditation-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900 sm:col-span-2">
-            MEDIA ACCREDITATION &amp; EDITORIAL EVENT COVERAGE POLICY
+          <Link to="/media-accreditation-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold capitalize text-gray-900 transition hover:border-gray-900 sm:col-span-2">
+            media accreditation &amp; editorial event coverage policy
           </Link>
         </div>
       </div>

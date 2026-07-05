@@ -8,8 +8,8 @@ const MediaAccreditationPolicy = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-            MEDIA ACCREDITATION &amp; EDITORIAL EVENT COVERAGE POLICY
+          <h1 className="text-2xl font-bold capitalize text-gray-900 sm:text-3xl">
+            media accreditation &amp; editorial event coverage policy
           </h1>
           <p className="mt-2 text-sm text-gray-600">{lastUpdated}</p>
 
