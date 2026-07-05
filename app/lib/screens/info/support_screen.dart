@@ -124,18 +124,6 @@ class _SupportScreenState extends State<SupportScreen> {
             _ContactCard(
               children: [
                 _ContactRow(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  title: 'Live Chat',
-                  subtitle: 'Chat with our support team in real-time',
-                  statusLabel: 'Online',
-                  statusColor: const Color(0xFF22C55E),
-                  actionLabel: 'Start Chat',
-                  onTap: () => _openContactSheet(
-                    subject: 'other',
-                    messageHint: 'Hi, I need help with...',
-                  ),
-                ),
-                _ContactRow(
                   icon: Icons.mail_outline_rounded,
                   title: 'Email Support',
                   subtitle: "Send us an email and we'll reply ASAP",
