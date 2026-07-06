@@ -21,7 +21,10 @@ import {
   canAccessOrderDownloads,
   createRazorpayOrder,
   getRazorpayKeyId,
+  isPayPalConfigured,
+  isRazorpayConfigured,
 } from '../services/paymentService.js'
+import { createPayPalOrder } from '../services/paypalService.js'
 import { sendOrderLicenseEmail } from '../services/emailService.js'
 import {
   buildLicenseCertificateBuffer,
@@ -59,6 +62,66 @@ const resolveOrderForRequest = async (req, orderId) => {
   })
   return { order, userEmail: null }
 }
+
+const resolvePaymentProvider = (value = '') =>
+  String(value).toLowerCase() === 'paypal' ? 'paypal' : 'razorpay'
+
+const buildPaymentSession = async (order, paymentProvider) => {
+  if (paymentProvider === 'paypal') {
+    if (!isPayPalConfigured()) {
+      throw new AppError('PayPal is not available right now', 503)
+    }
+
+    const paypalOrder = await createPayPalOrder({
+      amount: order.totalAmount,
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+    })
+
+    order.paypalOrderId = paypalOrder.id
+    order.razorpayOrderId = ''
+    await order.save()
+
+    return {
+      paypal: {
+        orderId: paypalOrder.id,
+        approvalUrl: paypalOrder.approvalUrl,
+        currency: paypalOrder.currency,
+        amount: paypalOrder.amount,
+        inrAmount: paypalOrder.inrAmount,
+        usdInrRate: paypalOrder.usdInrRate,
+        rateSource: paypalOrder.rateSource,
+      },
+    }
+  }
+
+  if (!isRazorpayConfigured()) {
+    throw new AppError('Razorpay is not available right now', 503)
+  }
+
+  const razorpayOrder = await createRazorpayOrder({
+    amount: order.totalAmount,
+    receipt: order.orderNumber,
+    notes: {
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+    },
+  })
+
+  order.razorpayOrderId = razorpayOrder.id
+  order.paypalOrderId = ''
+  await order.save()
+
+  return {
+    razorpay: {
+      keyId: getRazorpayKeyId(),
+      orderId: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+    },
+  }
+}
+
 export const getProfile = asyncHandler(async (req, res) => {
   const profile = await getCheckoutProfile(req.sessionId)
 
@@ -87,33 +150,27 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new AppError('COD payment is not available', 400)
   }
 
+  const paymentProvider = resolvePaymentProvider(req.body.paymentProvider)
+  if (paymentProvider === 'razorpay' && !isRazorpayConfigured()) {
+    throw new AppError('Razorpay is not available right now', 503)
+  }
+  if (paymentProvider === 'paypal' && !isPayPalConfigured()) {
+    throw new AppError('PayPal is not available right now', 503)
+  }
+
   const order = await createPendingOnlineOrderFromCart(req.sessionId, {
     billingAddress,
     userId: req.user?.id || null,
+    paymentProvider,
   })
-  const razorpayOrder = await createRazorpayOrder({
-    amount: order.totalAmount,
-    receipt: order.orderNumber,
-    notes: {
-      orderId: order._id.toString(),
-      orderNumber: order.orderNumber,
-    },
-  })
-
-  order.razorpayOrderId = razorpayOrder.id
-  await order.save()
+  const paymentSession = await buildPaymentSession(order, paymentProvider)
 
   res.status(201).json({
     success: true,
     message: 'Proceed to payment',
     data: {
       order: formatOrderResponse(order),
-      razorpay: {
-        keyId: getRazorpayKeyId(),
-        orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-      },
+      ...paymentSession,
     },
   })
 })
@@ -153,29 +210,15 @@ export const resumeOrderPayment = asyncHandler(async (req, res) => {
     )
   }
 
-  const razorpayOrder = await createRazorpayOrder({
-    amount: order.totalAmount,
-    receipt: order.orderNumber,
-    notes: {
-      orderId: order._id.toString(),
-      orderNumber: order.orderNumber,
-    },
-  })
-
-  order.razorpayOrderId = razorpayOrder.id
-  await order.save()
+  const paymentProvider = order.paymentProvider || 'razorpay'
+  const paymentSession = await buildPaymentSession(order, paymentProvider)
 
   res.json({
     success: true,
     message: 'Proceed to payment',
     data: {
       order: await enrichOrderWithPaymentResumeStatus(order),
-      razorpay: {
-        keyId: getRazorpayKeyId(),
-        orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-      },
+      ...paymentSession,
     },
   })
 })

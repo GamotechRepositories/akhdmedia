@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { orderAPI, paymentAPI } from '../services/commerceApi';
 import { BRAND } from '../config/brand';
 import { openRazorpayCheckout } from '../utils/razorpay';
+import { renderPayPalButtons } from '../utils/paypal';
 import {
   LICENSE_EMAIL_RESEND_LIMIT_MESSAGE,
   LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE,
@@ -92,7 +93,6 @@ const OrderSuccess = () => {
   const isResendWindowOpen = resendWindowRemainingMs > 0;
   const canResendEmail = isResendWindowOpen && resendsRemaining > 0;
 
-  const paymentPending =
     order?.paymentMethod === 'online' &&
     order?.paymentStatus === 'pending' &&
     order?.status === 'pending';
@@ -137,7 +137,58 @@ const OrderSuccess = () => {
         throw new Error(response.message || 'Could not start payment');
       }
 
-      const { order: pendingOrder, razorpay } = response.data;
+      const { order: pendingOrder, razorpay, paypal } = response.data;
+
+      if (pendingOrder.paymentProvider === 'paypal' || paypal?.orderId) {
+        const configResponse = await paymentAPI.getConfig();
+        const clientId = configResponse.data?.paypal?.clientId;
+        const currency = configResponse.data?.paypal?.currency || 'INR';
+        if (!clientId) {
+          throw new Error('PayPal is not available right now');
+        }
+
+        const containerId = 'paypal-resume-button-container';
+        let container = document.getElementById(containerId);
+        if (!container) {
+          container = document.createElement('div');
+          container.id = containerId;
+          container.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4';
+          container.innerHTML =
+            '<div class="w-full max-w-md rounded-2xl bg-white p-6"><p class="mb-4 text-sm font-medium text-gray-800">Complete payment with PayPal</p><div id="paypal-resume-buttons"></div></div>';
+          document.body.appendChild(container);
+        }
+
+        await renderPayPalButtons({
+          clientId,
+          currency,
+          containerId: 'paypal-resume-buttons',
+          paypalOrderId: paypal.orderId,
+          onApprove: async (paypalOrderId) => {
+            const verifyResponse = await paymentAPI.capturePayPalPayment({
+              orderId: pendingOrder.id,
+              paypalOrderId,
+              clearCart: false,
+            });
+
+            if (!verifyResponse.success) {
+              throw new Error(verifyResponse.message || 'Payment verification failed');
+            }
+
+            setOrder(verifyResponse.data.order);
+            container?.remove();
+          },
+          onCancel: () => {
+            container?.remove();
+            setResumingPayment(false);
+          },
+          onError: () => {
+            container?.remove();
+            setPaymentError('PayPal payment failed. Please try again.');
+            setResumingPayment(false);
+          },
+        });
+        return;
+      }
 
       if (!razorpay?.orderId || !razorpay?.keyId) {
         throw new Error('Payment gateway is not available right now');
@@ -240,13 +291,20 @@ const OrderSuccess = () => {
           pendingVerificationRef.current = null;
           setLoadingOrderLabel('Confirming your payment...');
 
-          const verifyResponse = await paymentAPI.verifyRazorpayPayment({
-            orderId,
-            razorpay_order_id: pendingVerification.razorpay_order_id,
-            razorpay_payment_id: pendingVerification.razorpay_payment_id,
-            razorpay_signature: pendingVerification.razorpay_signature,
-            clearCart: true,
-          });
+          const verifyResponse =
+            pendingVerification.provider === 'paypal'
+              ? await paymentAPI.capturePayPalPayment({
+                  orderId,
+                  paypalOrderId: pendingVerification.paypalOrderId,
+                  clearCart: true,
+                })
+              : await paymentAPI.verifyRazorpayPayment({
+                  orderId,
+                  razorpay_order_id: pendingVerification.razorpay_order_id,
+                  razorpay_payment_id: pendingVerification.razorpay_payment_id,
+                  razorpay_signature: pendingVerification.razorpay_signature,
+                  clearCart: true,
+                });
 
           window.history.replaceState({}, '', `${location.pathname}${location.search}`);
 

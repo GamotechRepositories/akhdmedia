@@ -11,6 +11,7 @@ import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
+import PayPalComplete from './pages/PayPalComplete';
 import Support from './pages/Support';
 import RefundPolicy from './pages/RefundPolicy';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -43,6 +44,7 @@ function AppContent() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/paypal/complete" element={<PayPalComplete />} />
           <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/support" element={<Support />} />
           <Route path="/refund-policy" element={<RefundPolicy />} />

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { checkoutAPI, orderAPI } from '../services/commerceApi';
+import { checkoutAPI, orderAPI, paymentAPI } from '../services/commerceApi';
 import { openRazorpayCheckout } from '../utils/razorpay';
-import { formatPayableCurrency } from '../utils/formatters';
+import { renderPayPalButtons } from '../utils/paypal';
+import { formatPayableCurrency, formatUsd, convertInrToUsd } from '../utils/formatters';
 import OrderAmountSummary from '../components/OrderAmountSummary';
 import PageLoader from '../components/ui/PageLoader';
 import PhoneCountryInput, { isPhoneNumberValid, normalizePhoneValue } from '../components/ui/PhoneCountryInput';
@@ -47,6 +48,11 @@ const emptyBilling = {
   purchaseReasonOther: '',
 };
 
+
+const PAYMENT_GATEWAYS = [
+  { id: 'razorpay', label: 'Razorpay', subtitle: 'UPI, cards & net banking' },
+  { id: 'paypal', label: 'PayPal', subtitle: 'Pay with PayPal account or card' },
+];
 
 const PAYMENT_OPTIONS = [
   { id: 'upi', label: 'UPI' },
@@ -168,6 +174,29 @@ const Checkout = () => {
   const [billingDetails, setBillingDetails] = useState(emptyBilling);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedLicensePolicy, setAcceptedLicensePolicy] = useState(false);
+  const [paymentProvider, setPaymentProvider] = useState('razorpay');
+  const [paymentConfig, setPaymentConfig] = useState(null);
+  const [paypalReady, setPaypalReady] = useState(false);
+  const paypalContainerId = 'paypal-button-container';
+  const paypalOrderRef = useRef(null);
+
+  useEffect(() => {
+    const loadPaymentConfig = async () => {
+      try {
+        const response = await paymentAPI.getConfig();
+        if (response.success) {
+          setPaymentConfig(response.data);
+          if (response.data?.paypal?.enabled && !response.data?.razorpay?.enabled) {
+            setPaymentProvider('paypal');
+          }
+        }
+      } catch (configError) {
+        console.error('Failed to load payment config:', configError);
+      }
+    };
+
+    loadPaymentConfig();
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -263,21 +292,29 @@ const Checkout = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const completeOrderSuccess = (orderId, paymentResponse, orderNumber = '') => {
+  const completeOrderSuccess = (orderId, paymentResponse, orderNumber = '', provider = 'razorpay') => {
     setIsProcessingOrder(false);
     setLoading(false);
     setIsPlacingOrder(false);
-    navigate(`/order-success?method=online&orderId=${orderId}`, {
+    navigate(`/order-success?method=${provider}&orderId=${orderId}`, {
       replace: true,
       state: {
         showConfirmingOverlay: true,
         previewOrderNumber: orderNumber,
-        pendingPaymentVerification: {
-          orderId,
-          razorpay_order_id: paymentResponse.razorpay_order_id,
-          razorpay_payment_id: paymentResponse.razorpay_payment_id,
-          razorpay_signature: paymentResponse.razorpay_signature,
-        },
+        pendingPaymentVerification:
+          provider === 'paypal'
+            ? {
+                provider: 'paypal',
+                orderId,
+                paypalOrderId: paymentResponse.paypalOrderId,
+              }
+            : {
+                provider: 'razorpay',
+                orderId,
+                razorpay_order_id: paymentResponse.razorpay_order_id,
+                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                razorpay_signature: paymentResponse.razorpay_signature,
+              },
       },
     });
   };
@@ -285,7 +322,7 @@ const Checkout = () => {
   const placeOnlineOrder = async (paymentMethod) => {
     setIsProcessingOrder(true);
 
-    const response = await orderAPI.createOrder(billingDetails, 'online');
+    const response = await orderAPI.createOrder(billingDetails, 'online', paymentProvider);
 
     if (!response.success) {
       throw new Error(response.message || 'Failed to start payment');
@@ -293,38 +330,125 @@ const Checkout = () => {
 
     const { order, razorpay } = response.data;
 
-    if (!razorpay?.orderId || !razorpay?.keyId) {
-      throw new Error('Payment gateway is not available right now');
+    if (paymentProvider === 'razorpay') {
+      if (!razorpay?.orderId || !razorpay?.keyId) {
+        throw new Error('Payment gateway is not available right now');
+      }
+
+      setIsProcessingOrder(false);
+
+      await openRazorpayCheckout({
+        key: razorpay.keyId,
+        amount: razorpay.amount,
+        currency: razorpay.currency,
+        orderId: razorpay.orderId,
+        name: BRAND.name,
+        description: `Order ${order.orderNumber}`,
+        preferredMethod: paymentMethod,
+        prefill: {
+          name: billingDetails.name,
+          email: billingDetails.email,
+          contact: billingDetails.phone,
+        },
+        onSuccess: (paymentResponse) => {
+          completeOrderSuccess(order.id, paymentResponse, order.orderNumber, 'razorpay');
+          return { success: true };
+        },
+        onDismiss: () => {
+          setLoading(false);
+          setIsPlacingOrder(false);
+        },
+      });
+      return;
     }
 
-    setIsProcessingOrder(false);
-
-    await openRazorpayCheckout({
-      key: razorpay.keyId,
-      amount: razorpay.amount,
-      currency: razorpay.currency,
-      orderId: razorpay.orderId,
-      name: BRAND.name,
-      description: `Order ${order.orderNumber}`,
-      preferredMethod: paymentMethod,
-      prefill: {
-        name: billingDetails.name,
-        email: billingDetails.email,
-        contact: billingDetails.phone,
-      },
-      onSuccess: (paymentResponse) => {
-        completeOrderSuccess(order.id, paymentResponse, order.orderNumber);
-        return { success: true };
-      },
-      onDismiss: () => {
-        setLoading(false);
-        setIsPlacingOrder(false);
-      },
-    });
+    throw new Error('Use PayPal to complete this payment');
   };
 
-  const handlePaymentMethodSelect = async (methodId) => {
+  const preparePayPalCheckout = async () => {
     if (loading || isProcessingOrder) return;
+
+    setLoading(true);
+    setIsPlacingOrder(true);
+    setIsProcessingOrder(true);
+    setPaypalReady(false);
+
+    try {
+      const response = await orderAPI.createOrder(billingDetails, 'online', 'paypal');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to start payment');
+      }
+
+      const { order, paypal } = response.data;
+      if (!paypal?.orderId || !paymentConfig?.paypal?.clientId) {
+        throw new Error('PayPal is not available right now');
+      }
+
+      paypalOrderRef.current = { order, paypalOrderId: paypal.orderId };
+      setIsProcessingOrder(false);
+
+      await renderPayPalButtons({
+        clientId: paymentConfig.paypal.clientId,
+        currency: paymentConfig.paypal.currency || paypal.currency || 'INR',
+        containerId: paypalContainerId,
+        paypalOrderId: paypal.orderId,
+        onApprove: async (paypalOrderId) => {
+          completeOrderSuccess(
+            order.id,
+            { paypalOrderId },
+            order.orderNumber,
+            'paypal',
+          );
+        },
+        onCancel: () => {
+          setLoading(false);
+          setIsPlacingOrder(false);
+          setIsProcessingOrder(false);
+        },
+        onError: () => {
+          setLoading(false);
+          setIsPlacingOrder(false);
+          setIsProcessingOrder(false);
+          showAlert('PayPal payment failed. Please try again.', 'Payment Failed');
+        },
+      });
+
+      setPaypalReady(true);
+      setLoading(false);
+      setIsPlacingOrder(false);
+    } catch (err) {
+      setIsPlacingOrder(false);
+      setIsProcessingOrder(false);
+      setLoading(false);
+      showAlert(err.message || 'Failed to start PayPal payment.', 'Payment Failed');
+    }
+  };
+
+  useEffect(() => {
+    if (step !== 'summary' || paymentProvider !== 'paypal') {
+      setPaypalReady(false);
+      paypalOrderRef.current = null;
+      return;
+    }
+
+    const refreshRateAndPayPal = async () => {
+      try {
+        const configResponse = await paymentAPI.getConfig();
+        if (configResponse.success) {
+          setPaymentConfig(configResponse.data);
+        }
+      } catch (_) {
+        // Keep existing config if refresh fails.
+      }
+      await preparePayPalCheckout();
+    };
+
+    refreshRateAndPayPal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, paymentProvider]);
+
+  const handlePaymentMethodSelect = async (methodId) => {
+    if (loading || isProcessingOrder || paymentProvider !== 'razorpay') return;
 
     setLoading(true);
     setIsPlacingOrder(true);
@@ -344,6 +468,17 @@ const Checkout = () => {
       showAlert(err.message || 'Failed to place order. Please try again.', 'Order Failed');
     }
   };
+
+  const availableGateways = PAYMENT_GATEWAYS.filter((gateway) => {
+    if (!paymentConfig) return gateway.id === 'razorpay';
+    if (gateway.id === 'razorpay') return paymentConfig.razorpay?.enabled !== false;
+    if (gateway.id === 'paypal') return paymentConfig.paypal?.enabled === true;
+    return false;
+  });
+
+  const paypalUsdRate = paymentConfig?.paypal?.usdInrRate || 84;
+  const paypalUsdTotal =
+    paymentProvider === 'paypal' ? convertInrToUsd(getCartTotal(), paypalUsdRate) : 0;
 
   if (!cartLoading && cart.length === 0 && !isPlacingOrder) {
     return null;
@@ -534,11 +669,23 @@ const Checkout = () => {
               <div className="mb-5 flex items-end justify-between gap-3 border-b border-gray-100 pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">Payment</h2>
-                  <p className="mt-1 text-xs text-gray-500">Secure checkout via Razorpay</p>
+                  <p className="mt-1 text-xs text-gray-500">Choose Razorpay or PayPal</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatPayableCurrency(getCartTotal())}</p>
+                  {paymentProvider === 'paypal' ? (
+                    <>
+                      <p className="text-2xl font-bold text-gray-900">{formatUsd(paypalUsdTotal)}</p>
+                      <p className="text-xs text-gray-500">
+                        ≈ {formatPayableCurrency(getCartTotal())}
+                        {' · '}
+                        {paymentConfig?.paypal?.usdInrRateSource === 'live' ? 'Live' : 'Est.'} rate ₹
+                        {paypalUsdRate.toFixed(2)}/USD
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">{formatPayableCurrency(getCartTotal())}</p>
+                  )}
                 </div>
               </div>
 
@@ -554,6 +701,29 @@ const Checkout = () => {
                 />
               </div>
 
+              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {availableGateways.map((gateway) => {
+                  const selected = paymentProvider === gateway.id;
+                  return (
+                    <button
+                      key={gateway.id}
+                      type="button"
+                      onClick={() => setPaymentProvider(gateway.id)}
+                      disabled={loading || isProcessingOrder}
+                      className={`rounded-xl border px-4 py-3 text-left transition ${
+                        selected
+                          ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-gray-900">{gateway.label}</p>
+                      <p className="mt-1 text-xs text-gray-500">{gateway.subtitle}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {paymentProvider === 'razorpay' && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {PAYMENT_OPTIONS.map((option) => {
                   const PaymentIcon = PAYMENT_OPTION_ICONS[option.id];
@@ -574,6 +744,20 @@ const Checkout = () => {
                   );
                 })}
               </div>
+              )}
+
+              {paymentProvider === 'paypal' && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-5">
+                  <p className="mb-1 text-sm font-medium text-gray-800">Pay securely with PayPal</p>
+                  <p className="mb-3 text-xs text-gray-500">
+                    You will be charged {formatUsd(paypalUsdTotal)} USD.
+                  </p>
+                  <div id={paypalContainerId} />
+                  {!paypalReady && (
+                    <p className="text-xs text-gray-500">Loading PayPal checkout…</p>
+                  )}
+                </div>
+              )}
 
               <div className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
                 <p>

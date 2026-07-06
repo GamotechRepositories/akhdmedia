@@ -7,9 +7,10 @@ import {
 import { getOrderItemDownloads } from '../services/downloadService.js'
 import { sendOrderLicenseEmail } from '../services/emailService.js'
 import {
-  getRazorpayKeyId,
+  getPaymentProvidersConfig,
   verifyRazorpaySignature,
 } from '../services/paymentService.js'
+import { capturePayPalOrder } from '../services/paypalService.js'
 import AppError from '../utils/AppError.js'
 import { getUserById } from '../services/userAuthService.js'
 
@@ -95,12 +96,59 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   })
 })
 
+export const capturePayPalPayment = asyncHandler(async (req, res) => {
+  const { orderId, paypalOrderId, clearCart = false } = req.body
+
+  if (!orderId || !paypalOrderId) {
+    throw new AppError('Missing PayPal payment details', 400)
+  }
+
+  const order = await resolveOrderForPayment(req, orderId)
+
+  if (order.paymentStatus === 'paid') {
+    return res.json({
+      success: true,
+      message: 'Payment already verified',
+      data: { order: formatOrderResponse(order) },
+    })
+  }
+
+  if (order.paymentProvider !== 'paypal') {
+    throw new AppError('This order does not use PayPal', 400)
+  }
+
+  if (order.paypalOrderId && order.paypalOrderId !== paypalOrderId) {
+    throw new AppError('PayPal order mismatch', 400)
+  }
+
+  const capture = await capturePayPalOrder(paypalOrderId)
+
+  const confirmedOrder = await confirmOnlineOrderPayment(
+    order,
+    {
+      paypalOrderId,
+      paypalCaptureId: capture.captureId,
+    },
+    { clearCart: clearCart === true },
+  )
+
+  try {
+    const downloads = await getOrderItemDownloads(confirmedOrder)
+    await sendOrderLicenseEmail({ order: confirmedOrder, downloads })
+  } catch (emailError) {
+    console.error('[email] Failed to send license email:', emailError.message)
+  }
+
+  res.json({
+    success: true,
+    message: 'Payment verified successfully',
+    data: { order: formatOrderResponse(confirmedOrder) },
+  })
+})
+
 export const getPaymentConfig = asyncHandler(async (req, res) => {
   res.json({
     success: true,
-    data: {
-      razorpayKeyId: getRazorpayKeyId(),
-      currency: 'INR',
-    },
+    data: await getPaymentProvidersConfig(),
   })
 })

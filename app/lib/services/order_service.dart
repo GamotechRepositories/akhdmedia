@@ -25,21 +25,32 @@ class OrderService {
     return address;
   }
 
-  Future<CreateOrderResult> createOrder(BillingAddress billingAddress) async {
+  Future<CreateOrderResult> createOrder(
+    BillingAddress billingAddress, {
+    String paymentProvider = 'razorpay',
+  }) async {
     final response = await _api.postJson('/orders', data: {
       'billingAddress': billingAddress.toJson(),
       'paymentMethod': 'online',
+      'paymentProvider': paymentProvider,
     });
 
     final orderJson = response['data']?['order'];
-    final razorpayJson = response['data']?['razorpay'];
-    if (orderJson is! Map<String, dynamic> || razorpayJson is! Map<String, dynamic>) {
+    if (orderJson is! Map<String, dynamic>) {
       throw Exception('Invalid order response');
     }
 
+    final razorpayJson = response['data']?['razorpay'];
+    final paypalJson = response['data']?['paypal'];
+
     return CreateOrderResult(
       order: Order.fromJson(orderJson),
-      razorpay: RazorpayCheckoutData.fromJson(razorpayJson),
+      razorpay: razorpayJson is Map<String, dynamic>
+          ? RazorpayCheckoutData.fromJson(razorpayJson)
+          : null,
+      paypal: paypalJson is Map<String, dynamic>
+          ? PayPalCheckoutData.fromJson(paypalJson)
+          : null,
     );
   }
 
@@ -55,14 +66,46 @@ class OrderService {
   Future<CreateOrderResult> resumePayment(String orderId) async {
     final response = await _api.postJson('/orders/$orderId/payment');
     final orderJson = response['data']?['order'];
-    final razorpayJson = response['data']?['razorpay'];
-    if (orderJson is! Map<String, dynamic> || razorpayJson is! Map<String, dynamic>) {
+    if (orderJson is! Map<String, dynamic>) {
       throw Exception('Payment unavailable');
     }
+
+    final razorpayJson = response['data']?['razorpay'];
+    final paypalJson = response['data']?['paypal'];
+
     return CreateOrderResult(
       order: Order.fromJson(orderJson),
-      razorpay: RazorpayCheckoutData.fromJson(razorpayJson),
+      razorpay: razorpayJson is Map<String, dynamic>
+          ? RazorpayCheckoutData.fromJson(razorpayJson)
+          : null,
+      paypal: paypalJson is Map<String, dynamic>
+          ? PayPalCheckoutData.fromJson(paypalJson)
+          : null,
     );
+  }
+
+  Future<Order> capturePayPalPayment({
+    required String orderId,
+    required String paypalOrderId,
+    bool clearCart = true,
+  }) async {
+    final response = await _api.postJson('/payments/paypal/capture', data: {
+      'orderId': orderId,
+      'paypalOrderId': paypalOrderId,
+      'clearCart': clearCart,
+    });
+    final orderJson = response['data']?['order'];
+    if (orderJson is! Map<String, dynamic>) {
+      throw Exception('Payment verification failed');
+    }
+    return Order.fromJson(orderJson);
+  }
+
+  Future<Map<String, dynamic>> getPaymentConfig() async {
+    final response = await _api.getJson('/payments/config');
+    return response['data'] is Map<String, dynamic>
+        ? response['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
   }
 
   Future<Order> verifyRazorpayPayment({

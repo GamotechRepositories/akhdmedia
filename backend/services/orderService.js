@@ -178,7 +178,10 @@ const orderItemsMatch = (existingItems = [], newItems = []) => {
   return existingKeys.every((key, index) => key === newKeys[index])
 }
 
-export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddress, userId = null }) => {
+export const createPendingOnlineOrderFromCart = async (
+  sessionId,
+  { billingAddress, userId = null, paymentProvider = 'razorpay' } = {},
+) => {
   const {
     normalizedAddress,
     orderItems,
@@ -189,11 +192,14 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
     total,
   } = await buildOrderPayloadFromCart(sessionId, billingAddress, userId)
 
+  const provider = paymentProvider === 'paypal' ? 'paypal' : 'razorpay'
+
   const reusableOrder = await Order.findOne({
     sessionId,
     paymentStatus: 'pending',
     status: 'pending',
     paymentMethod: 'online',
+    paymentProvider: provider,
   }).sort({ createdAt: -1 })
 
   if (
@@ -208,6 +214,7 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
     reusableOrder.promoCode = promoCode
     reusableOrder.discountAmount = discountAmount
     reusableOrder.totalAmount = total
+    reusableOrder.paymentProvider = provider
     if (userId) {
       reusableOrder.userId = userId
     }
@@ -223,6 +230,7 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
     items: orderItems,
     billingAddress: normalizedAddress,
     paymentMethod: 'online',
+    paymentProvider: provider,
     subtotalAmount: subtotal,
     gstAmount: gstTotal,
     promoCode,
@@ -239,7 +247,7 @@ export const createPendingOnlineOrderFromCart = async (sessionId, { billingAddre
 
 export const confirmOnlineOrderPayment = async (
   order,
-  { razorpayPaymentId, razorpaySignature, razorpayOrderId },
+  paymentDetails = {},
   { clearCart = true } = {},
 ) => {
   if (!order) {
@@ -256,10 +264,18 @@ export const confirmOnlineOrderPayment = async (
 
   order.paymentStatus = 'paid'
   order.status = 'confirmed'
-  order.razorpayPaymentId = razorpayPaymentId
-  order.razorpaySignature = razorpaySignature
-  if (razorpayOrderId) {
-    order.razorpayOrderId = razorpayOrderId
+
+  if (paymentDetails.paypalCaptureId) {
+    order.paypalCaptureId = paymentDetails.paypalCaptureId
+    if (paymentDetails.paypalOrderId) {
+      order.paypalOrderId = paymentDetails.paypalOrderId
+    }
+  } else {
+    order.razorpayPaymentId = paymentDetails.razorpayPaymentId || ''
+    order.razorpaySignature = paymentDetails.razorpaySignature || ''
+    if (paymentDetails.razorpayOrderId) {
+      order.razorpayOrderId = paymentDetails.razorpayOrderId
+    }
   }
 
   order.items.forEach((item) => {

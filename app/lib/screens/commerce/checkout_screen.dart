@@ -10,6 +10,7 @@ import '../../models/billing_address.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
+import '../../services/paypal_checkout.dart';
 import '../../services/razorpay_checkout.dart';
 import '../../widgets/common/loading_view.dart';
 
@@ -26,14 +27,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _phoneCtrl = TextEditingController();
   final _otherReasonCtrl = TextEditingController();
   final _razorpay = RazorpayCheckout();
+  final _paypal = PayPalCheckout();
 
   int _step = 0;
   bool _loadingProfile = true;
   bool _processing = false;
+  String _paymentProvider = 'razorpay';
   bool _acceptedTerms = false;
   bool _acceptedLicensePolicy = false;
   String? _selectedReason;
   String? _error;
+  Map<String, dynamic> _paymentConfig = {};
 
   @override
   void initState() {
@@ -75,6 +79,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
     } catch (_) {
       // Profile prefill is optional.
+    }
+
+    try {
+      _paymentConfig = await orders.getPaymentConfig();
+    } catch (_) {
+      // Payment config is optional for Razorpay-only checkout.
     } finally {
       if (mounted) setState(() => _loadingProfile = false);
     }
@@ -142,30 +152,56 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     try {
       await orders.saveCheckoutProfile(_billing);
-      final result = await orders.createOrder(_billing);
+      final result = await orders.createOrder(_billing, paymentProvider: _paymentProvider);
 
-      setState(() => _processing = false);
+      if (_paymentProvider == 'paypal') {
+        final paypal = result.paypal;
+        if (paypal == null || paypal.approvalUrl.isEmpty) {
+          throw Exception('PayPal is not available right now');
+        }
 
-      final payment = await _razorpay.open(
-        keyId: result.razorpay.keyId,
-        amount: result.razorpay.amount,
-        currency: result.razorpay.currency,
-        razorpayOrderId: result.razorpay.orderId,
-        name: Brand.name,
-        description: 'Order ${result.order.orderNumber}',
-        customerName: _billing.name,
-        customerEmail: _billing.email,
-        customerPhone: _billing.phone,
-      );
+        setState(() => _processing = false);
 
-      setState(() => _processing = true);
+        final paypalOrderId = await _paypal.open(
+          context: context,
+          approvalUrl: paypal.approvalUrl,
+        );
 
-      await orders.verifyRazorpayPayment(
-        orderId: result.order.id,
-        razorpayOrderId: payment.razorpayOrderId,
-        razorpayPaymentId: payment.razorpayPaymentId,
-        razorpaySignature: payment.razorpaySignature,
-      );
+        setState(() => _processing = true);
+
+        await orders.capturePayPalPayment(
+          orderId: result.order.id,
+          paypalOrderId: paypalOrderId,
+        );
+      } else {
+        final razorpay = result.razorpay;
+        if (razorpay == null) {
+          throw Exception('Razorpay is not available right now');
+        }
+
+        setState(() => _processing = false);
+
+        final payment = await _razorpay.open(
+          keyId: razorpay.keyId,
+          amount: razorpay.amount,
+          currency: razorpay.currency,
+          razorpayOrderId: razorpay.orderId,
+          name: Brand.name,
+          description: 'Order ${result.order.orderNumber}',
+          customerName: _billing.name,
+          customerEmail: _billing.email,
+          customerPhone: _billing.phone,
+        );
+
+        setState(() => _processing = true);
+
+        await orders.verifyRazorpayPayment(
+          orderId: result.order.id,
+          razorpayOrderId: payment.razorpayOrderId,
+          razorpayPaymentId: payment.razorpayPaymentId,
+          razorpaySignature: payment.razorpaySignature,
+        );
+      }
 
       await cartProvider.clearCart();
 
@@ -326,7 +362,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     ];
   }
 
+  double _paypalUsdAmount(num inrTotal) {
+    final paypal = _paymentConfig['paypal'];
+    final rate = paypal is Map && paypal['usdInrRate'] is num
+        ? (paypal['usdInrRate'] as num).toDouble()
+        : 84.0;
+    final usd = inrTotal / rate;
+    return double.parse((usd < 0.01 ? 0.01 : usd).toStringAsFixed(2));
+  }
+
+  String _liveRateLabel() {
+    final paypal = _paymentConfig['paypal'];
+    if (paypal is Map && paypal['usdInrRateSource'] == 'live') {
+      return 'Live rate ';
+    }
+    return 'Est. rate ';
+  }
+
   List<Widget> _summary(CartProvider cartProvider) {
+    final inrTotal = cartProvider.cart.total;
+    final paypalUsd = _paymentProvider == 'paypal' ? _paypalUsdAmount(inrTotal) : 0.0;
+    final paypalRate = (_paymentConfig['paypal'] is Map
+            ? (_paymentConfig['paypal'] as Map)['usdInrRate']
+            : null) is num
+        ? ((_paymentConfig['paypal'] as Map)['usdInrRate'] as num).toDouble()
+        : 84.0;
+
     return [
       const Text('Order summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
       const SizedBox(height: AppSpacing.sm),
@@ -344,18 +405,108 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text('Total', style: TextStyle(fontWeight: FontWeight.w800)),
-          Text(
-            Formatters.currency(cartProvider.cart.total),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (_paymentProvider == 'paypal') ...[
+                Text(
+                  '\$${paypalUsd.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+                Text(
+                  '≈ ${Formatters.currency(inrTotal)} · ${_liveRateLabel()}₹${paypalRate.toStringAsFixed(2)}/USD',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+              ] else
+                Text(
+                  Formatters.currency(inrTotal),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+                ),
+            ],
           ),
         ],
       ),
       const SizedBox(height: AppSpacing.md),
+      const Text('Payment method', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+      const SizedBox(height: AppSpacing.sm),
+      _PaymentProviderTile(
+        title: 'Razorpay',
+        subtitle: 'UPI, cards & net banking',
+        selected: _paymentProvider == 'razorpay',
+        onTap: () => setState(() => _paymentProvider = 'razorpay'),
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      _PaymentProviderTile(
+        title: 'PayPal',
+        subtitle: 'Pay with PayPal account or card',
+        selected: _paymentProvider == 'paypal',
+        onTap: () => setState(() => _paymentProvider = 'paypal'),
+      ),
+      const SizedBox(height: AppSpacing.md),
       Text(
-        'Pay securely with UPI, card, or net banking via Razorpay.',
+        _paymentProvider == 'paypal'
+            ? 'You will be charged \$${paypalUsd.toStringAsFixed(2)} USD via PayPal.'
+            : 'Pay securely with UPI, card, or net banking via Razorpay.',
         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
       ),
     ];
+  }
+}
+
+class _PaymentProviderTile extends StatelessWidget {
+  const _PaymentProviderTile({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? const Color(0xFF111827) : Colors.grey.shade300,
+            ),
+            color: selected ? const Color(0xFFF9FAFB) : Colors.white,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: selected ? const Color(0xFF111827) : Colors.grey,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

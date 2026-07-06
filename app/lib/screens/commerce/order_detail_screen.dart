@@ -14,6 +14,7 @@ import '../../core/utils/order_formatters.dart';
 import '../../models/order.dart';
 import '../../models/order_item.dart';
 import '../../services/order_service.dart';
+import '../../services/paypal_checkout.dart';
 import '../../services/razorpay_checkout.dart';
 import '../../widgets/common/error_view.dart';
 import '../../widgets/common/loading_view.dart';
@@ -58,6 +59,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   int _resendWindowRemainingMs = 0;
   Timer? _resendTimer;
   final _razorpay = RazorpayCheckout();
+  final _paypal = PayPalCheckout();
 
   @override
   void initState() {
@@ -191,25 +193,56 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       final result = await orders.resumePayment(order.id);
       final billing = result.order.billingAddress;
 
-      final payment = await _razorpay.open(
-        keyId: result.razorpay.keyId,
-        amount: result.razorpay.amount,
-        currency: result.razorpay.currency,
-        razorpayOrderId: result.razorpay.orderId,
-        name: Brand.name,
-        description: 'Order ${result.order.orderNumber}',
-        customerName: billing.name,
-        customerEmail: billing.email,
-        customerPhone: billing.phone,
-      );
+      if (result.order.paymentProvider == 'paypal' || result.paypal != null) {
+        final paypal = result.paypal;
+        if (paypal == null || paypal.approvalUrl.isEmpty) {
+          throw Exception('PayPal is not available right now');
+        }
 
-      await orders.verifyRazorpayPayment(
-        orderId: order.id,
-        razorpayOrderId: payment.razorpayOrderId,
-        razorpayPaymentId: payment.razorpayPaymentId,
-        razorpaySignature: payment.razorpaySignature,
-        clearCart: false,
-      );
+        setState(() => _paying = false);
+
+        final paypalOrderId = await _paypal.open(
+          context: context,
+          approvalUrl: paypal.approvalUrl,
+        );
+
+        setState(() => _paying = true);
+
+        await orders.capturePayPalPayment(
+          orderId: order.id,
+          paypalOrderId: paypalOrderId,
+          clearCart: false,
+        );
+      } else {
+        final razorpay = result.razorpay;
+        if (razorpay == null) {
+          throw Exception('Razorpay is not available right now');
+        }
+
+        setState(() => _paying = false);
+
+        final payment = await _razorpay.open(
+          keyId: razorpay.keyId,
+          amount: razorpay.amount,
+          currency: razorpay.currency,
+          razorpayOrderId: razorpay.orderId,
+          name: Brand.name,
+          description: 'Order ${result.order.orderNumber}',
+          customerName: billing.name,
+          customerEmail: billing.email,
+          customerPhone: billing.phone,
+        );
+
+        setState(() => _paying = true);
+
+        await orders.verifyRazorpayPayment(
+          orderId: order.id,
+          razorpayOrderId: payment.razorpayOrderId,
+          razorpayPaymentId: payment.razorpayPaymentId,
+          razorpaySignature: payment.razorpaySignature,
+          clearCart: false,
+        );
+      }
 
       if (mounted) await _loadOrder();
     } catch (e) {

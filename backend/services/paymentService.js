@@ -1,24 +1,51 @@
 import crypto from 'crypto'
 import Razorpay from 'razorpay'
 import AppError from '../utils/AppError.js'
+import { isPayPalConfigured, getPayPalClientId } from './paypalService.js'
+import { getPayPalCurrency, getPayPalMode } from '../config/paypal.js'
+import { fetchLiveUsdInrRate } from './exchangeRateService.js'
+
+export const isRazorpayConfigured = () =>
+  Boolean(process.env.RAZORPAY_KEY_ID?.trim() && process.env.RAZORPAY_KEY_SECRET?.trim())
+
+export { isPayPalConfigured, getPayPalClientId }
 
 const getRazorpayClient = () => {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
-
-  if (!keyId || !keySecret) {
+  if (!isRazorpayConfigured()) {
     throw new AppError('Online payment is not configured. Please contact support.', 503)
   }
 
-  return new Razorpay({ key_id: keyId, key_secret: keySecret })
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  })
 }
 
 export const getRazorpayKeyId = () => {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  if (!keyId) {
+  if (!isRazorpayConfigured()) {
     throw new AppError('Online payment is not configured. Please contact support.', 503)
   }
-  return keyId
+  return process.env.RAZORPAY_KEY_ID
+}
+
+export const getPaymentProvidersConfig = async () => {
+  const { rate, source } = await fetchLiveUsdInrRate()
+
+  return {
+    currency: 'INR',
+    razorpay: {
+      enabled: isRazorpayConfigured(),
+      keyId: isRazorpayConfigured() ? process.env.RAZORPAY_KEY_ID : '',
+    },
+    paypal: {
+      enabled: isPayPalConfigured(),
+      clientId: isPayPalConfigured() ? getPayPalClientId() : '',
+      mode: getPayPalMode(),
+      currency: getPayPalCurrency(),
+      usdInrRate: rate,
+      usdInrRateSource: source,
+    },
+  }
 }
 
 export const createRazorpayOrder = async ({ amount, receipt, notes = {} }) => {

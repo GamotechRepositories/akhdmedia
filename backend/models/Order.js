@@ -42,6 +42,11 @@ const orderSchema = new mongoose.Schema(
       enum: ['online', 'COD'],
       default: 'online',
     },
+    paymentProvider: {
+      type: String,
+      enum: ['razorpay', 'paypal'],
+      default: 'razorpay',
+    },
     subtotalAmount: { type: Number, required: true, min: 0, default: 0 },
     gstAmount: { type: Number, required: true, min: 0, default: 0 },
     promoCode: { type: String, default: '' },
@@ -55,6 +60,8 @@ const orderSchema = new mongoose.Schema(
     razorpayOrderId: { type: String, default: '' },
     razorpayPaymentId: { type: String, default: '' },
     razorpaySignature: { type: String, default: '' },
+    paypalOrderId: { type: String, default: '' },
+    paypalCaptureId: { type: String, default: '' },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'completed'],
