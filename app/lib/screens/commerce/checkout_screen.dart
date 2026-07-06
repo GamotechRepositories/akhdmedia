@@ -434,23 +434,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       const Text('Payment method', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
       const SizedBox(height: AppSpacing.sm),
       _PaymentProviderTile(
-        title: 'Razorpay',
-        subtitle: 'UPI, cards & net banking',
+        title: 'India',
+        badge: 'INR',
+        subtitle: 'UPI, cards & net banking via Razorpay',
         selected: _paymentProvider == 'razorpay',
         onTap: () => setState(() => _paymentProvider = 'razorpay'),
       ),
       const SizedBox(height: AppSpacing.xs),
       _PaymentProviderTile(
-        title: 'PayPal',
-        subtitle: 'Pay with PayPal account or card',
+        title: 'International',
+        badge: 'USD',
+        subtitle: 'PayPal — pay in USD from anywhere',
         selected: _paymentProvider == 'paypal',
         onTap: () => setState(() => _paymentProvider = 'paypal'),
       ),
       const SizedBox(height: AppSpacing.md),
       Text(
         _paymentProvider == 'paypal'
-            ? 'You will be charged \$${paypalUsd.toStringAsFixed(2)} USD via PayPal.'
-            : 'Pay securely with UPI, card, or net banking via Razorpay.',
+            ? 'International: pay \$${paypalUsd.toStringAsFixed(2)} USD via PayPal.'
+            : 'India: pay in INR via UPI, card, or net banking.',
         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
       ),
     ];
@@ -463,10 +465,12 @@ class _PaymentProviderTile extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.onTap,
+    this.badge,
   });
 
   final String title;
   final String subtitle;
+  final String? badge;
   final bool selected;
   final VoidCallback onTap;
 
@@ -497,7 +501,33 @@ class _PaymentProviderTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    Row(
+                      children: [
+                        Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        if (badge != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: badge == 'USD'
+                                  ? const Color(0xFFDBEAFE)
+                                  : const Color(0xFFD1FAE5),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              badge!,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: badge == 'USD'
+                                    ? const Color(0xFF1E40AF)
+                                    : const Color(0xFF065F46),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                   ],
                 ),

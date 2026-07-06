@@ -50,8 +50,18 @@ const emptyBilling = {
 
 
 const PAYMENT_GATEWAYS = [
-  { id: 'razorpay', label: 'Razorpay', subtitle: 'UPI, cards & net banking' },
-  { id: 'paypal', label: 'PayPal', subtitle: 'Pay with PayPal account or card' },
+  {
+    id: 'razorpay',
+    label: 'India',
+    badge: 'INR',
+    subtitle: 'UPI, cards & net banking via Razorpay',
+  },
+  {
+    id: 'paypal',
+    label: 'International',
+    badge: 'USD',
+    subtitle: 'PayPal — pay in USD from anywhere in the world',
+  },
 ];
 
 const PAYMENT_OPTIONS = [
@@ -669,7 +679,9 @@ const Checkout = () => {
               <div className="mb-5 flex items-end justify-between gap-3 border-b border-gray-100 pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">Payment</h2>
-                  <p className="mt-1 text-xs text-gray-500">Choose Razorpay or PayPal</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    India → Razorpay (INR) · International → PayPal (USD)
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total</p>
@@ -690,15 +702,41 @@ const Checkout = () => {
               </div>
 
               <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50 px-3 py-3 text-sm">
-                <OrderAmountSummary
-                  order={{
-                    subtotalAmount: getCartSubtotal(),
-                    gstAmount: getCartGstTotal(),
-                    promoCode: appliedPromo?.code || '',
-                    discountAmount,
-                    totalAmount: getCartTotal(),
-                  }}
-                />
+                {paymentProvider === 'paypal' ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotal</span>
+                      <span>{formatUsd(convertInrToUsd(getCartSubtotal(), paypalUsdRate))}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>GST</span>
+                      <span>{formatUsd(convertInrToUsd(getCartGstTotal(), paypalUsdRate))}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-emerald-700">
+                        <span>Discount</span>
+                        <span>-{formatUsd(convertInrToUsd(discountAmount, paypalUsdRate))}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
+                      <span>Total payable (USD)</span>
+                      <span>{formatUsd(paypalUsdTotal)}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      Listed in INR as {formatPayableCurrency(getCartTotal())} · converted at live rate
+                    </p>
+                  </div>
+                ) : (
+                  <OrderAmountSummary
+                    order={{
+                      subtotalAmount: getCartSubtotal(),
+                      gstAmount: getCartGstTotal(),
+                      promoCode: appliedPromo?.code || '',
+                      discountAmount,
+                      totalAmount: getCartTotal(),
+                    }}
+                  />
+                )}
               </div>
 
               <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -716,7 +754,18 @@ const Checkout = () => {
                           : 'border-gray-200 hover:border-gray-400'
                       }`}
                     >
-                      <p className="text-sm font-semibold text-gray-900">{gateway.label}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-900">{gateway.label}</p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            gateway.id === 'paypal'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {gateway.badge}
+                        </span>
+                      </div>
                       <p className="mt-1 text-xs text-gray-500">{gateway.subtitle}</p>
                     </button>
                   );
@@ -747,10 +796,10 @@ const Checkout = () => {
               )}
 
               {paymentProvider === 'paypal' && (
-                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-5">
-                  <p className="mb-1 text-sm font-medium text-gray-800">Pay securely with PayPal</p>
-                  <p className="mb-3 text-xs text-gray-500">
-                    You will be charged {formatUsd(paypalUsdTotal)} USD.
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-5">
+                  <p className="mb-1 text-sm font-semibold text-blue-900">International payment via PayPal</p>
+                  <p className="mb-3 text-xs text-blue-800/80">
+                    Pay {formatUsd(paypalUsdTotal)} USD with your PayPal account or international card.
                   </p>
                   <div id={paypalContainerId} />
                   {!paypalReady && (
