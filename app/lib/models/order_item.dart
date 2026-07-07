@@ -40,23 +40,3 @@ class OrderItem {
     );
   }
 }
-
-class UnavailableOrderItem {
-  const UnavailableOrderItem({
-    required this.productId,
-    required this.name,
-    required this.reason,
-  });
-
-  final String productId;
-  final String name;
-  final String reason;
-
-  factory UnavailableOrderItem.fromJson(Map<String, dynamic> json) {
-    return UnavailableOrderItem(
-      productId: json['productId']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
-      reason: json['reason']?.toString() ?? '',
-    );
-  }
-}

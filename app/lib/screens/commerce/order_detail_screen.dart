@@ -14,11 +14,8 @@ import '../../core/utils/order_formatters.dart';
 import '../../models/order.dart';
 import '../../models/order_item.dart';
 import '../../services/order_service.dart';
-import '../../services/paypal_checkout.dart';
-import '../../services/razorpay_checkout.dart';
 import '../../widgets/common/error_view.dart';
 import '../../widgets/common/loading_view.dart';
-import '../../widgets/orders/order_widgets.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   const OrderDetailScreen({
@@ -52,14 +49,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Order? _order;
   bool _loading = true;
   bool _resending = false;
-  bool _paying = false;
   bool _showSupportDialog = false;
   String? _error;
   String? _emailNotice;
   int _resendWindowRemainingMs = 0;
   Timer? _resendTimer;
-  final _razorpay = RazorpayCheckout();
-  final _paypal = PayPalCheckout();
 
   @override
   void initState() {
@@ -70,7 +64,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void dispose() {
     _resendTimer?.cancel();
-    _razorpay.dispose();
     super.dispose();
   }
 
@@ -178,83 +171,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  Future<void> _resumePayment() async {
-    final order = _order;
-    if (order == null || _paying || !order.canResumePayment) return;
-
-    setState(() {
-      _paying = true;
-      _error = null;
-    });
-
-    final orders = context.read<OrderService>();
-
-    try {
-      final result = await orders.resumePayment(order.id);
-      final billing = result.order.billingAddress;
-
-      if (result.order.paymentProvider == 'paypal' || result.paypal != null) {
-        final paypal = result.paypal;
-        if (paypal == null || paypal.approvalUrl.isEmpty) {
-          throw Exception('PayPal is not available right now');
-        }
-
-        setState(() => _paying = false);
-
-        final paypalOrderId = await _paypal.open(
-          context: context,
-          approvalUrl: paypal.approvalUrl,
-        );
-
-        setState(() => _paying = true);
-
-        await orders.capturePayPalPayment(
-          orderId: order.id,
-          paypalOrderId: paypalOrderId,
-          clearCart: false,
-        );
-      } else {
-        final razorpay = result.razorpay;
-        if (razorpay == null) {
-          throw Exception('Razorpay is not available right now');
-        }
-
-        setState(() => _paying = false);
-
-        final payment = await _razorpay.open(
-          keyId: razorpay.keyId,
-          amount: razorpay.amount,
-          currency: razorpay.currency,
-          razorpayOrderId: razorpay.orderId,
-          name: Brand.name,
-          description: 'Order ${result.order.orderNumber}',
-          customerName: billing.name,
-          customerEmail: billing.email,
-          customerPhone: billing.phone,
-        );
-
-        setState(() => _paying = true);
-
-        await orders.verifyRazorpayPayment(
-          orderId: order.id,
-          razorpayOrderId: payment.razorpayOrderId,
-          razorpayPaymentId: payment.razorpayPaymentId,
-          razorpaySignature: payment.razorpaySignature,
-          clearCart: false,
-        );
-      }
-
-      if (mounted) await _loadOrder();
-    } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '');
-      if (message != 'Payment cancelled' && mounted) {
-        setState(() => _error = message);
-      }
-    } finally {
-      if (mounted) setState(() => _paying = false);
-    }
-  }
-
   Future<void> _downloadLicense() async {
     final order = _order;
     if (order == null) return;
@@ -305,149 +221,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
-                child: order.isPaymentPending
-                    ? _PaymentPendingCard(
-                        order: order,
-                        paying: _paying,
-                        error: _error,
-                        fromOrders: widget.fromOrders,
-                        onPay: _resumePayment,
-                        onContinue: _handleContinue,
-                      )
-                    : _LicenseIssuedCard(
-                        order: order,
-                        resendWindowRemainingMs: _resendWindowRemainingMs,
-                        isResendWindowOpen: _isResendWindowOpen,
-                        canResendEmail: _canResendEmail,
-                        resending: _resending,
-                        emailNotice: _emailNotice,
-                        fromOrders: widget.fromOrders,
-                        onResend: _resendEmail,
-                        onDownload: _downloadLicense,
-                        onContinue: _handleContinue,
-                      ),
+                child: _LicenseIssuedCard(
+                  order: order,
+                  resendWindowRemainingMs: _resendWindowRemainingMs,
+                  isResendWindowOpen: _isResendWindowOpen,
+                  canResendEmail: _canResendEmail,
+                  resending: _resending,
+                  emailNotice: _emailNotice,
+                  fromOrders: widget.fromOrders,
+                  onResend: _resendEmail,
+                  onDownload: _downloadLicense,
+                  onContinue: _handleContinue,
+                ),
               ),
             ),
           ),
           if (_showSupportDialog) _SupportDialog(order: order, onClose: () => setState(() => _showSupportDialog = false)),
         ],
       ),
-    );
-  }
-}
-
-class _PaymentPendingCard extends StatelessWidget {
-  const _PaymentPendingCard({
-    required this.order,
-    required this.paying,
-    required this.error,
-    required this.fromOrders,
-    required this.onPay,
-    required this.onContinue,
-  });
-
-  final Order order;
-  final bool paying;
-  final String? error;
-  final bool fromOrders;
-  final VoidCallback onPay;
-  final VoidCallback onContinue;
-
-  @override
-  Widget build(BuildContext context) {
-    return _OrderCardShell(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFFBEB),
-            border: Border(bottom: BorderSide(color: Color(0xFFFEF3C7))),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              const Text('Payment Pending', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              Text(
-                'Complete payment for Order #${order.shortOrderNumber} to receive your license.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-        ),
-        if (order.items.isNotEmpty) _PendingItemsList(items: order.items),
-        _SummaryRows(
-          rows: [
-            ('Total due', Formatters.currency(order.totalAmount), true),
-            ('Date', OrderFormatters.formatDateShort(order.createdAt), false),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            children: [
-              if (!order.canResumePayment) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Payment unavailable', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Text(
-                        order.paymentBlockReason.isNotEmpty
-                            ? order.paymentBlockReason
-                            : 'One or more items in this order are no longer available or delivery files are missing.',
-                        style: TextStyle(fontSize: 12, color: Colors.amber.shade900, height: 1.4),
-                      ),
-                      if (order.unavailableItems.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        ...order.unavailableItems.map(
-                          (item) => Text('• ${item.reason}', style: const TextStyle(fontSize: 11)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              if (error != null) ...[
-                Text(error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: paying || !order.canResumePayment ? null : onPay,
-                  child: paying
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text('Pay ${Formatters.currency(order.totalAmount)}'),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: onContinue,
-                  child: Text(fromOrders ? 'Back to My Orders' : 'Back to Home'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -693,49 +484,6 @@ class _LicenseDetailRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PendingItemsList extends StatelessWidget {
-  const _PendingItemsList({required this.items});
-
-  final List<OrderItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6))),
-      ),
-      child: Column(
-        children: items.map((item) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Row(
-              children: [
-                OrderItemThumbnail(imageUrl: item.image),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      Text(
-                        '${item.imageSize.isEmpty ? 'Standard' : item.imageSize} · Qty ${item.quantity}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(Formatters.currency(item.lineTotal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-              ],
-            ),
-          );
-        }).toList(),
       ),
     );
   }

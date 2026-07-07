@@ -23,9 +23,6 @@ class Order {
     this.licenseEmailResendsRemaining = 1,
     this.isLicenseEmailResendWindowOpen = false,
     this.canResendLicenseEmail = false,
-    this.canResumePayment = true,
-    this.paymentBlockReason = '',
-    this.unavailableItems = const [],
     this.licenseEmailResendWindowEndsAt,
     this.createdAt,
   });
@@ -50,15 +47,10 @@ class Order {
   final int licenseEmailResendsRemaining;
   final bool isLicenseEmailResendWindowOpen;
   final bool canResendLicenseEmail;
-  final bool canResumePayment;
-  final String paymentBlockReason;
-  final List<UnavailableOrderItem> unavailableItems;
   final DateTime? licenseEmailResendWindowEndsAt;
   final DateTime? createdAt;
 
   bool get isPaid => paymentStatus == 'paid';
-  bool get isPaymentPending =>
-      paymentMethod == 'online' && paymentStatus == 'pending' && status == 'pending';
 
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
@@ -74,7 +66,6 @@ class Order {
     final createdAtRaw = json['createdAt']?.toString();
     final windowEndsRaw = json['licenseEmailResendWindowEndsAt']?.toString();
     final itemsJson = json['items'] as List<dynamic>? ?? [];
-    final unavailableJson = json['unavailableItems'] as List<dynamic>? ?? [];
 
     return Order(
       id: json['id']?.toString() ?? '',
@@ -109,12 +100,6 @@ class Order {
       isLicenseEmailResendWindowOpen:
           json['isLicenseEmailResendWindowOpen'] == true,
       canResendLicenseEmail: json['canResendLicenseEmail'] == true,
-      canResumePayment: json['canResumePayment'] != false,
-      paymentBlockReason: json['paymentBlockReason']?.toString() ?? '',
-      unavailableItems: unavailableJson
-          .whereType<Map<String, dynamic>>()
-          .map(UnavailableOrderItem.fromJson)
-          .toList(),
       licenseEmailResendWindowEndsAt:
           windowEndsRaw != null ? DateTime.tryParse(windowEndsRaw) : null,
       createdAt: createdAtRaw != null ? DateTime.tryParse(createdAtRaw) : null,
