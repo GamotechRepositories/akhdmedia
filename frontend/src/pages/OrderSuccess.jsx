@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import AlertModal from '../components/AlertModal';
 import { useCart } from '../context/CartContext';
 import { orderAPI, paymentAPI } from '../services/commerceApi';
 import { BRAND } from '../config/brand';
-import { openRazorpayCheckout } from '../utils/razorpay';
-import { renderPayPalButtons } from '../utils/paypal';
 import {
   LICENSE_EMAIL_RESEND_LIMIT_MESSAGE,
   LICENSE_EMAIL_RESEND_WINDOW_EXPIRED_MESSAGE,
@@ -16,8 +13,6 @@ import OrderAmountSummary from '../components/OrderAmountSummary';
 import OrderConfirmingModal from '../components/OrderConfirmingModal';
 import PageLoader from '../components/ui/PageLoader';
 import { IconClose } from '../components/icons/Icons';
-import { formatCurrency } from '../utils/formatters';
-import { getOrderAmountBreakdown, getOrderLineAmountBreakdown } from '../utils/orderAmounts';
 
 const saveBlobDownload = (blob, filename) => {
   const url = window.URL.createObjectURL(blob);
@@ -50,8 +45,6 @@ const OrderSuccess = () => {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [resendWindowRemainingMs, setResendWindowRemainingMs] = useState(0);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
-  const [resumingPayment, setResumingPayment] = useState(false);
-  const [paymentError, setPaymentError] = useState('');
 
   const pendingVerificationRef = useRef(null);
   const previewOrderNumberRef = useRef('');
@@ -84,7 +77,6 @@ const OrderSuccess = () => {
     formatOrderNumber(order?.orderNumber || '') ||
     formatOrderNumber(previewOrderNumberRef.current || '') ||
     '--------';
-  const { total: orderPayableTotal } = getOrderAmountBreakdown(order || {});
   const customerEmail = order?.billingAddress?.email || '';
   const orderItems = order?.items || [];
   const maxResends = order?.maxLicenseEmailResends ?? MAX_LICENSE_EMAIL_RESENDS;
@@ -92,14 +84,6 @@ const OrderSuccess = () => {
   const resendsRemaining = order?.licenseEmailResendsRemaining ?? Math.max(0, maxResends - resendCount);
   const isResendWindowOpen = resendWindowRemainingMs > 0;
   const canResendEmail = isResendWindowOpen && resendsRemaining > 0;
-
-    order?.paymentMethod === 'online' &&
-    order?.paymentStatus === 'pending' &&
-    order?.status === 'pending';
-
-  const canResumePayment = order?.canResumePayment !== false;
-  const unavailableItems = order?.unavailableItems || [];
-  const paymentBlockReason = order?.paymentBlockReason || '';
 
   const isPaid = order?.paymentStatus === 'paid';
 
@@ -123,116 +107,6 @@ const OrderSuccess = () => {
   };
 
   const openSupportModal = () => setShowSupportModal(true);
-
-  const handleResumePayment = async () => {
-    if (!orderId || resumingPayment || !canResumePayment) return;
-
-    setResumingPayment(true);
-    setPaymentError('');
-
-    try {
-      const response = await orderAPI.resumeOrderPayment(orderId);
-
-      if (!response.success) {
-        throw new Error(response.message || 'Could not start payment');
-      }
-
-      const { order: pendingOrder, razorpay, paypal } = response.data;
-
-      if (pendingOrder.paymentProvider === 'paypal' || paypal?.orderId) {
-        const configResponse = await paymentAPI.getConfig();
-        const clientId = configResponse.data?.paypal?.clientId;
-        const currency = configResponse.data?.paypal?.currency || 'INR';
-        if (!clientId) {
-          throw new Error('PayPal is not available right now');
-        }
-
-        const containerId = 'paypal-resume-button-container';
-        let container = document.getElementById(containerId);
-        if (!container) {
-          container = document.createElement('div');
-          container.id = containerId;
-          container.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4';
-          container.innerHTML =
-            '<div class="w-full max-w-md rounded-2xl bg-white p-6"><p class="mb-4 text-sm font-medium text-gray-800">Complete payment with PayPal</p><div id="paypal-resume-buttons"></div></div>';
-          document.body.appendChild(container);
-        }
-
-        await renderPayPalButtons({
-          clientId,
-          currency,
-          containerId: 'paypal-resume-buttons',
-          paypalOrderId: paypal.orderId,
-          onApprove: async (paypalOrderId) => {
-            const verifyResponse = await paymentAPI.capturePayPalPayment({
-              orderId: pendingOrder.id,
-              paypalOrderId,
-              clearCart: false,
-            });
-
-            if (!verifyResponse.success) {
-              throw new Error(verifyResponse.message || 'Payment verification failed');
-            }
-
-            setOrder(verifyResponse.data.order);
-            container?.remove();
-          },
-          onCancel: () => {
-            container?.remove();
-            setResumingPayment(false);
-          },
-          onError: () => {
-            container?.remove();
-            setPaymentError('PayPal payment failed. Please try again.');
-            setResumingPayment(false);
-          },
-        });
-        return;
-      }
-
-      if (!razorpay?.orderId || !razorpay?.keyId) {
-        throw new Error('Payment gateway is not available right now');
-      }
-
-      await openRazorpayCheckout({
-        key: razorpay.keyId,
-        amount: razorpay.amount,
-        currency: razorpay.currency,
-        orderId: razorpay.orderId,
-        name: BRAND.name,
-        description: `Order ${pendingOrder.orderNumber}`,
-        prefill: {
-          name: pendingOrder.billingAddress?.name || '',
-          email: pendingOrder.billingAddress?.email || '',
-          contact: pendingOrder.billingAddress?.phone || '',
-        },
-        onSuccess: async (paymentResponse) => {
-          const verifyResponse = await paymentAPI.verifyRazorpayPayment({
-            orderId: pendingOrder.id,
-            razorpay_order_id: paymentResponse.razorpay_order_id,
-            razorpay_payment_id: paymentResponse.razorpay_payment_id,
-            razorpay_signature: paymentResponse.razorpay_signature,
-            clearCart: false,
-          });
-
-          if (!verifyResponse.success) {
-            throw new Error(verifyResponse.message || 'Payment verification failed');
-          }
-
-          setOrder(verifyResponse.data.order);
-        },
-        onDismiss: () => {
-          setResumingPayment(false);
-        },
-      });
-    } catch (error) {
-      if (error.message !== 'Payment cancelled') {
-        setPaymentError(error.message || 'Could not complete payment');
-      }
-    } finally {
-      setResumingPayment(false);
-    }
-  };
 
   const handleResendEmail = async () => {
     if (!orderId || resendingEmail) return;
@@ -326,7 +200,7 @@ const OrderSuccess = () => {
               return;
             }
           } else if (!verifyResponse.success) {
-            setPaymentError(verifyResponse.message || 'Payment verification failed');
+            console.error('Payment verification failed:', verifyResponse.message);
           }
         }
 
@@ -340,7 +214,6 @@ const OrderSuccess = () => {
         }
       } catch (error) {
         console.error('Failed to load order:', error);
-        setPaymentError(error.message || 'Could not load order details');
       } finally {
         setLoadingOrder(false);
       }
@@ -382,102 +255,6 @@ const OrderSuccess = () => {
 
   if (loadingOrder) {
     return <PageLoader fullScreen label={loadingOrderLabel} />;
-  }
-
-  if (paymentPending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-lg">
-          <div className="border-b border-amber-100 bg-amber-50 px-6 py-5 text-center">
-            <h1 className="text-xl font-bold text-gray-900">Payment Pending</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Complete payment for Order #{orderNumber} to receive your license.
-            </p>
-          </div>
-
-          {orderItems.length > 0 && (
-            <div className="border-b border-gray-100 px-6 py-4">
-              <div className="space-y-3">
-                {orderItems.map((item, index) => {
-                  const lineAmounts = getOrderLineAmountBreakdown(item, order || {});
-
-                  return (
-                  <div key={`${item.productId}-${index}`} className="flex items-center gap-3">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="h-14 w-20 rounded-lg object-cover" />
-                    ) : (
-                      <div className="flex h-14 w-20 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
-                        No image
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">{item.name}</p>
-                      <p className="mt-0.5 text-xs text-gray-500">
-                        {item.imageSize || 'Standard'} · Qty {item.quantity}
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(lineAmounts.total)}</p>
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2 border-b border-gray-100 px-6 py-4 text-sm">
-            <OrderAmountSummary
-              order={order}
-              totalLabel={paymentPending ? 'Total due' : 'Total paid'}
-            />
-            <div className="flex justify-between gap-4 pt-2">
-              <span className="text-gray-600">Date</span>
-              <span className="font-medium text-gray-900">{orderDateLabel}</span>
-            </div>
-          </div>
-
-          <div className="space-y-3 px-6 py-5">
-            {!canResumePayment && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-                <p className="font-semibold">Payment unavailable</p>
-                <p className="mt-1 leading-relaxed">
-                  {paymentBlockReason ||
-                    'One or more items in this order are no longer available or delivery files are missing.'}
-                </p>
-                {unavailableItems.length > 0 && (
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
-                    {unavailableItems.map((item) => (
-                      <li key={item.productId}>{item.reason}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleResumePayment}
-              disabled={resumingPayment || !canResumePayment}
-              className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
-            >
-              {resumingPayment ? 'Opening payment...' : `Pay ${formatCurrency(orderPayableTotal)}`}
-            </button>
-            <button
-              type="button"
-              onClick={handleContinue}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50"
-            >
-              {location.state?.fromOrders ? 'Back to My Orders' : 'Back to Home'}
-            </button>
-          </div>
-        </div>
-
-        <AlertModal
-          open={Boolean(paymentError)}
-          title="Payment failed"
-          message={paymentError}
-          onClose={() => setPaymentError('')}
-        />
-      </div>
-    );
   }
 
   return (
