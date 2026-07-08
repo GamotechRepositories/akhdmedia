@@ -33,19 +33,53 @@ class _CatalogScreenState extends State<CatalogScreen> {
   late String? _actor = widget.initialActor;
   late final TextEditingController _searchController =
       TextEditingController(text: widget.initialSearch ?? '');
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CatalogProvider>().loadCatalog();
+      _scrollToTop();
     });
   }
 
   @override
+  void didUpdateWidget(covariant CatalogScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final nextSearch = widget.initialSearch ?? '';
+    if (oldWidget.initialSearch != widget.initialSearch &&
+        _searchController.text != nextSearch) {
+      _searchController.text = nextSearch;
+    }
+
+    if (oldWidget.initialCategory != widget.initialCategory ||
+        oldWidget.initialSubCategory != widget.initialSubCategory ||
+        oldWidget.initialActor != widget.initialActor) {
+      setState(() {
+        _category = widget.initialCategory;
+        _subCategory = widget.initialSubCategory;
+        _actor = widget.initialActor;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToTop());
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -116,27 +150,64 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   AppSpacing.lg,
                   AppSpacing.sm,
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search name, clip ID, category...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.close, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
+                child: SizedBox(
+                  height: 42,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search name, clip ID, category...',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: Colors.grey.shade600,
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minHeight: 36,
+                        minWidth: 36,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF111827),
+                          width: 1.2,
+                        ),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
                   ),
-                  onChanged: (_) => setState(() {}),
                 ),
               ),
               if (_actor == null)
                 SizedBox(
-                  height: 34,
+                  height: 30,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding:
@@ -145,19 +216,25 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       _FilterChip(
                         label: 'All',
                         selected: _category == null,
-                        onTap: () => setState(() {
-                          _category = null;
-                          _subCategory = null;
-                        }),
+                        onTap: () {
+                          setState(() {
+                            _category = null;
+                            _subCategory = null;
+                          });
+                          _scrollToTop();
+                        },
                       ),
                       ...catalog.categories.map((category) {
                         return _FilterChip(
                           label: category.navLabel,
                           selected: _category == category.slug,
-                          onTap: () => setState(() {
-                            _category = category.slug;
-                            _subCategory = null;
-                          }),
+                          onTap: () {
+                            setState(() {
+                              _category = category.slug;
+                              _subCategory = null;
+                            });
+                            _scrollToTop();
+                          },
                         );
                       }),
                     ],
@@ -179,6 +256,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 child: filtered.isEmpty
                     ? const Center(child: Text('No clips match your filters.'))
                     : GridView.builder(
+                        controller: _scrollController,
                         padding: const EdgeInsets.fromLTRB(
                           AppSpacing.lg,
                           0,
@@ -225,9 +303,27 @@ class _FilterChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
       child: FilterChip(
-        label: Text(label, style: const TextStyle(fontSize: 11)),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF374151),
+          ),
+        ),
         selected: selected,
-        visualDensity: VisualDensity.compact,
+        showCheckmark: false,
+        selectedColor: const Color(0xFF111827),
+        backgroundColor: Colors.white,
+        side: BorderSide(
+          color: selected ? const Color(0xFF111827) : const Color(0xFFE5E7EB),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+        visualDensity: const VisualDensity(horizontal: -2.5, vertical: -3),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         onSelected: (_) => onTap(),
       ),
     );

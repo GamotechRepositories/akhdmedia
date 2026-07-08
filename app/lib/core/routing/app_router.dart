@@ -13,6 +13,7 @@ import '../../screens/commerce/checkout_screen.dart';
 import '../../screens/commerce/order_detail_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/info/info_screens.dart';
+import '../../screens/info/policies_legal_screen.dart';
 import '../../screens/info/support_screen.dart';
 import '../../screens/product/product_detail_screen.dart';
 import '../../screens/shell/main_shell.dart';
@@ -130,6 +131,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/support',
       builder: (context, state) => const SupportScreen(),
+    ),
+    GoRoute(
+      path: '/policies-legal',
+      builder: (context, state) => const PoliciesLegalScreen(),
     ),
     GoRoute(
       path: '/about-us',

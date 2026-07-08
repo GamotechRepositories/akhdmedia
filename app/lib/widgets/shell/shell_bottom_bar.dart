@@ -21,22 +21,16 @@ class ShellBottomBar extends StatelessWidget {
     super.key,
     this.selectedIndex,
     this.onTabSelected,
-    this.onSearchSubmitted,
   });
 
   final int? selectedIndex;
   final ValueChanged<int>? onTabSelected;
-  final ValueChanged<String>? onSearchSubmitted;
 
   static const _tabRoutes = ['/', '/videos', '/cart', '/account'];
 
   void _defaultSelectTab(BuildContext context, int index) {
     ShellTabState.noteTabIndex(index);
     context.go(_tabRoutes[index]);
-  }
-
-  void _defaultSearch(BuildContext context, String query) {
-    context.go('/videos?search=${Uri.encodeComponent(query)}');
   }
 
   @override
@@ -48,8 +42,6 @@ class ShellBottomBar extends StatelessWidget {
           cartCount: cart.cart.itemCount,
           onTabSelected: (index) =>
               (onTabSelected ?? (i) => _defaultSelectTab(context, i))(index),
-          onSearchSubmitted: (query) =>
-              (onSearchSubmitted ?? (q) => _defaultSearch(context, q))(query),
         );
       },
     );

@@ -37,8 +37,8 @@ class OrderItemThumbnail extends StatelessWidget {
   const OrderItemThumbnail({
     super.key,
     required this.imageUrl,
-    this.width = 80,
-    this.height = 56,
+    this.width = 96,
+    this.height = 68,
   });
 
   final String imageUrl;
@@ -62,11 +62,15 @@ class OrderItemThumbnail extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: CachedNetworkImage(
-        imageUrl: imageUrl,
+      child: Container(
         width: width,
         height: height,
-        fit: BoxFit.cover,
+        color: Colors.grey.shade100,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+        ),
       ),
     );
   }
@@ -93,7 +97,7 @@ class OrderListItemPreview extends StatelessWidget {
             children: [
               Text(
                 first?.name ?? 'Order items',
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),

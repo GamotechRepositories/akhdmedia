@@ -115,7 +115,7 @@ class _SupportScreenState extends State<SupportScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
-            _SupportHeader(onBack: () => context.pop()),
+            const _SupportHeader(),
             const SizedBox(height: 16),
             const _SupportHeroBanner(),
             const SizedBox(height: 22),
@@ -137,70 +137,6 @@ class _SupportScreenState extends State<SupportScreen> {
                   actionLabel: 'Call Now',
                   onTap: _launchPhone,
                   showDivider: false,
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            const _SectionTitle('Policies & Legal'),
-            const SizedBox(height: 12),
-            _ContactCard(
-              children: [
-                _ContactRow(
-                  icon: Icons.privacy_tip_outlined,
-                  title: 'Privacy Policy',
-                  subtitle: 'How we collect and protect your data',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => context.push('/privacy-policy'),
-                ),
-                _ContactRow(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Refund Policy',
-                  subtitle: 'Digital product refund terms and exceptions',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => context.push('/refund-policy'),
-                ),
-                _ContactRow(
-                  icon: Icons.gavel_outlined,
-                  title: 'Terms & Conditions',
-                  subtitle: 'Website usage and purchase terms',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => context.push('/terms-and-conditions'),
-                ),
-                _ContactRow(
-                  icon: Icons.verified_user_outlined,
-                  title: 'License Information Policy',
-                  subtitle: 'Content licensing rights and restrictions',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => context.push('/license-information-policy'),
-                ),
-                _ContactRow(
-                  icon: Icons.article_outlined,
-                  title: 'Editorial Policy',
-                  subtitle: 'Editorial and personal-use guidelines',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => context.push('/editorial-policy'),
-                ),
-                _ContactRow(
-                  icon: Icons.balance_outlined,
-                  title: 'Legal Policy',
-                  subtitle: 'Legal terms, ownership, and compliance',
-                  showAction: false,
-                  showChevron: true,
-                  onTap: () => context.push('/legal-policy'),
-                ),
-                _ContactRow(
-                  icon: Icons.badge_outlined,
-                  title: 'MEDIA ACCREDITATION & EDITORIAL EVENT COVERAGE POLICY',
-                  subtitle: 'Editorial event coverage and accreditation',
-                  showAction: false,
-                  showChevron: true,
-                  showDivider: false,
-                  onTap: () => context.push('/media-accreditation-policy'),
                 ),
               ],
             ),
@@ -489,36 +425,20 @@ class _TicketRow extends StatelessWidget {
 }
 
 class _SupportHeader extends StatelessWidget {
-  const _SupportHeader({required this.onBack});
-
-  final VoidCallback onBack;
+  const _SupportHeader();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Column(
       children: [
-        IconButton(
-          onPressed: onBack,
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Color(0xFF64748B)),
+        Text(
+          'Support',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
         ),
-        const Expanded(
-          child: Column(
-            children: [
-              Text(
-                'Support',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-              ),
-              SizedBox(height: 2),
-              Text(
-                "We're here to help you",
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-              ),
-            ],
-          ),
+        SizedBox(height: 2),
+        Text(
+          "We're here to help you",
+          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
         ),
       ],
     );
@@ -569,7 +489,7 @@ class _SupportHeroBanner extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Browse our policies below or contact our support team.',
+                  'Contact our support team for order and license help.',
                   style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
                 ),
               ],

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants/brand.dart';
 import '../../core/constants/purchase.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/auth_gate.dart';
@@ -110,102 +109,106 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           final licenseNote =
               product.videoInfo?['orientationNote']?.toString().trim() ?? '';
 
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: _TopBar(onBack: () => context.pop()),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
+          return SafeArea(
+            top: true,
+            bottom: false,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _TopBar(onBack: () => context.pop()),
                 ),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    ProductMediaGallery(product: product),
-                    const SizedBox(height: AppSpacing.md),
-                    _InfoCard(
-                      product: product,
-                      displayTierName: displayTierName,
-                      displayPrice: displayPrice,
-                      licenseNote: licenseNote,
-                      isSharing: _sharing,
-                      onShare: () => _shareProduct(product),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _ActionButtons(
-                      isPurchasable: product.isPurchasable,
-                      isBusy: _cartBusy,
-                      onAddToCart: () => _addToCart(context, product),
-                      onBuyNow: () => _buyNow(context, product),
-                    ),
-                    if (!isAuthenticated && product.isPurchasable)
-                      const Padding(
-                        padding: EdgeInsets.only(top: AppSpacing.sm),
-                        child: Text(
-                          'To continue, please login or create account.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-                        ),
-                      ),
-                    const SizedBox(height: AppSpacing.md),
-                    if (resolutionEntries.isNotEmpty)
-                      _QualitySelector(
-                        isVideo: product.isVideo,
-                        entries: resolutionEntries,
-                        selected: _selectedImageSize,
-                        onSelected: (size) =>
-                            setState(() => _selectedImageSize = size),
-                      ),
-                    const SizedBox(height: AppSpacing.md),
-                    _SpecsSection(product: product),
-                    if (relatedPreview.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.section),
-                      const Text(
-                        'More like this',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF111827),
-                        ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      ProductMediaGallery(product: product),
+                      const SizedBox(height: AppSpacing.md),
+                      _InfoCard(
+                        product: product,
+                        displayTierName: displayTierName,
+                        displayPrice: displayPrice,
+                        licenseNote: licenseNote,
+                        isSharing: _sharing,
+                        onShare: () => _shareProduct(product),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: AppSpacing.sm,
-                          mainAxisSpacing: AppSpacing.xs,
-                          childAspectRatio: 0.54,
-                        ),
-                        itemCount: relatedPreview.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == relatedPreview.length) {
-                            return _ViewAllCard(
-                              onTap: () => context.go('/videos'),
-                            );
-                          }
-                          final item = relatedPreview[index];
-                          return TightProductCard(
-                            product: item,
-                            onTap: () =>
-                                context.pushReplacement('/product/${item.id}'),
-                          );
-                        },
+                      _ActionButtons(
+                        isPurchasable: product.isPurchasable,
+                        isBusy: _cartBusy,
+                        onAddToCart: () => _addToCart(context, product),
+                        onBuyNow: () => _buyNow(context, product),
                       ),
-                    ],
-                  ]),
+                      if (!isAuthenticated && product.isPurchasable)
+                        const Padding(
+                          padding: EdgeInsets.only(top: AppSpacing.sm),
+                          child: Text(
+                            'To continue, please login or create account.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                          ),
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      if (resolutionEntries.isNotEmpty)
+                        _QualitySelector(
+                          isVideo: product.isVideo,
+                          entries: resolutionEntries,
+                          selected: _selectedImageSize,
+                          onSelected: (size) =>
+                              setState(() => _selectedImageSize = size),
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      _SpecsSection(product: product),
+                      if (relatedPreview.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.section),
+                        const Text(
+                          'More like this',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: AppSpacing.sm,
+                            mainAxisSpacing: AppSpacing.xs,
+                            childAspectRatio: 0.54,
+                          ),
+                          itemCount: relatedPreview.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index == relatedPreview.length) {
+                              return _ViewAllCard(
+                                onTap: () => context.go('/videos'),
+                              );
+                            }
+                            final item = relatedPreview[index];
+                            return TightProductCard(
+                              product: item,
+                              onTap: () =>
+                                  context.pushReplacement('/product/${item.id}'),
+                            );
+                          },
+                        ),
+                      ],
+                    ]),
+                  ),
                 ),
-              ),
-              SliverPadding(
-                padding: EdgeInsets.only(bottom: bottomInset),
-                sliver: SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
-              ),
-            ],
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: bottomInset),
+                  sliver: SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -330,12 +333,12 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: const Color(0xFFF4F5F7),
       padding: EdgeInsets.fromLTRB(
         AppSpacing.sm,
-        MediaQuery.paddingOf(context).top + AppSpacing.xs,
+        AppSpacing.xs,
         AppSpacing.lg,
-        AppSpacing.sm,
+        6,
       ),
       child: Row(
         children: [
@@ -348,9 +351,9 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Text(
-            Brand.tagline.toUpperCase(),
-            style: const TextStyle(
+          const Text(
+            'PREMIUM VIDEO WITH EDITORIAL LICENSE',
+            style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
@@ -833,6 +836,7 @@ class _SpecsSection extends StatelessWidget {
                     label: spec.label,
                     value: spec.value,
                     onTap: spec.onTap,
+                    isArtist: spec.isArtist,
                   );
                 },
               ),
@@ -850,15 +854,15 @@ class _SpecsSection extends StatelessWidget {
     final specs = <_SpecData>[];
 
     if (product.actorName.trim().isNotEmpty) {
+      final artistName = product.actorName.trim();
       specs.add(
         _SpecData(
           label: 'Artist',
-          value: product.actorName.trim(),
-          onTap: product.actorId != null && product.actorId!.isNotEmpty
-              ? () => context.go(
-                    '/videos?actor=${Uri.encodeComponent(product.actorId!)}',
-                  )
-              : null,
+          value: artistName,
+          isArtist: true,
+          onTap: () => context.go(
+            '/videos?search=${Uri.encodeComponent(artistName)}',
+          ),
         ),
       );
     }
@@ -892,11 +896,17 @@ class _SpecsSection extends StatelessWidget {
 }
 
 class _SpecData {
-  const _SpecData({required this.label, required this.value, this.onTap});
+  const _SpecData({
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.isArtist = false,
+  });
 
   final String label;
   final String value;
   final VoidCallback? onTap;
+  final bool isArtist;
 }
 
 class _SpecItem extends StatelessWidget {
@@ -904,11 +914,13 @@ class _SpecItem extends StatelessWidget {
     required this.label,
     required this.value,
     this.onTap,
+    this.isArtist = false,
   });
 
   final String label;
   final String value;
   final VoidCallback? onTap;
+  final bool isArtist;
 
   @override
   Widget build(BuildContext context) {
@@ -930,12 +942,11 @@ class _SpecItem extends StatelessWidget {
             onTap: onTap,
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF111827),
-                decoration: TextDecoration.underline,
-                decorationColor: Color(0xFFD1D5DB),
+                color: isArtist ? const Color(0xFF2563EB) : const Color(0xFF111827),
+                decoration: TextDecoration.none,
               ),
             ),
           )
@@ -980,7 +991,7 @@ class _LicenseNote extends StatelessWidget {
           _linkSpan(context, 'Editorial Policy', '/editorial-policy'),
           const TextSpan(text: ' and '),
           _linkSpan(context, 'Terms & Conditions', '/terms-and-conditions'),
-          const TextSpan(text: ' below.'),
+          const TextSpan(text: '.'),
         ],
       ),
     );
@@ -992,8 +1003,6 @@ class _LicenseNote extends StatelessWidget {
       style: const TextStyle(
         fontWeight: FontWeight.w600,
         color: Color(0xFF1F2937),
-        decoration: TextDecoration.underline,
-        decorationColor: Color(0xFF94A3B8),
       ),
       recognizer: TapGestureRecognizer()..onTap = () => context.push(path),
     );

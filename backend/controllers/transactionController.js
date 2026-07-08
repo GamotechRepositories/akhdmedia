@@ -30,7 +30,9 @@ export const listAdminTransactions = asyncHandler(async (req, res) => {
     return
   }
 
-  const orders = await Order.find().sort({ createdAt: -1 })
+  const orders = await Order.find({
+    paymentStatus: { $in: ['paid', 'invoice', 'failed'] },
+  }).sort({ createdAt: -1 })
   const transactions = orders.map(formatTransactionResponse)
 
   const successfulTxns = transactions.filter((txn) => txn.transactionStatus === 'successful')

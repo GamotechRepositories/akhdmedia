@@ -436,20 +436,75 @@ class _LicensedItemBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        _LicenseDetailRow(label: 'Clip ID', value: item.clipId.isEmpty ? '—' : item.clipId, mono: true),
-        _LicenseDetailRow(label: 'License tier', value: item.imageSize.isEmpty ? 'Standard' : item.imageSize),
-        _LicenseDetailRow(label: 'License No', value: item.licenseNumber.isEmpty ? '—' : item.licenseNumber, mono: true),
-        const SizedBox(height: 10),
-        Text(
-          'Download link sent to your email only.',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              _LicenseDetailRow(label: 'Clip ID', value: item.clipId.isEmpty ? '—' : item.clipId, mono: true),
+              _LicenseDetailRow(label: 'License tier', value: item.imageSize.isEmpty ? 'Standard' : item.imageSize),
+              _LicenseDetailRow(label: 'License No', value: item.licenseNumber.isEmpty ? '—' : item.licenseNumber, mono: true),
+              const SizedBox(height: 10),
+              Text(
+                'Download link sent to your email only.',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: AppSpacing.md),
+        _LicensedItemImage(imageUrl: item.image),
       ],
+    );
+  }
+}
+
+class _LicensedItemImage extends StatelessWidget {
+  const _LicensedItemImage({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty) {
+      return Container(
+        width: 116,
+        height: 78,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'No image',
+          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        imageUrl,
+        width: 116,
+        height: 78,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: 116,
+          height: 78,
+          color: Colors.grey.shade100,
+          alignment: Alignment.center,
+          child: Text(
+            'No image',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -222,7 +222,14 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     return AuthScreenShell(
       backEnabled: !loading,
-      onBack: () => context.pop(),
+      onBack: () {
+        final router = GoRouter.of(context);
+        if (router.canPop()) {
+          router.pop();
+        } else {
+          router.go('/login$_redirectQuery');
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -308,7 +308,8 @@ export const getOrderById = async (sessionId, orderId) => {
   return order
 }
 
-export const getAllOrders = async () => Order.find().sort({ createdAt: -1 })
+export const getAllOrders = async () =>
+  Order.find({ paymentStatus: 'paid' }).sort({ createdAt: -1 })
 
 export const getAdminOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
@@ -338,7 +339,10 @@ export const getOrdersForUser = async (userId, email) => {
     throw new AppError('User email is required', 400)
   }
 
-  return Order.find(buildUserOrderFilter(userId, normalizedEmail)).sort({ createdAt: -1 })
+  return Order.find({
+    ...buildUserOrderFilter(userId, normalizedEmail),
+    paymentStatus: 'paid',
+  }).sort({ createdAt: -1 })
 }
 
 export const getUserOrderById = async (userId, email, orderId) => {

@@ -21,13 +21,17 @@ import { formatCurrency } from '../utils/formatters';
 import { shareProduct } from '../utils/shareProduct';
 import { IconShare } from '../components/icons/Icons';
 
-const SpecItem = ({ label, value, href }) => (
+const SpecItem = ({ label, value, href, isArtist = false }) => (
   <div>
     <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
     {href ? (
       <Link
         to={href}
-        className="mt-0.5 inline-block text-xs font-semibold text-gray-900 underline decoration-gray-300 underline-offset-2 transition hover:text-gray-600 hover:decoration-gray-500 sm:text-sm"
+        className={`mt-0.5 inline-block text-xs font-semibold transition sm:text-sm ${
+          isArtist
+            ? 'text-blue-600 no-underline hover:text-blue-700'
+            : 'text-gray-900 underline decoration-gray-300 underline-offset-2 hover:text-gray-600 hover:decoration-gray-500'
+        }`}
       >
         {value}
       </Link>
@@ -220,11 +224,19 @@ const ProductDetail = () => {
           {
             label: 'Artist',
             value: product.actorName.trim(),
-            href: `/videos?actor=${encodeURIComponent(product.actorId)}`,
+            href: `/videos?search=${encodeURIComponent(product.actorName.trim())}`,
+            isArtist: true,
           },
         ]
       : product.actorName?.trim()
-        ? [{ label: 'Artist', value: product.actorName.trim() }]
+        ? [
+            {
+              label: 'Artist',
+              value: product.actorName.trim(),
+              href: `/videos?search=${encodeURIComponent(product.actorName.trim())}`,
+              isArtist: true,
+            },
+          ]
         : [];
 
   const specItems = isVideo
@@ -258,7 +270,7 @@ const ProductDetail = () => {
             Back
           </button>
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-            {BRAND.tagline}
+            Premium Video with Editorial License
           </span>
         </div>
       </div>
@@ -426,6 +438,7 @@ const ProductDetail = () => {
                         label={item.label}
                         value={item.value}
                         href={item.href}
+                        isArtist={item.isArtist}
                       />
                     ))}
                   </div>

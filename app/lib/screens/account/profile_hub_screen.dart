@@ -110,9 +110,7 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
-              _ProfilePageHeader(
-                onSettings: () => context.push('/profile'),
-              ),
+              const _ProfilePageHeader(),
               const SizedBox(height: 16),
               _ProfileHeroCard(
                 name: user.name,
@@ -155,14 +153,6 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                       subtitle: '$_paidOrderCount active license${_paidOrderCount == 1 ? '' : 's'}',
                       onTap: () => context.push('/orders'),
                     ),
-                    _ProfileMenuItem(
-                      icon: Icons.person_outline_rounded,
-                      iconColor: const Color(0xFF2563EB),
-                      iconBg: const Color(0xFFEFF6FF),
-                      title: 'Edit Profile',
-                      subtitle: 'Update your name and phone',
-                      onTap: () => context.push('/profile'),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -177,12 +167,12 @@ class _ProfileHubScreenState extends State<ProfileHubScreen> {
                       onTap: () => context.push('/support'),
                     ),
                     _ProfileMenuItem(
-                      icon: Icons.shield_outlined,
-                      iconColor: const Color(0xFF64748B),
-                      iconBg: const Color(0xFFF8FAFC),
-                      title: 'Privacy & Security',
-                      subtitle: 'How we protect your data',
-                      onTap: () => context.push('/privacy-policy'),
+                      icon: Icons.policy_outlined,
+                      iconColor: const Color(0xFF2563EB),
+                      iconBg: const Color(0xFFEFF6FF),
+                      title: 'Policies & Legal',
+                      subtitle: 'Privacy, terms and legal documents',
+                      onTap: () => context.push('/policies-legal'),
                     ),
                     _ProfileMenuItem(
                       icon: Icons.info_outline_rounded,
@@ -234,16 +224,10 @@ class _ProfilePageHeader extends StatelessWidget {
               Text(
                 'Profile',
                 style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                   color: Color(0xFF0F172A),
-                  letterSpacing: -0.5,
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Manage your account and preferences',
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),
             ],
           ),
@@ -325,23 +309,6 @@ class _ProfileHeroCard extends StatelessWidget {
                           child: Image.asset(
                             'assets/IMG_1577.jpg',
                             fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: GestureDetector(
-                          onTap: onEdit,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF2563EB), width: 2),
-                            ),
-                            child: const Icon(Icons.camera_alt_rounded, size: 12, color: Color(0xFF2563EB)),
                           ),
                         ),
                       ),

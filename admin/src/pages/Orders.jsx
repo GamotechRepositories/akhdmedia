@@ -34,14 +34,12 @@ const ordersLoader = createPaginatedLoader()
 const PAYMENT_FILTERS = [
   { id: 'all', label: 'All payments' },
   { id: 'paid', label: 'Paid' },
-  { id: 'pending', label: 'Payment pending' },
   { id: 'failed', label: 'Failed' },
 ]
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All statuses' },
   { id: 'confirmed', label: 'Confirmed' },
-  { id: 'pending', label: 'Order pending' },
   { id: 'completed', label: 'Completed' },
 ]
 

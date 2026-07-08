@@ -1,11 +1,10 @@
 import Order from '../models/Order.js'
 
 export const getTransactionSummary = async () => {
-  const [total, successful, failed, pending, amountAgg] = await Promise.all([
-    Order.countDocuments(),
+  const [total, successful, failed, amountAgg] = await Promise.all([
+    Order.countDocuments({ paymentStatus: { $in: ['paid', 'invoice', 'failed'] } }),
     Order.countDocuments({ paymentStatus: { $in: ['paid', 'invoice'] } }),
     Order.countDocuments({ paymentStatus: 'failed' }),
-    Order.countDocuments({ paymentStatus: 'pending' }),
     Order.aggregate([
       { $match: { paymentStatus: { $in: ['paid', 'invoice'] } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
@@ -18,7 +17,6 @@ export const getTransactionSummary = async () => {
     total,
     successful,
     failed,
-    pending,
     successfulAmount,
     revenue: successfulAmount,
   }

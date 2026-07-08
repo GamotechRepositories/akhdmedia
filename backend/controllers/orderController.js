@@ -312,12 +312,15 @@ export const listAdminOrders = asyncHandler(async (req, res) => {
 
   if (pagination) {
     const { page, limit, skip } = pagination
-    const filter = buildOrderListFilter(req.query)
+    const filter = {
+      ...buildOrderListFilter(req.query),
+      paymentStatus: 'paid',
+    }
 
     const [orders, total, grandTotal] = await Promise.all([
       Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
       Order.countDocuments(filter),
-      Order.countDocuments(),
+      Order.countDocuments({ paymentStatus: 'paid' }),
     ])
 
     res.json({

@@ -133,10 +133,8 @@ const CategoryPage = () => {
   }, [category, subCategory, actorId]);
 
   useEffect(() => {
-    if (searchQuery || actorId) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [searchQuery, actorId]);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [category, subCategory, searchQuery, actorId]);
 
   const toggleFilters = () => {
     if (window.innerWidth >= 1024) {

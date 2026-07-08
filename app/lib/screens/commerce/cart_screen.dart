@@ -138,7 +138,13 @@ class _EmptyCart extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(onPressed: onShop, child: const Text('Browse videos')),
+            FilledButton(
+              onPressed: onShop,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+              ),
+              child: const Text('Browse videos'),
+            ),
           ],
         ),
       ),
@@ -351,6 +357,9 @@ class _CartSummary extends StatelessWidget {
                 final ok = await ensureAuthenticated(context, redirectTo: '/checkout');
                 if (ok && context.mounted) onCheckout();
               },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+              ),
               child: const Text('Proceed to checkout'),
             ),
           ],

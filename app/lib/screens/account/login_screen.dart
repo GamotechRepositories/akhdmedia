@@ -157,6 +157,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
     return AuthScreenShell(
       scrollable: false,
+      centerContent: true,
       showBack: !widget.embedded,
       backEnabled: !loading,
       onBack: () => context.pop(),

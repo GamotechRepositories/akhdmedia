@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { fetchAdminTransactions } from '../api/client'
+import { fetchAdminTransactions, fetchTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
@@ -17,11 +17,13 @@ import {
   tdHideMd,
   tdPrimaryClass,
   tdRightClass,
+  exportBtnClass,
   thClass,
   thHideMd,
   thRightClass,
 } from '../components/ui/adminUi'
 import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
+import { downloadTransactionsExcel } from '../utils/exportTransactionsExcel'
 
 const PAGE_SIZE = 50
 const transactionsLoader = createPaginatedLoader()
@@ -54,15 +56,38 @@ const formatDate = (value) => {
 const statusStyles = {
   successful: 'bg-emerald-50 text-emerald-700',
   failed: 'bg-red-50 text-red-700',
-  pending: 'bg-amber-50 text-amber-700',
 }
 
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'successful', label: 'Successful' },
   { id: 'failed', label: 'Failed' },
-  { id: 'pending', label: 'Pending' },
 ]
+
+const MONTH_FILTERS = [
+  { value: 'all', label: 'All months' },
+  { value: '1', label: 'January' },
+  { value: '2', label: 'February' },
+  { value: '3', label: 'March' },
+  { value: '4', label: 'April' },
+  { value: '5', label: 'May' },
+  { value: '6', label: 'June' },
+  { value: '7', label: 'July' },
+  { value: '8', label: 'August' },
+  { value: '9', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+]
+
+const YEAR_FILTERS = (() => {
+  const currentYear = new Date().getFullYear()
+  const years = [{ value: 'all', label: 'All years' }]
+  for (let year = currentYear; year >= currentYear - 10; year -= 1) {
+    years.push({ value: String(year), label: String(year) })
+  }
+  return years
+})()
 
 const Transactions = () => {
   const location = useLocation()
@@ -77,10 +102,13 @@ const Transactions = () => {
   const [filter, setFilter] = useState(location.state?.restore?.filter || 'all')
   const [searchQuery, setSearchQuery] = useState(location.state?.restore?.searchQuery || '')
   const [debouncedSearch, setDebouncedSearch] = useState(location.state?.restore?.searchQuery || '')
+  const [monthFilter, setMonthFilter] = useState(location.state?.restore?.monthFilter || 'all')
+  const [yearFilter, setYearFilter] = useState(location.state?.restore?.yearFilter || 'all')
   const [highlightedId, setHighlightedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(location.state?.restore?.page || 1)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(searchQuery), 300)
@@ -101,6 +129,8 @@ const Transactions = () => {
       const cacheKey = buildPageCacheKey('transactions', currentPage, {
         search: debouncedSearch,
         status: filter,
+        month: monthFilter,
+        year: yearFilter,
       })
 
       setLoading(true)
@@ -116,6 +146,8 @@ const Transactions = () => {
               limit: PAGE_SIZE,
               search: debouncedSearch,
               status: filter,
+              month: yearFilter === 'all' ? 'all' : monthFilter,
+              year: yearFilter,
             })
             const payload = response.data?.data || {}
             return {
@@ -140,7 +172,7 @@ const Transactions = () => {
         setLoading(false)
       }
     },
-    [currentPage, debouncedSearch, filter],
+    [currentPage, debouncedSearch, filter, monthFilter, yearFilter],
   )
 
   useEffect(() => {
@@ -159,6 +191,8 @@ const Transactions = () => {
       setDebouncedSearch(restore.searchQuery)
     }
     if (restore.page) setCurrentPage(restore.page)
+    if (restore.monthFilter) setMonthFilter(restore.monthFilter)
+    if (restore.yearFilter) setYearFilter(restore.yearFilter)
 
     const frame = requestAnimationFrame(() => {
       if (tableContainerRef.current && typeof restore.scrollTop === 'number') {
@@ -181,6 +215,24 @@ const Transactions = () => {
   const listStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const listEnd = Math.min(currentPage * PAGE_SIZE, totalCount)
 
+  const handleExportExcel = async () => {
+    setExporting(true)
+    setError('')
+    try {
+      const response = await fetchTransactions()
+      const allTransactions = response.data?.data?.transactions || []
+      if (!allTransactions.length) {
+        setError('No transactions to export')
+        return
+      }
+      downloadTransactionsExcel(allTransactions, { scope: 'all' })
+    } catch (exportError) {
+      setError(exportError.message || 'Could not export transactions')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {summary && (
@@ -197,10 +249,6 @@ const Transactions = () => {
           <div className={`${cardClass} p-3`}>
             <p className="text-xs text-slate-500">Failed</p>
             <p className="mt-1 text-2xl font-bold text-red-600">{summary.failed}</p>
-          </div>
-          <div className={`${cardClass} p-3`}>
-            <p className="text-xs text-slate-500">Pending</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">{summary.pending}</p>
           </div>
           <div className={`${cardClass} p-3`}>
             <p className="text-xs text-slate-500">Successful amount</p>
@@ -220,7 +268,7 @@ const Transactions = () => {
       )}
 
       <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <label className="block flex-1">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Search transactions
@@ -233,15 +281,35 @@ const Transactions = () => {
               className={inputClass}
             />
           </label>
-          {searchQuery.trim() && (
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              onClick={handleExportExcel}
+              disabled={loading || exporting || totalCount === 0}
+              className={`${exportBtnClass} shrink-0`}
             >
-              Clear search
+              <span className="inline-flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                {exporting ? 'Exporting...' : 'Download Excel'}
+              </span>
             </button>
-          )}
+            {searchQuery.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -263,6 +331,49 @@ const Transactions = () => {
               {item.label}
             </button>
           ))}
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <label className="block min-w-[160px]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year</span>
+            <select
+              value={yearFilter}
+              onChange={(event) => {
+                const nextYear = event.target.value
+                transactionsLoader.clear()
+                setYearFilter(nextYear)
+                if (nextYear === 'all') setMonthFilter('all')
+                setCurrentPage(1)
+              }}
+              className={inputClass}
+            >
+              {YEAR_FILTERS.map((year) => (
+                <option key={year.value} value={year.value}>
+                  {year.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block min-w-[180px]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Month</span>
+            <select
+              value={monthFilter}
+              disabled={yearFilter === 'all'}
+              onChange={(event) => {
+                transactionsLoader.clear()
+                setMonthFilter(event.target.value)
+                setCurrentPage(1)
+              }}
+              className={inputClass}
+            >
+              {MONTH_FILTERS.map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {!loading && (
@@ -331,6 +442,8 @@ const Transactions = () => {
                       fromList: {
                         filter,
                         searchQuery,
+                        monthFilter,
+                        yearFilter,
                         page: currentPage,
                         scrollTop: tableContainerRef.current?.scrollTop ?? 0,
                         transactionId: txn.id,

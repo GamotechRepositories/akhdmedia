@@ -7,13 +7,11 @@ class ModernBottomBar extends StatefulWidget {
     required this.selectedIndex,
     required this.onTabSelected,
     required this.cartCount,
-    this.onSearchSubmitted,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onTabSelected;
   final int cartCount;
-  final ValueChanged<String>? onSearchSubmitted;
 
   static const _tabs = [
     _TabData(
@@ -31,12 +29,6 @@ class ModernBottomBar extends StatefulWidget {
       icon: Icons.shopping_cart_outlined,
       activeIcon: Icons.shopping_cart_rounded,
       isCart: true,
-    ),
-    _TabData(
-      label: 'Search',
-      icon: Icons.search_rounded,
-      activeIcon: Icons.search_rounded,
-      isSearch: true,
     ),
     _TabData(
       label: 'Profile',
@@ -57,27 +49,11 @@ class _ModernBottomBarState extends State<ModernBottomBar> {
   bool _isDragging = false;
 
   int _branchToDisplayIndex(int branchIndex) {
-    if (branchIndex <= 2) return branchIndex;
-    return 4;
+    return branchIndex.clamp(0, ModernBottomBar._tabs.length - 1);
   }
 
   int get _displayIndex =>
       _dragHighlightIndex ?? _branchToDisplayIndex(widget.selectedIndex);
-
-  void _openSearchInput() {
-    HapticFeedback.lightImpact();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      builder: (ctx) => _SearchInputSheet(
-        onSubmitted: (query) {
-          Navigator.of(ctx).pop();
-          widget.onSearchSubmitted?.call(query);
-        },
-      ),
-    );
-  }
 
   @override
   void didUpdateWidget(covariant ModernBottomBar oldWidget) {
@@ -91,43 +67,30 @@ class _ModernBottomBarState extends State<ModernBottomBar> {
   void _pickTabFromX(double x, double width, {required bool commit}) {
     final tabCount = ModernBottomBar._tabs.length;
     final index = ((x / width) * tabCount).floor().clamp(0, tabCount - 1);
-    final tab = ModernBottomBar._tabs[index];
 
-    if (!tab.isSearch && _dragHighlightIndex != index) {
+    if (_dragHighlightIndex != index) {
       setState(() => _dragHighlightIndex = index);
     }
 
-    if (_lastHapticIndex != index && !tab.isSearch) {
+    if (_lastHapticIndex != index) {
       _lastHapticIndex = index;
       HapticFeedback.selectionClick();
     }
 
     if (!commit) return;
-    if (tab.isSearch) {
-      return;
-    }
-
-    final branchIndex = index <= 2 ? index : 3;
-    if (branchIndex != widget.selectedIndex) {
-      widget.onTabSelected(branchIndex);
+    if (index != widget.selectedIndex) {
+      widget.onTabSelected(index);
     }
   }
 
   void _onTapTab(int index) {
-    final tab = ModernBottomBar._tabs[index];
-    if (tab.isSearch) {
-      _openSearchInput();
-      return;
-    }
-
     HapticFeedback.mediumImpact();
     setState(() {
       _dragHighlightIndex = null;
       _lastHapticIndex = index;
     });
 
-    final branchIndex = index <= 2 ? index : 3;
-    widget.onTabSelected(branchIndex);
+    widget.onTabSelected(index);
   }
 
   @override
@@ -229,67 +192,18 @@ class _ModernBottomBarState extends State<ModernBottomBar> {
   }
 }
 
-class _SearchInputSheet extends StatefulWidget {
-  const _SearchInputSheet({required this.onSubmitted});
-
-  final ValueChanged<String> onSubmitted;
-
-  @override
-  State<_SearchInputSheet> createState() => _SearchInputSheetState();
-}
-
-class _SearchInputSheetState extends State<_SearchInputSheet> {
-  late final TextEditingController _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final query = _controller.text.trim();
-    if (query.isEmpty) return;
-    widget.onSubmitted(query);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.viewInsetsOf(context).bottom + 16,
-      ),
-      child: TextField(
-        controller: _controller,
-        autofocus: true,
-        textInputAction: TextInputAction.search,
-        decoration: const InputDecoration(
-          hintText: 'Search clips, categories...',
-          prefixIcon: Icon(Icons.search_rounded),
-        ),
-        onSubmitted: (_) => _submit(),
-      ),
-    );
-  }
-}
-
 class _TabData {
   const _TabData({
     required this.label,
     required this.icon,
     required this.activeIcon,
     this.isCart = false,
-    this.isSearch = false,
   });
 
   final String label;
   final IconData icon;
   final IconData activeIcon;
   final bool isCart;
-  final bool isSearch;
 }
 
 class _BottomBarItem extends StatelessWidget {

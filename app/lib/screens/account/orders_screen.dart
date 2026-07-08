@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_spacing.dart';
-import '../../core/utils/formatters.dart';
 import '../../core/utils/order_formatters.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
@@ -152,7 +151,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               child: _OrderCard(
                                 order: order,
                                 highlighted: highlighted,
-                                onViewDetails: () => context.push(
+                                onTap: () => context.push(
                                   '/orders/${order.id}?fromOrders=1',
                                 ),
                               ),
@@ -201,7 +200,13 @@ class _EmptyOrders extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
               const SizedBox(height: AppSpacing.lg),
-              FilledButton(onPressed: onBrowse, child: const Text('Browse Videos')),
+              FilledButton(
+                onPressed: onBrowse,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                ),
+                child: const Text('Browse Videos'),
+              ),
             ],
           ),
         ),
@@ -214,85 +219,63 @@ class _OrderCard extends StatelessWidget {
   const _OrderCard({
     required this.order,
     required this.highlighted,
-    required this.onViewDetails,
+    required this.onTap,
   });
 
   final Order order;
   final bool highlighted;
-  final VoidCallback onViewDetails;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: highlighted ? Colors.grey.shade400 : Colors.grey.shade200,
-          width: highlighted ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'Order #${order.shortOrderNumber}',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                        ),
-                        PaymentStatusBadge(status: order.paymentStatus),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      OrderFormatters.formatDate(order.createdAt),
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    OrderListItemPreview(order: order),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    Formatters.currency(order.totalAmount),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  FilledButton(
-                    onPressed: onViewDetails,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    ),
-                    child: const Text('View details', style: TextStyle(fontSize: 13)),
-                  ),
-                ],
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: highlighted ? Colors.grey.shade400 : Colors.grey.shade200,
+              width: highlighted ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-        ],
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Order #${order.shortOrderNumber}',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
+                  PaymentStatusBadge(status: order.paymentStatus),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                OrderFormatters.formatDate(order.createdAt),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              OrderListItemPreview(order: order),
+            ],
+          ),
+        ),
       ),
     );
   }

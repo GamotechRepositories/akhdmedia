@@ -126,6 +126,7 @@ class OrderService {
     return ordersJson
         .whereType<Map<String, dynamic>>()
         .map(Order.fromJson)
+        .where((order) => order.isPaid)
         .toList();
   }
 }

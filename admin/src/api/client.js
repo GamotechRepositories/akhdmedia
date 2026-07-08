@@ -370,6 +370,8 @@ export const fetchAdminTransactions = ({
   limit = 50,
   search = '',
   status = 'all',
+  month = 'all',
+  year = 'all',
 } = {}) =>
   api.get('/admin/transactions', {
     params: {
@@ -377,6 +379,8 @@ export const fetchAdminTransactions = ({
       limit,
       ...(search.trim() ? { search: search.trim() } : {}),
       ...(status !== 'all' ? { status } : {}),
+      ...(month !== 'all' ? { month } : {}),
+      ...(year !== 'all' ? { year } : {}),
     },
   })
 

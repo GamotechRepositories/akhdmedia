@@ -200,14 +200,61 @@ class _StoreSearchSheetState extends State<_StoreSearchSheet> {
         AppSpacing.lg,
         MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
       ),
-      child: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'Search clips, categories...',
-          prefixIcon: Icon(Icons.search),
+      child: SizedBox(
+        height: 42,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Search clips, categories...',
+            hintStyle: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade500,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              size: 18,
+              color: Colors.grey.shade600,
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minHeight: 36,
+              minWidth: 36,
+            ),
+            suffixIcon: _controller.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    onPressed: () {
+                      _controller.clear();
+                      setState(() {});
+                    },
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFF111827),
+                width: 1.2,
+              ),
+            ),
+          ),
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => _submit(),
         ),
-        onSubmitted: (_) => _submit(),
       ),
     );
   }

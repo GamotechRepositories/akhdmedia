@@ -61,6 +61,7 @@ class AuthScreenShell extends StatelessWidget {
     this.backEnabled = true,
     this.showBack = true,
     this.scrollable = true,
+    this.centerContent = false,
   });
 
   final VoidCallback? onBack;
@@ -68,6 +69,7 @@ class AuthScreenShell extends StatelessWidget {
   final bool backEnabled;
   final bool showBack;
   final bool scrollable;
+  final bool centerContent;
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +153,12 @@ class AuthScreenShell extends StatelessWidget {
                         physics: const ClampingScrollPhysics(),
                         child: ConstrainedBox(
                           constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                          child: content,
+                          child: centerContent
+                              ? Align(
+                                  alignment: Alignment.center,
+                                  child: content,
+                                )
+                              : content,
                         ),
                       );
                     },
