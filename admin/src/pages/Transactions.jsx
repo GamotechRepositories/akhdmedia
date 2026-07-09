@@ -64,31 +64,6 @@ const FILTERS = [
   { id: 'failed', label: 'Failed' },
 ]
 
-const MONTH_FILTERS = [
-  { value: 'all', label: 'All months' },
-  { value: '1', label: 'January' },
-  { value: '2', label: 'February' },
-  { value: '3', label: 'March' },
-  { value: '4', label: 'April' },
-  { value: '5', label: 'May' },
-  { value: '6', label: 'June' },
-  { value: '7', label: 'July' },
-  { value: '8', label: 'August' },
-  { value: '9', label: 'September' },
-  { value: '10', label: 'October' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'December' },
-]
-
-const YEAR_FILTERS = (() => {
-  const currentYear = new Date().getFullYear()
-  const years = [{ value: 'all', label: 'All years' }]
-  for (let year = currentYear; year >= currentYear - 10; year -= 1) {
-    years.push({ value: String(year), label: String(year) })
-  }
-  return years
-})()
-
 const Transactions = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -102,8 +77,6 @@ const Transactions = () => {
   const [filter, setFilter] = useState(location.state?.restore?.filter || 'all')
   const [searchQuery, setSearchQuery] = useState(location.state?.restore?.searchQuery || '')
   const [debouncedSearch, setDebouncedSearch] = useState(location.state?.restore?.searchQuery || '')
-  const [monthFilter, setMonthFilter] = useState(location.state?.restore?.monthFilter || 'all')
-  const [yearFilter, setYearFilter] = useState(location.state?.restore?.yearFilter || 'all')
   const [highlightedId, setHighlightedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -129,8 +102,6 @@ const Transactions = () => {
       const cacheKey = buildPageCacheKey('transactions', currentPage, {
         search: debouncedSearch,
         status: filter,
-        month: monthFilter,
-        year: yearFilter,
       })
 
       setLoading(true)
@@ -146,8 +117,6 @@ const Transactions = () => {
               limit: PAGE_SIZE,
               search: debouncedSearch,
               status: filter,
-              month: yearFilter === 'all' ? 'all' : monthFilter,
-              year: yearFilter,
             })
             const payload = response.data?.data || {}
             return {
@@ -172,7 +141,7 @@ const Transactions = () => {
         setLoading(false)
       }
     },
-    [currentPage, debouncedSearch, filter, monthFilter, yearFilter],
+    [currentPage, debouncedSearch, filter],
   )
 
   useEffect(() => {
@@ -191,8 +160,6 @@ const Transactions = () => {
       setDebouncedSearch(restore.searchQuery)
     }
     if (restore.page) setCurrentPage(restore.page)
-    if (restore.monthFilter) setMonthFilter(restore.monthFilter)
-    if (restore.yearFilter) setYearFilter(restore.yearFilter)
 
     const frame = requestAnimationFrame(() => {
       if (tableContainerRef.current && typeof restore.scrollTop === 'number') {
@@ -333,49 +300,6 @@ const Transactions = () => {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <label className="block min-w-[160px]">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year</span>
-            <select
-              value={yearFilter}
-              onChange={(event) => {
-                const nextYear = event.target.value
-                transactionsLoader.clear()
-                setYearFilter(nextYear)
-                if (nextYear === 'all') setMonthFilter('all')
-                setCurrentPage(1)
-              }}
-              className={inputClass}
-            >
-              {YEAR_FILTERS.map((year) => (
-                <option key={year.value} value={year.value}>
-                  {year.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block min-w-[180px]">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Month</span>
-            <select
-              value={monthFilter}
-              disabled={yearFilter === 'all'}
-              onChange={(event) => {
-                transactionsLoader.clear()
-                setMonthFilter(event.target.value)
-                setCurrentPage(1)
-              }}
-              className={inputClass}
-            >
-              {MONTH_FILTERS.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
         {!loading && (
           <p className="text-xs text-slate-500">
             {totalCount === 0
@@ -442,8 +366,6 @@ const Transactions = () => {
                       fromList: {
                         filter,
                         searchQuery,
-                        monthFilter,
-                        yearFilter,
                         page: currentPage,
                         scrollTop: tableContainerRef.current?.scrollTop ?? 0,
                         transactionId: txn.id,

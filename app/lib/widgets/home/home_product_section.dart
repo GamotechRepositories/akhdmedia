@@ -36,44 +36,13 @@ class HomeProductSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                ),
-                if (onViewAll != null)
-                  TextButton(
-                    onPressed: onViewAll,
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFF111827),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                        side: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    child: Text(
-                      viewAllLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-              ],
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -117,7 +86,53 @@ class HomeProductSection extends StatelessWidget {
                 },
               ),
             ),
+          if (onViewAll != null && !isLoading) ...[
+            const SizedBox(height: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: _SectionViewAllButton(
+                label: viewAllLabel,
+                onPressed: onViewAll!,
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _SectionViewAllButton extends StatelessWidget {
+  const _SectionViewAllButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: const Color(0xFF111827),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+            side: BorderSide(color: Colors.grey.shade300),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

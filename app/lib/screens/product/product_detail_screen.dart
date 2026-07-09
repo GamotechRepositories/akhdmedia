@@ -417,7 +417,12 @@ class _InfoCard extends StatelessWidget {
                     ),
                     if (product.isVideo && product.durationLabel.isNotEmpty) ...[
                       const SizedBox(width: 6),
-                      Flexible(child: _AmberBadge(text: product.durationLabel)),
+                      Flexible(
+                        child: _AmberBadge(
+                          text: product.durationLabel,
+                          fontSize: 11,
+                        ),
+                      ),
                     ],
                     const Spacer(),
                     SizedBox(
@@ -531,11 +536,15 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _AmberBadge extends StatelessWidget {
-  const _AmberBadge({required this.text});
+  const _AmberBadge({
+    required this.text,
+    this.fontSize = 9,
+  });
 
   static const double height = 32;
 
   final String text;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -549,10 +558,10 @@ class _AmberBadge extends StatelessWidget {
       ),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 9,
+        style: TextStyle(
+          fontSize: fontSize,
           fontWeight: FontWeight.w800,
-          color: Color(0xFF111827),
+          color: const Color(0xFF111827),
           letterSpacing: 0.3,
           height: 1,
         ),
