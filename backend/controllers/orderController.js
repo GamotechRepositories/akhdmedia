@@ -5,6 +5,7 @@ import { buildPaginationMeta, parsePageLimit } from '../utils/pagination.js'
 import { buildOrderListFilter } from '../utils/orderFilters.js'
 import {
   createPendingOnlineOrderFromCart,
+  deleteAdminOrderById,
   getAdminOrderById,
   getAllOrders,
   getCheckoutProfile,
@@ -352,5 +353,14 @@ export const getAdminOrder = asyncHandler(async (req, res) => {
     data: {
       order: formatOrderResponse(order),
     },
+  })
+})
+
+export const deleteAdminOrder = asyncHandler(async (req, res) => {
+  await deleteAdminOrderById(req.params.id)
+
+  res.json({
+    success: true,
+    message: 'Order deleted successfully',
   })
 })

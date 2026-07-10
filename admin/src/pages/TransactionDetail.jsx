@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
-import { fetchTransaction } from '../api/client'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { deleteTransaction, fetchTransaction } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import { getOrderLineAmountBreakdown } from '../utils/orderAmounts'
 import PageLoader from '../components/ui/PageLoader'
 import FormStep from '../components/FormStep'
-import { compactFormClass, inputClass, secondaryBtnClass } from '../components/ui/adminUi'
+import { compactFormClass, inputClass, secondaryBtnClass, actionDeleteClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
@@ -59,6 +59,7 @@ const ReadOnlyField = ({ label, value }) => (
 const TransactionDetail = () => {
   const { id } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const backState = location.state?.fromList
     ? { restore: location.state.fromList }
     : undefined
@@ -66,6 +67,7 @@ const TransactionDetail = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const loadTransaction = async () => {
@@ -87,6 +89,27 @@ const TransactionDetail = () => {
   useEffect(() => {
     setErrorDismissed(false)
   }, [id])
+
+  const handleDelete = async () => {
+    if (
+      !window.confirm(
+        `Delete transaction for order ${transaction?.orderNumber || transaction?.orderId || ''}? This permanently removes the order and transaction record.`,
+      )
+    ) {
+      return
+    }
+
+    setDeleting(true)
+    setError('')
+    try {
+      await deleteTransaction(id)
+      navigate('/transactions', { state: backState })
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete transaction')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   if (loading) {
     return <PageLoader label="Loading transaction..." />
@@ -116,6 +139,14 @@ const TransactionDetail = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className={actionDeleteClass}
+        >
+          {deleting ? 'Deleting...' : 'Delete Transaction'}
+        </button>
         <Link to="/transactions" state={backState} className={secondaryBtnClass}>
           Back to Transactions
         </Link>
@@ -248,6 +279,13 @@ const TransactionDetail = () => {
           </div>
         </FormStep>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not delete transaction"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

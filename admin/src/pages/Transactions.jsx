@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { fetchAdminTransactions, fetchTransactions } from '../api/client'
+import { deleteTransaction, fetchAdminTransactions, fetchTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
 import TableLoader from '../components/ui/TableLoader'
 import {
-  actionViewClass,
+  actionDeleteIconClass,
+  actionGroupClass,
+  actionViewIconClass,
   cardClass,
   inputClass,
   tableBodyClass,
@@ -24,6 +26,7 @@ import {
 } from '../components/ui/adminUi'
 import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
 import { downloadTransactionsExcel } from '../utils/exportTransactionsExcel'
+import { IconEye, IconSpinner, IconTrash } from '../components/icons/AdminIcons'
 
 const PAGE_SIZE = 50
 const transactionsLoader = createPaginatedLoader()
@@ -82,6 +85,7 @@ const Transactions = () => {
   const [error, setError] = useState('')
   const [currentPage, setCurrentPage] = useState(location.state?.restore?.page || 1)
   const [exporting, setExporting] = useState(false)
+  const [deletingId, setDeletingId] = useState('')
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(searchQuery), 300)
@@ -181,6 +185,32 @@ const Transactions = () => {
 
   const listStart = totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const listEnd = Math.min(currentPage * PAGE_SIZE, totalCount)
+
+  const handleDelete = async (txn) => {
+    if (
+      !window.confirm(
+        `Delete transaction for order ${txn.orderNumber || txn.orderId}? This permanently removes the order and transaction record.`,
+      )
+    ) {
+      return
+    }
+
+    setDeletingId(txn.id)
+    setError('')
+    try {
+      await deleteTransaction(txn.id)
+      transactionsLoader.clear()
+      if (transactions.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1)
+      } else {
+        await loadTransactions({ force: true })
+      }
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete transaction')
+    } finally {
+      setDeletingId('')
+    }
+  }
 
   const handleExportExcel = async () => {
     setExporting(true)
@@ -317,7 +347,7 @@ const Transactions = () => {
             <th className={thHideMd}>Items</th>
             <th className={thClass}>Status</th>
             <th className={thClass}>Amount</th>
-            <th className={thRightClass}>View</th>
+            <th className={thRightClass}>Actions</th>
           </tr>
         </thead>
         <tbody className={tableBodyClass}>
@@ -360,21 +390,35 @@ const Transactions = () => {
                 </td>
                 <td className={`${tdPrimaryClass} whitespace-nowrap`}>{formatCurrency(txn.amount)}</td>
                 <td className={tdRightClass}>
-                  <Link
-                    to={`/transactions/${txn.id}`}
-                    state={{
-                      fromList: {
-                        filter,
-                        searchQuery,
-                        page: currentPage,
-                        scrollTop: tableContainerRef.current?.scrollTop ?? 0,
-                        transactionId: txn.id,
-                      },
-                    }}
-                    className={actionViewClass}
-                  >
-                    View
-                  </Link>
+                  <div className={actionGroupClass}>
+                    <Link
+                      to={`/transactions/${txn.id}`}
+                      state={{
+                        fromList: {
+                          filter,
+                          searchQuery,
+                          page: currentPage,
+                          scrollTop: tableContainerRef.current?.scrollTop ?? 0,
+                          transactionId: txn.id,
+                        },
+                      }}
+                      className={actionViewIconClass}
+                      title="View transaction"
+                      aria-label="View transaction"
+                    >
+                      <IconEye />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(txn)}
+                      disabled={deletingId === txn.id}
+                      className={actionDeleteIconClass}
+                      title="Delete transaction"
+                      aria-label="Delete transaction"
+                    >
+                      {deletingId === txn.id ? <IconSpinner /> : <IconTrash />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

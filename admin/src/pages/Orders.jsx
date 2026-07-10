@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { fetchAdminOrders, fetchOrders } from '../api/client'
+import { deleteOrder, fetchAdminOrders, fetchOrders } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
 import TableLoader from '../components/ui/TableLoader'
 import {
-  actionViewClass,
+  actionDeleteIconClass,
+  actionGroupClass,
+  actionViewIconClass,
   filterGridClass,
   inputClass,
   exportBtnClass,
@@ -27,6 +29,7 @@ import {
 } from '../components/ui/adminUi'
 import { downloadOrdersExcel } from '../utils/exportOrdersExcel'
 import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPageCache'
+import { IconEye, IconSpinner, IconTrash } from '../components/icons/AdminIcons'
 
 const PAGE_SIZE = 50
 const ordersLoader = createPaginatedLoader()
@@ -87,6 +90,7 @@ const Orders = () => {
   const [highlightedId, setHighlightedId] = useState('')
   const [currentPage, setCurrentPage] = useState(restore?.page || 1)
   const [exporting, setExporting] = useState(false)
+  const [deletingId, setDeletingId] = useState('')
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(searchQuery), 300)
@@ -240,6 +244,33 @@ const Orders = () => {
     setDateFrom('')
     setDateTo('')
     setCurrentPage(1)
+  }
+
+  const handleDelete = async (order) => {
+    const label = shortOrderNumber(order.orderNumber)
+    if (
+      !window.confirm(
+        `Delete order #${label}? This permanently removes the order and any linked transaction record.`,
+      )
+    ) {
+      return
+    }
+
+    setDeletingId(order.id)
+    setError('')
+    try {
+      await deleteOrder(order.id)
+      ordersLoader.clear()
+      if (orders.length === 1 && currentPage > 1) {
+        setCurrentPage((page) => page - 1)
+      } else {
+        await loadOrders({ force: true })
+      }
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete order')
+    } finally {
+      setDeletingId('')
+    }
   }
 
   const handleExportExcel = async () => {
@@ -454,25 +485,39 @@ const Orders = () => {
                 </td>
                 <td className={`${tdHideLg} text-slate-600`}>{formatDate(order.createdAt)}</td>
                 <td className={tdRightClass}>
-                  <Link
-                    to={`/orders/${order.id}`}
-                    state={{
-                      fromList: {
-                        searchQuery,
-                        customerEmail: customerEmailFilter,
-                        paymentFilter,
-                        statusFilter,
-                        dateFrom,
-                        dateTo,
-                        page: currentPage,
-                        scrollTop: tableContainerRef.current?.scrollTop ?? 0,
-                        orderId: order.id,
-                      },
-                    }}
-                    className={actionViewClass}
-                  >
-                    View
-                  </Link>
+                  <div className={actionGroupClass}>
+                    <Link
+                      to={`/orders/${order.id}`}
+                      state={{
+                        fromList: {
+                          searchQuery,
+                          customerEmail: customerEmailFilter,
+                          paymentFilter,
+                          statusFilter,
+                          dateFrom,
+                          dateTo,
+                          page: currentPage,
+                          scrollTop: tableContainerRef.current?.scrollTop ?? 0,
+                          orderId: order.id,
+                        },
+                      }}
+                      className={actionViewIconClass}
+                      title="View order"
+                      aria-label="View order"
+                    >
+                      <IconEye />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(order)}
+                      disabled={deletingId === order.id}
+                      className={actionDeleteIconClass}
+                      title="Delete order"
+                      aria-label="Delete order"
+                    >
+                      {deletingId === order.id ? <IconSpinner /> : <IconTrash />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

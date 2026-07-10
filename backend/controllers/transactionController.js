@@ -1,6 +1,6 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import Order from '../models/Order.js'
-import { getAdminOrderById } from '../services/orderService.js'
+import { deleteAdminOrderById, getAdminOrderById } from '../services/orderService.js'
 import { formatTransactionResponse } from '../utils/formatTransaction.js'
 import { buildPaginationMeta, parsePageLimit } from '../utils/pagination.js'
 import { buildTransactionListFilter } from '../utils/transactionFilters.js'
@@ -63,5 +63,14 @@ export const getAdminTransaction = asyncHandler(async (req, res) => {
     data: {
       transaction: formatTransactionResponse(order),
     },
+  })
+})
+
+export const deleteAdminTransaction = asyncHandler(async (req, res) => {
+  await deleteAdminOrderById(req.params.id)
+
+  res.json({
+    success: true,
+    message: 'Transaction deleted successfully',
   })
 })

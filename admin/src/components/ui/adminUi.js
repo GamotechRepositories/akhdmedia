@@ -45,6 +45,11 @@ export const actionEditClass = `${actionBtnBase} border-slate-200 bg-white text-
 export const actionDeleteClass = `${actionBtnBase} border-red-200 bg-white text-red-600 hover:bg-red-50`
 export const actionViewClass = `${actionBtnBase} w-[4.5rem] border-transparent bg-slate-900 text-white hover:bg-slate-800`
 
+export const actionIconBase =
+  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-50'
+export const actionViewIconClass = `${actionIconBase} border-transparent bg-slate-900 text-white hover:bg-slate-800`
+export const actionDeleteIconClass = `${actionIconBase} border-red-200 bg-white text-red-600 hover:bg-red-50`
+
 export const paginationBtnClass =
   'rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm'
 export const paginationWrapClass = `${cardClass} flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4`

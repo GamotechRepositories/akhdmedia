@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
-import { fetchOrder } from '../api/client'
+import { deleteOrder, fetchOrder } from '../api/client'
 import { getOrderLineAmountBreakdown } from '../utils/orderAmounts'
 import PageLoader from '../components/ui/PageLoader'
-import { cardClass, secondaryBtnClass } from '../components/ui/adminUi'
+import { cardClass, secondaryBtnClass, actionDeleteClass } from '../components/ui/adminUi'
 
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
@@ -45,6 +45,7 @@ const formatDate = (value) => {
 const OrderDetail = () => {
   const { id } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const fromList = location.state?.fromList
   const backState = {
     restore: {
@@ -63,6 +64,7 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -84,6 +86,27 @@ const OrderDetail = () => {
   useEffect(() => {
     setErrorDismissed(false)
   }, [id])
+
+  const handleDelete = async () => {
+    if (
+      !window.confirm(
+        `Delete order ${order?.orderNumber || ''}? This permanently removes the order and any linked transaction record.`,
+      )
+    ) {
+      return
+    }
+
+    setDeleting(true)
+    setError('')
+    try {
+      await deleteOrder(id)
+      navigate('/orders', { state: backState })
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete order')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   if (loading) {
     return <PageLoader label="Loading order..." />
@@ -113,6 +136,14 @@ const OrderDetail = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className={actionDeleteClass}
+        >
+          {deleting ? 'Deleting...' : 'Delete Order'}
+        </button>
         <Link to="/orders" state={backState} className={secondaryBtnClass}>
           Back to Orders
         </Link>
@@ -241,6 +272,13 @@ const OrderDetail = () => {
           </table>
         </div>
       </div>
+
+      <AdminAlertModal
+        open={Boolean(error)}
+        title="Could not delete order"
+        message={error}
+        onClose={() => setError('')}
+      />
     </div>
   )
 }

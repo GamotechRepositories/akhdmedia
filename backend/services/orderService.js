@@ -321,6 +321,12 @@ export const getAdminOrderById = async (orderId) => {
   return order
 }
 
+export const deleteAdminOrderById = async (orderId) => {
+  const order = await getAdminOrderById(orderId)
+  await order.deleteOne()
+  return order
+}
+
 const buildUserOrderFilter = (userId, email) => ({
   $or: [
     { userId },

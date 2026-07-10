@@ -363,6 +363,8 @@ export const fetchAdminOrders = ({
 
 export const fetchOrder = (id) => api.get(`/admin/orders/${id}`)
 
+export const deleteOrder = (id) => api.delete(`/admin/orders/${id}`)
+
 export const fetchTransactions = () => api.get('/admin/transactions')
 
 export const fetchAdminTransactions = ({
@@ -381,6 +383,8 @@ export const fetchAdminTransactions = ({
   })
 
 export const fetchTransaction = (id) => api.get(`/admin/transactions/${id}`)
+
+export const deleteTransaction = (id) => api.delete(`/admin/transactions/${id}`)
 
 export const fetchSupportRequests = () => api.get('/admin/support')
 
