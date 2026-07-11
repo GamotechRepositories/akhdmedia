@@ -784,9 +784,449 @@ class SiteContent {
         ],
       ),
     ],
+    'copyright-policy': [
+      ContentSection(
+        title: 'Copyright policy',
+        paragraphs: ['Last updated: 1 July 2026'],
+      ),
+      ContentSection(
+        title: '1. Introduction',
+        paragraphs: [
+          'This Copyright Policy explains how AKHD MEDIA & CO protects, manages, and licenses the intellectual property available on AKHDMEDIA.COM.',
+          'By accessing, purchasing, or using any content from our platform, you agree to respect the copyright rights described in this Policy and in our other applicable policies.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Copyright ownership',
+        paragraphs: [
+          'Unless otherwise stated, all videos, photographs, footage, preview clips, thumbnails, metadata, graphics, logos, text, and other digital materials published on AKHDMEDIA.COM are protected by copyright and remain the exclusive property of AKHD MEDIA & CO or its licensors.',
+          'Purchasing a license does not transfer copyright ownership to the buyer.',
+        ],
+      ),
+      ContentSection(
+        title: '3. Limited license granted',
+        paragraphs: [
+          'Upon successful purchase, customers receive only a limited, non-exclusive, non-transferable license to use the content in accordance with the applicable License Information Policy, Editorial Policy, and purchased license tier.',
+        ],
+      ),
+      ContentSection(
+        title: '4. Prohibited uses',
+        paragraphs: ['Without prior written permission, users may not:'],
+        bullets: [
+          'Copy, reproduce, distribute, or publicly display our content outside the licensed scope.',
+          'Resell, sublicense, rent, lease, or transfer licensed files.',
+          'Upload our content to stock agencies, marketplaces, or file-sharing platforms.',
+          'Remove, alter, or bypass watermarks, copyright notices, or metadata.',
+          'Claim ownership, authorship, or exclusive rights in our content.',
+          'Use our content for AI training, dataset creation, or synthetic media generation.',
+        ],
+      ),
+      ContentSection(
+        title: '5. Watermarks and preview content',
+        paragraphs: [
+          'Preview files, thumbnails, and watermarked media are provided for evaluation purposes only. They remain protected by copyright and may not be used, published, or distributed without a valid license.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Enforcement',
+        paragraphs: [
+          'Unauthorized use of our copyrighted content may result in license revocation, account suspension, termination of access, and legal action for copyright infringement, breach of contract, or other applicable claims.',
+        ],
+      ),
+      ContentSection(
+        title: '7. Reporting infringement',
+        paragraphs: [
+          'If you believe your copyright has been infringed by content on our website, please follow the procedure described in our DMCA / Copyright Infringement Policy.',
+        ],
+      ),
+      ContentSection(
+        title: '8. Policy updates',
+        paragraphs: [
+          'AKHD MEDIA & CO reserves the right to modify this Copyright Policy at any time. Updated versions become effective immediately upon publication on AKHDMEDIA.COM.',
+        ],
+      ),
+      ContentSection(
+        title: 'Contact',
+        paragraphs: [
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Website: https://www.akhdmedia.com',
+          'Email: support@akhdmedia.com',
+        ],
+      ),
+    ],
+    'dmca-copyright-infringement-policy': [
+      ContentSection(
+        title: 'DMCA / Copyright infringement policy',
+        paragraphs: ['Last updated: 1 July 2026'],
+      ),
+      ContentSection(
+        title: '1. Introduction',
+        paragraphs: [
+          'AKHD MEDIA & CO respects the intellectual property rights of others and expects all users of AKHDMEDIA.COM to do the same.',
+          'This DMCA / Copyright Infringement Policy explains the procedure for reporting alleged copyright infringement relating to content available on our website.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Reporting copyright infringement',
+        paragraphs: [
+          'If you believe that any content available on AKHDMEDIA.COM infringes your copyright or other intellectual property rights, you may submit a written Copyright Infringement Notice containing the following information:',
+        ],
+        bullets: [
+          'Your full legal name.',
+          'Your contact information (email address, phone number, and postal address).',
+          'A description of the copyrighted work claimed to have been infringed.',
+          'The exact URL or location of the allegedly infringing material.',
+          'A statement that you have a good-faith belief that the disputed use is not authorized by the copyright owner, its agent, or applicable law.',
+          'A statement that the information provided is accurate and that you are the copyright owner or authorized to act on behalf of the copyright owner.',
+          'Your physical or electronic signature.',
+        ],
+      ),
+      ContentSection(
+        title: '3. Submission of notices',
+        paragraphs: [
+          'Please send all copyright infringement notices to:',
+          'Copyright Officer',
+          'AKHD MEDIA & CO',
+          'Email: support@akhdmedia.com',
+          'Incomplete or inaccurate notices may delay our review process.',
+        ],
+      ),
+      ContentSection(
+        title: '4. Review process',
+        paragraphs: ['Upon receiving a valid copyright complaint, AKHD MEDIA & CO will:'],
+        bullets: [
+          'Review the complaint in good faith.',
+          'Evaluate the supporting information.',
+          'Contact the reporting party if additional information is required.',
+          'Remove, restrict, or disable access to the disputed content where legally appropriate.',
+          'Take any additional action required under applicable law.',
+        ],
+      ),
+      ContentSection(
+        title: '5. Counter-notification',
+        paragraphs: [
+          'If you believe that content removed or restricted due to a copyright complaint was removed in error or misidentification, you may submit a written counter-notification containing appropriate supporting information.',
+          'AKHD MEDIA & CO will review all valid counter-notifications and respond in accordance with applicable law.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Repeat infringers',
+        paragraphs: [
+          'AKHD MEDIA & CO reserves the right to suspend or permanently terminate the accounts of users who repeatedly violate copyright or intellectual property rights.',
+        ],
+      ),
+      ContentSection(
+        title: '7. False claims',
+        paragraphs: [
+          'Submitting false, misleading, or fraudulent copyright complaints or counter-notifications may result in legal liability under applicable law.',
+          'AKHD MEDIA & CO reserves all legal rights against any person who knowingly submits false claims.',
+        ],
+      ),
+      ContentSection(
+        title: '8. No waiver of rights',
+        paragraphs: [
+          'Nothing in this Policy limits or waives any copyright, intellectual property, contractual, or legal rights available to AKHD MEDIA & CO under applicable laws.',
+        ],
+      ),
+      ContentSection(
+        title: '9. Policy updates',
+        paragraphs: [
+          'AKHD MEDIA & CO may update this DMCA / Copyright Infringement Policy at any time. Any revised version becomes effective immediately upon publication on AKHDMEDIA.COM.',
+        ],
+      ),
+      ContentSection(
+        title: 'Contact',
+        paragraphs: [
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Website: https://www.akhdmedia.com',
+          'Email: support@akhdmedia.com',
+        ],
+      ),
+    ],
+    'acceptable-use-policy': [
+      ContentSection(
+        title: 'Acceptable use policy',
+        paragraphs: ['Last updated: 1 July 2026'],
+      ),
+      ContentSection(
+        title: '1. Introduction',
+        paragraphs: [
+          'Welcome to AKHD MEDIA & CO. This Acceptable Use Policy outlines the rules governing the use of AKHDMEDIA.COM and all content, services, and licensed materials provided through our platform.',
+          'By accessing or using our website, purchasing a license, or downloading any content, you agree to comply with this Policy.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Lawful use',
+        paragraphs: [
+          'You agree to use our website and licensed content only for lawful purposes and in accordance with all applicable local, national, and international laws and regulations.',
+          'You are solely responsible for ensuring that your use of our content complies with the terms of your purchased license.',
+        ],
+      ),
+      ContentSection(
+        title: '3. Permitted use',
+        paragraphs: ['You may:'],
+        bullets: [
+          'Browse and search our website.',
+          'Preview watermarked content.',
+          'Purchase licenses for available content.',
+          'Download licensed content after successful payment.',
+          'Use licensed content strictly within the scope of the purchased license.',
+        ],
+      ),
+      ContentSection(
+        title: '4. Prohibited activities',
+        paragraphs: ['Users must not:'],
+        bullets: [
+          'Copy, reproduce, or redistribute our content without authorization.',
+          'Resell, sublicense, rent, lease, or transfer licensed content.',
+          'Share downloaded files with any third party.',
+          'Upload our content to stock agencies, marketplaces, or file-sharing platforms.',
+          'Remove, crop, alter, or bypass watermarks from preview files.',
+          'Claim ownership or authorship of our content.',
+          'Use automated tools, bots, scrapers, or data mining software to collect website content or metadata.',
+          'Attempt to gain unauthorized access to our systems, servers, or user accounts.',
+          'Upload malicious software, viruses, or harmful code.',
+          'Interfere with the security or normal operation of the website.',
+          'Misrepresent the origin or ownership of our content.',
+        ],
+      ),
+      ContentSection(
+        title: '5. Editorial content restrictions',
+        paragraphs: ['Unless expressly permitted under the purchased license, users may not:'],
+        bullets: [
+          'Use editorial footage for advertising, product promotion, or commercial endorsements.',
+          'Suggest that any person, celebrity, brand, or organization featured in the footage endorses any product, service, or opinion.',
+          'Use editorial content in a misleading, defamatory, unlawful, or deceptive manner.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Artificial intelligence (AI) restrictions',
+        paragraphs: ['Unless expressly authorized in writing by AKHD MEDIA & CO, users may not use our content for:'],
+        bullets: [
+          'AI model training.',
+          'Machine learning datasets.',
+          'Deepfake generation.',
+          'Facial recognition systems.',
+          'Computer vision datasets.',
+          'Synthetic media creation.',
+          'Automated content scraping or dataset collection.',
+        ],
+      ),
+      ContentSection(
+        title: '7. Account responsibility',
+        paragraphs: ['If you create an account on AKHDMEDIA.COM, you are responsible for:'],
+        bullets: [
+          'Maintaining the confidentiality of your login credentials.',
+          'All activities conducted through your account.',
+          'Providing accurate and up-to-date information.',
+        ],
+      ),
+      ContentSection(
+        title: '8. Enforcement',
+        paragraphs: ['Violation of this Policy may result in one or more of the following actions:'],
+        bullets: [
+          'Suspension or termination of your account.',
+          'Revocation of purchased licenses.',
+          'Removal of access to purchased content where permitted by law.',
+          'Legal action for copyright infringement, breach of contract, or other applicable claims.',
+          'Claims for damages and any other remedies available under applicable law.',
+        ],
+      ),
+      ContentSection(
+        title: '9. Policy updates',
+        paragraphs: [
+          'AKHD MEDIA & CO reserves the right to modify this Acceptable Use Policy at any time. Updated versions become effective immediately upon publication on AKHDMEDIA.COM.',
+        ],
+      ),
+      ContentSection(
+        title: 'Contact',
+        paragraphs: [
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Website: https://www.akhdmedia.com',
+          'Email: support@akhdmedia.com',
+        ],
+      ),
+    ],
+    'ai-usage-policy': [
+      ContentSection(
+        title: 'AI usage policy',
+        paragraphs: ['Strict prohibition on AI use', 'Last updated: 1 July 2026'],
+      ),
+      ContentSection(
+        title: '1. Introduction',
+        paragraphs: [
+          'This AI Usage Policy governs the use of all content available on AKHDMEDIA.COM in connection with Artificial Intelligence (AI), Machine Learning (ML), Large Language Models (LLMs), Generative AI, and any similar technologies.',
+          'By accessing, purchasing, downloading, or using any content from our website, you acknowledge and agree to comply with this Policy.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Ownership of content',
+        paragraphs: [
+          'All videos, preview clips, thumbnails, metadata, graphics, logos, text, and all other materials available on AKHDMEDIA.COM are the exclusive intellectual property of AKHD MEDIA & CO.',
+          'Purchasing a license grants only the limited usage rights specified in the applicable license and does not transfer ownership or copyright of the content.',
+        ],
+      ),
+      ContentSection(
+        title: '3. Strict prohibition on AI use',
+        paragraphs: [
+          'AKHD MEDIA & CO strictly prohibits the use of any of its content for Artificial Intelligence (AI) purposes.',
+          'We do not grant, sell, license, authorize, or permit the use of any of our content for AI-related activities under any circumstances.',
+        ],
+        bullets: [
+          'Licensed videos',
+          'Preview videos',
+          'Watermarked previews',
+          'Thumbnails',
+          'Images',
+          'Metadata',
+          'Captions',
+          'Text',
+          'Graphics',
+          'Logos',
+          'Any other digital content published by AKHD MEDIA & CO',
+        ],
+      ),
+      ContentSection(
+        title: '4. Prohibited AI activities',
+        paragraphs: ['Our content must not be used for, including but not limited to:'],
+        bullets: [
+          'Training Artificial Intelligence (AI) models.',
+          'Training Machine Learning (ML) systems.',
+          'Large Language Models (LLMs).',
+          'Generative AI systems.',
+          'AI dataset creation.',
+          'Computer vision systems.',
+          'Facial recognition technologies.',
+          'Biometric identification systems.',
+          'Deepfake generation.',
+          'Synthetic media creation.',
+          'AI-assisted image or video generation.',
+          'Automated data collection for AI development.',
+          'Web scraping or harvesting content for AI purposes.',
+          'Fine-tuning existing AI models.',
+          'Any present or future AI-related technologies.',
+        ],
+      ),
+      ContentSection(
+        title: '5. No AI rights are granted',
+        paragraphs: [
+          'No license sold by AKHD MEDIA & CO includes any right to train AI systems, develop AI products, build AI datasets, improve AI models, feed our content into AI software, or use our content for automated learning systems.',
+          'AI rights are expressly excluded from every license offered by AKHD MEDIA & CO.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Monitoring and enforcement',
+        paragraphs: ['Any violation of this Policy may result in:'],
+        bullets: [
+          'Immediate termination of the license.',
+          'Permanent suspension of user accounts.',
+          'Revocation of access to licensed content.',
+          'Legal action for copyright infringement.',
+          'Claims for damages, injunctive relief, and any other remedies available under applicable law.',
+        ],
+      ),
+      ContentSection(
+        title: '7. Relationship with other policies',
+        paragraphs: [
+          'This AI Usage Policy forms an integral part of our Terms & Conditions, License Information Policy, Copyright Policy, and Acceptable Use Policy.',
+          'Any violation of this Policy shall also constitute a violation of those policies.',
+        ],
+      ),
+      ContentSection(
+        title: '8. Policy updates',
+        paragraphs: [
+          'AKHD MEDIA & CO reserves the right to amend or update this AI Usage Policy at any time. Any changes become effective immediately upon publication on AKHDMEDIA.COM.',
+        ],
+      ),
+      ContentSection(
+        title: 'Contact',
+        paragraphs: [
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Website: https://www.akhdmedia.com',
+          'Email: support@akhdmedia.com',
+        ],
+      ),
+    ],
+    'disclaimer': [
+      ContentSection(
+        title: 'Disclaimer',
+        paragraphs: ['Last updated: 1 July 2026'],
+      ),
+      ContentSection(
+        title: '1. Introduction',
+        paragraphs: [
+          'This Disclaimer governs your access to and use of AKHDMEDIA.COM and all content, products, and services provided through our website.',
+          'By accessing or using our website, you acknowledge that you have read, understood, and agreed to this Disclaimer.',
+        ],
+      ),
+      ContentSection(
+        title: '2. Informational purpose',
+        paragraphs: [
+          'The information, descriptions, metadata, captions, and other materials available on AKHDMEDIA.COM are provided for general informational purposes only.',
+          'While we make reasonable efforts to ensure accuracy, we do not guarantee that all information is complete, accurate, current, or free from errors.',
+        ],
+      ),
+      ContentSection(
+        title: '3. No warranties',
+        paragraphs: [
+          'All content, services, and licensed materials are provided "AS IS" and "AS AVAILABLE", without any express or implied warranties, including but not limited to warranties of merchantability, fitness for a particular purpose, title, or non-infringement, to the fullest extent permitted by applicable law.',
+        ],
+      ),
+      ContentSection(
+        title: '4. Editorial content',
+        paragraphs: [
+          'AKHD MEDIA & CO provides licensed editorial video content captured at officially organized public events, media events, red carpet appearances, press conferences, entertainment events, and other newsworthy occasions where accredited media are permitted to record public appearances.',
+          'The availability of editorial content on our website does not imply any endorsement, sponsorship, affiliation, approval, or partnership by any individual, celebrity, brand, organization, or event organizer.',
+        ],
+      ),
+      ContentSection(
+        title: '5. Customer responsibility',
+        paragraphs: [
+          'Customers are solely responsible for ensuring that their use of licensed content complies with the purchased license, applicable laws and regulations, and any required third-party rights or permissions, where applicable.',
+          'AKHD MEDIA & CO is not responsible for any misuse of licensed content by customers or third parties.',
+        ],
+      ),
+      ContentSection(
+        title: '6. Limitation of liability',
+        paragraphs: [
+          'To the fullest extent permitted by law, AKHD MEDIA & CO shall not be liable for any direct, indirect, incidental, consequential, special, exemplary, or punitive damages arising from or related to the use or inability to use our website, licensed content or digital downloads, website interruptions, errors, or technical issues, or loss of data, profits, revenue, business opportunities, or goodwill.',
+        ],
+      ),
+      ContentSection(
+        title: '7. Third-party services',
+        paragraphs: [
+          'Our website may integrate or link to third-party services, including payment providers or other external platforms.',
+          'AKHD MEDIA & CO is not responsible for the content, policies, security, availability, or practices of any third-party websites or services.',
+        ],
+      ),
+      ContentSection(
+        title: '8. Policy updates',
+        paragraphs: [
+          'AKHD MEDIA & CO reserves the right to modify this Disclaimer at any time. Any changes become effective immediately upon publication on AKHDMEDIA.COM.',
+        ],
+      ),
+      ContentSection(
+        title: 'Contact',
+        paragraphs: [
+          'AKHD MEDIA & CO',
+          'Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India.',
+          'Website: https://www.akhdmedia.com',
+          'Email: support@akhdmedia.com',
+        ],
+      ),
+    ],
   };
 
   static String policySlugFromPath(String path) {
+    if (path.contains('dmca')) return 'dmca-copyright-infringement-policy';
+    if (path.contains('copyright')) return 'copyright-policy';
+    if (path.contains('acceptable-use')) return 'acceptable-use-policy';
+    if (path.contains('ai-usage')) return 'ai-usage-policy';
+    if (path.contains('disclaimer')) return 'disclaimer';
     if (path.contains('privacy')) return 'privacy-policy';
     if (path.contains('legal')) return 'legal-policy';
     if (path.contains('media-accreditation')) return 'media-accreditation-policy';

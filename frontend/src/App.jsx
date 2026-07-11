@@ -19,6 +19,11 @@ import EditorialPolicy from './pages/EditorialPolicy';
 import LicenseInformationPolicy from './pages/LicenseInformationPolicy';
 import LegalPolicy from './pages/LegalPolicy';
 import MediaAccreditationPolicy from './pages/MediaAccreditationPolicy';
+import CopyrightPolicy from './pages/CopyrightPolicy';
+import DmcaCopyrightInfringementPolicy from './pages/DmcaCopyrightInfringementPolicy';
+import AcceptableUsePolicy from './pages/AcceptableUsePolicy';
+import AiUsagePolicy from './pages/AiUsagePolicy';
+import Disclaimer from './pages/Disclaimer';
 import TermsAndConditions from './pages/TermsAndConditions';
 import AboutUs from './pages/AboutUs';
 import Login from './pages/Login';
@@ -53,6 +58,11 @@ function AppContent() {
           <Route path="/license-information-policy" element={<LicenseInformationPolicy />} />
           <Route path="/legal-policy" element={<LegalPolicy />} />
           <Route path="/media-accreditation-policy" element={<MediaAccreditationPolicy />} />
+          <Route path="/copyright-policy" element={<CopyrightPolicy />} />
+          <Route path="/dmca-copyright-infringement-policy" element={<DmcaCopyrightInfringementPolicy />} />
+          <Route path="/acceptable-use-policy" element={<AcceptableUsePolicy />} />
+          <Route path="/ai-usage-policy" element={<AiUsagePolicy />} />
+          <Route path="/disclaimer" element={<Disclaimer />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/about-us" element={<AboutUs />} />
           <Route path="/login" element={<Login />} />

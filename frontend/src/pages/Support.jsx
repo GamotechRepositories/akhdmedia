@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
+import { POLICY_LINKS } from '../constants/policyLinks';
 import { supportAPI, checkoutAPI } from '../services/commerceApi';
 
 const STATUS_LABELS = {
@@ -455,27 +456,15 @@ const Support = () => {
         <h2 className="text-lg font-bold text-gray-900">Policies & Legal</h2>
         <p className="mt-2 text-sm text-gray-600">Review our policies before purchasing or requesting support.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <Link to="/privacy-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
-            Privacy Policy
-          </Link>
-          <Link to="/refund-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
-            Refund Policy
-          </Link>
-          <Link to="/terms-and-conditions" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
-            Terms & Conditions
-          </Link>
-          <Link to="/license-information-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
-            License Information Policy
-          </Link>
-          <Link to="/editorial-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
-            Editorial Policy
-          </Link>
-          <Link to="/legal-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900">
-            Legal Policy
-          </Link>
-          <Link to="/media-accreditation-policy" className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold capitalize text-gray-900 transition hover:border-gray-900 sm:col-span-2">
-            media accreditation &amp; editorial event coverage policy
-          </Link>
+          {POLICY_LINKS.map((policy) => (
+            <Link
+              key={policy.to}
+              to={policy.to}
+              className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900"
+            >
+              {policy.label}
+            </Link>
+          ))}
         </div>
       </div>
 

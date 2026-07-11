@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BRAND } from '../config/brand';
+import { POLICY_LINKS } from '../constants/policyLinks';
 import Logo from './brand/Logo';
 
 const Footer = () => {
@@ -20,13 +21,13 @@ const Footer = () => {
         <div>
           <h3 className="mb-4 text-lg font-semibold text-white">Policies</h3>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/refund-policy" className="transition hover:text-white">Refund Policy</Link></li>
-            <li><Link to="/privacy-policy" className="transition hover:text-white">Privacy Policy</Link></li>
-            <li><Link to="/editorial-policy" className="transition hover:text-white">Editorial Policy</Link></li>
-            <li><Link to="/license-information-policy" className="transition hover:text-white">License Information Policy</Link></li>
-            <li><Link to="/legal-policy" className="transition hover:text-white">Legal Policy</Link></li>
-            <li><Link to="/terms-and-conditions" className="transition hover:text-white">Terms and Conditions</Link></li>
-            <li><Link to="/media-accreditation-policy" className="capitalize transition hover:text-white">media accreditation &amp; editorial event coverage policy</Link></li>
+            {POLICY_LINKS.map((policy) => (
+              <li key={policy.to}>
+                <Link to={policy.to} className="transition hover:text-white">
+                  {policy.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 

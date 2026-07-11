@@ -189,5 +189,40 @@ final appRouter = GoRouter(
         policySlug: 'media-accreditation-policy',
       ),
     ),
+    GoRoute(
+      path: '/copyright-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'Copyright Policy',
+        policySlug: 'copyright-policy',
+      ),
+    ),
+    GoRoute(
+      path: '/dmca-copyright-infringement-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'DMCA / Copyright Infringement Policy',
+        policySlug: 'dmca-copyright-infringement-policy',
+      ),
+    ),
+    GoRoute(
+      path: '/acceptable-use-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'Acceptable Use Policy',
+        policySlug: 'acceptable-use-policy',
+      ),
+    ),
+    GoRoute(
+      path: '/ai-usage-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'AI Usage Policy',
+        policySlug: 'ai-usage-policy',
+      ),
+    ),
+    GoRoute(
+      path: '/disclaimer',
+      builder: (context, state) => const PolicyScreen(
+        title: 'Disclaimer',
+        policySlug: 'disclaimer',
+      ),
+    ),
   ],
 );

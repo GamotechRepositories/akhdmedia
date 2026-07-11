@@ -22,16 +22,16 @@ class PoliciesLegalScreen extends StatelessWidget {
         ),
         children: const [
           _PolicyTile(
-            title: 'Privacy Policy',
-            subtitle: 'How we collect and protect your data',
-            route: '/privacy-policy',
-            icon: Icons.privacy_tip_outlined,
-          ),
-          _PolicyTile(
             title: 'Terms & Conditions',
             subtitle: 'Website usage and purchase terms',
             route: '/terms-and-conditions',
             icon: Icons.gavel_outlined,
+          ),
+          _PolicyTile(
+            title: 'Privacy Policy',
+            subtitle: 'How we collect and protect your data',
+            route: '/privacy-policy',
+            icon: Icons.privacy_tip_outlined,
           ),
           _PolicyTile(
             title: 'Refund Policy',
@@ -40,16 +40,16 @@ class PoliciesLegalScreen extends StatelessWidget {
             icon: Icons.receipt_long_outlined,
           ),
           _PolicyTile(
-            title: 'License Information Policy',
-            subtitle: 'Content licensing rights and restrictions',
-            route: '/license-information-policy',
-            icon: Icons.verified_user_outlined,
-          ),
-          _PolicyTile(
             title: 'Editorial Policy',
             subtitle: 'Editorial and personal-use guidelines',
             route: '/editorial-policy',
             icon: Icons.article_outlined,
+          ),
+          _PolicyTile(
+            title: 'License Information Policy',
+            subtitle: 'Content licensing rights and restrictions',
+            route: '/license-information-policy',
+            icon: Icons.verified_user_outlined,
           ),
           _PolicyTile(
             title: 'Legal Policy',
@@ -58,10 +58,40 @@ class PoliciesLegalScreen extends StatelessWidget {
             icon: Icons.balance_outlined,
           ),
           _PolicyTile(
-            title: 'Media Accreditation & Editorial Coverage Policy',
+            title: 'Media Accreditation & Editorial Event Coverage Policy',
             subtitle: 'Editorial event coverage and accreditation',
             route: '/media-accreditation-policy',
             icon: Icons.badge_outlined,
+          ),
+          _PolicyTile(
+            title: 'Copyright Policy',
+            subtitle: 'Copyright ownership and licensed use',
+            route: '/copyright-policy',
+            icon: Icons.copyright_outlined,
+          ),
+          _PolicyTile(
+            title: 'DMCA / Copyright Infringement Policy',
+            subtitle: 'How to report copyright infringement',
+            route: '/dmca-copyright-infringement-policy',
+            icon: Icons.report_gmailerrorred_outlined,
+          ),
+          _PolicyTile(
+            title: 'Acceptable Use Policy',
+            subtitle: 'Rules for using our website and content',
+            route: '/acceptable-use-policy',
+            icon: Icons.rule_folder_outlined,
+          ),
+          _PolicyTile(
+            title: 'AI Usage Policy',
+            subtitle: 'Strict prohibition on AI use of our content',
+            route: '/ai-usage-policy',
+            icon: Icons.smart_toy_outlined,
+          ),
+          _PolicyTile(
+            title: 'Disclaimer',
+            subtitle: 'Website and content liability disclaimer',
+            route: '/disclaimer',
+            icon: Icons.info_outline,
           ),
         ],
       ),
