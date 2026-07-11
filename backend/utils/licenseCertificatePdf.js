@@ -140,6 +140,7 @@ const drawVerifiedCheckBadge = (doc, cx, cy, radius = 3) => {
 export const generateLicenseCertificateBuffer = ({
   brandName,
   orderNumber,
+  transactionId = '',
   orderDateLabel,
   customerName,
   customerEmail,
@@ -173,13 +174,20 @@ export const generateLicenseCertificateBuffer = ({
   writeAt(doc, 'Editorial & News Media License', centerX, y, { size: 9.5, color: CERT.muted, align: 'center' })
   y += 8
 
-  const refW = 78
+  const txnId = String(transactionId || '').trim()
+  const refW = txnId ? 118 : 78
+  const refBoxH = txnId ? 18 : 10
   doc.setFillColor(...CERT.panel)
   doc.setDrawColor(...CERT.border)
-  doc.roundedRect(centerX - refW / 2, y - 3.5, refW, 10, 2.5, 2.5, 'FD')
-  writeAt(doc, 'Certificate Ref:', centerX - 14, y + 2.5, { size: 8.5, color: CERT.body, align: 'right' })
-  writeAt(doc, orderNumber, centerX - 12, y + 2.5, { size: 9.5, style: 'bold', color: CERT.gold, align: 'left' })
-  y += 14
+  doc.roundedRect(centerX - refW / 2, y - 3.5, refW, refBoxH, 2.5, 2.5, 'FD')
+  writeAt(doc, 'Certificate Ref:', centerX - refW / 2 + 6, y + 2.5, { size: 8.5, color: CERT.body })
+  writeAt(doc, orderNumber, centerX - refW / 2 + 34, y + 2.5, { size: 9.5, style: 'bold', color: CERT.gold })
+  if (txnId) {
+    writeAt(doc, 'Transaction ID:', centerX - refW / 2 + 6, y + 9.5, { size: 7.5, color: CERT.muted })
+    const txnLine = doc.splitTextToSize(txnId, refW - 40)[0] || txnId
+    writeAt(doc, txnLine, centerX - refW / 2 + 34, y + 9.5, { size: 7.5, style: 'bold', color: CERT.navy })
+  }
+  y += txnId ? 18 : 14
 
   const metaY = y
   const colW = contentWidth / 3

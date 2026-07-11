@@ -1,5 +1,6 @@
 import { BRAND } from '../config/brand.js'
 import { getOrderAmountBreakdown } from '../utils/orderAmounts.js'
+import { getPaymentReferenceId } from '../utils/paymentReference.js'
 import { generateLicenseCertificateBuffer } from '../utils/licenseCertificatePdf.js'
 
 const formatCurrencyForPdf = (amount) => {
@@ -20,6 +21,8 @@ export const getLicenseCertificateFilename = (order) => {
   return `license-certificate-${orderNumber}.pdf`
 }
 
+const getOrderTransactionId = (order) => getPaymentReferenceId(order)
+
 export const buildLicenseCertificateBuffer = (order, downloads = null) => {
   const items = downloads ?? order.items ?? []
   const { subtotal, gst, total, promoCode, discountAmount } = getOrderAmountBreakdown(order)
@@ -34,6 +37,7 @@ export const buildLicenseCertificateBuffer = (order, downloads = null) => {
   return generateLicenseCertificateBuffer({
     brandName: BRAND.name,
     orderNumber,
+    transactionId: getOrderTransactionId(order),
     orderDateLabel,
     customerName: order.billingAddress?.name || '',
     customerEmail: order.billingAddress?.email || '',

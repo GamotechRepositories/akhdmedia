@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/preview_video_gate.dart';
 import '../../core/utils/product_media.dart';
 import '../../models/product.dart';
 import '../common/preview_media_watermark.dart';
+import '../common/preview_play_icon.dart';
 
 class ProductMediaGallery extends StatefulWidget {
   const ProductMediaGallery({super.key, required this.product});
@@ -28,6 +30,7 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
   bool _isInitializing = false;
   bool _isBuffering = false;
   double _videoAspectRatio = 16 / 9;
+  bool _previewGateTriggered = false;
 
   @override
   void initState() {
@@ -48,6 +51,7 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
       _selectedIndex = _items.indexWhere((item) => item.isVideo);
       if (_selectedIndex < 0) _selectedIndex = 0;
       _videoAspectRatio = 16 / 9;
+      _previewGateTriggered = false;
       _initVideoIfNeeded();
     }
   }
@@ -101,6 +105,13 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
     final controller = _videoController;
     if (controller == null || !mounted) return;
 
+    enforcePreviewVideoAuthGate(
+      context,
+      controller,
+      isGateTriggered: () => _previewGateTriggered,
+      setGateTriggered: (value) => _previewGateTriggered = value,
+    );
+
     setState(() {
       _isPlaying = controller.value.isPlaying;
       _isBuffering = controller.value.isBuffering;
@@ -123,6 +134,7 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
       _selectedIndex = index;
       _videoAspectRatio = 16 / 9;
       _isInitializing = _items[index].isVideo;
+      _previewGateTriggered = false;
     });
     await _initVideoIfNeeded();
   }
@@ -452,31 +464,9 @@ class _VideoLayer extends StatelessWidget {
             ),
           ),
         if (ready && !_showLoading)
-          Positioned.fill(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTogglePlay,
-                child: Center(
-                  child: AnimatedOpacity(
-                    opacity: isPlaying ? 0 : 1,
-                    duration: const Duration(milliseconds: 200),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          PreviewVideoPlayOverlay(
+            isPlaying: isPlaying,
+            onTogglePlay: onTogglePlay,
           ),
       ],
     );
@@ -700,6 +690,7 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
   bool _isInitializing = true;
   bool _isBuffering = false;
   bool _isPlaying = false;
+  bool _previewGateTriggered = false;
 
   @override
   void initState() {
@@ -729,6 +720,7 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
       _isInitializing = true;
       _isBuffering = false;
       _isPlaying = false;
+      _previewGateTriggered = false;
     });
 
     final controller =
@@ -748,6 +740,14 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
   void _onVideoUpdate() {
     final controller = _controller;
     if (controller == null || !mounted) return;
+
+    enforcePreviewVideoAuthGate(
+      context,
+      controller,
+      isGateTriggered: () => _previewGateTriggered,
+      setGateTriggered: (value) => _previewGateTriggered = value,
+    );
+
     setState(() {
       _isPlaying = controller.value.isPlaying;
       _isBuffering = controller.value.isBuffering;
@@ -800,10 +800,10 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
               color: Colors.black,
               child: Center(
                 child: AspectRatio(
-                  aspectRatio: controller!.value.aspectRatio,
+                  aspectRatio: controller.value.aspectRatio,
                   child: ClipRect(
                     clipBehavior: Clip.hardEdge,
-                    child: VideoPlayer(controller!),
+                    child: VideoPlayer(controller),
                   ),
                 ),
               ),
@@ -819,29 +819,10 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
               child: const Center(child: _VideoLoadingIndicator()),
             ),
           if (ready && !showLoading)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _togglePlay,
-                behavior: HitTestBehavior.opaque,
-                child: Center(
-                  child: AnimatedOpacity(
-                    opacity: _isPlaying ? 0 : 1,
-                    duration: const Duration(milliseconds: 200),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 42,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            PreviewVideoPlayOverlay(
+              isPlaying: _isPlaying,
+              onTogglePlay: _togglePlay,
+              iconSize: 72,
             ),
           if (ready)
             Positioned(
@@ -902,6 +883,7 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
   bool _isInitializing = true;
   bool _isBuffering = false;
   bool _isPlaying = false;
+  bool _previewGateTriggered = false;
 
   @override
   void initState() {
@@ -936,6 +918,14 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
   void _onVideoUpdate() {
     final controller = _controller;
     if (controller == null || !mounted) return;
+
+    enforcePreviewVideoAuthGate(
+      context,
+      controller,
+      isGateTriggered: () => _previewGateTriggered,
+      setGateTriggered: (value) => _previewGateTriggered = value,
+    );
+
     setState(() {
       _isPlaying = controller.value.isPlaying;
       _isBuffering = controller.value.isBuffering;
@@ -1025,29 +1015,10 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
                   child: const Center(child: _VideoLoadingIndicator()),
                 ),
               if (ready && !showLoading)
-                Positioned.fill(
-                  child: GestureDetector(
-                    onTap: _togglePlay,
-                    behavior: HitTestBehavior.opaque,
-                    child: Center(
-                      child: AnimatedOpacity(
-                        opacity: _isPlaying ? 0 : 1,
-                        duration: const Duration(milliseconds: 200),
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.55),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 42,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                PreviewVideoPlayOverlay(
+                  isPlaying: _isPlaying,
+                  onTogglePlay: _togglePlay,
+                  iconSize: 80,
                 ),
               Positioned(
                 left: 8,

@@ -1,3 +1,5 @@
+import { getPaymentProvider, getPaymentReferenceId } from './paymentReference.js'
+
 export const getTransactionStatus = (order) => {
   if (order.paymentStatus === 'paid' || order.paymentStatus === 'invoice') {
     return {
@@ -35,11 +37,14 @@ export const formatTransactionResponse = (order) => {
 
   return {
     id: order._id.toString(),
-    transactionId: order.razorpayPaymentId || '',
+    transactionId: getPaymentReferenceId(order),
     orderId: order._id.toString(),
     orderNumber: order.orderNumber,
+    paymentProvider: getPaymentProvider(order),
     razorpayOrderId: order.razorpayOrderId || '',
     razorpayPaymentId: order.razorpayPaymentId || '',
+    paypalOrderId: order.paypalOrderId || '',
+    paypalCaptureId: order.paypalCaptureId || '',
     customerName: order.billingAddress?.name || '',
     customerEmail: order.billingAddress?.email || '',
     customerPhone: order.billingAddress?.phone || '',

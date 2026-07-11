@@ -104,8 +104,15 @@ const buildOrderRows = (orders = []) =>
       Brands: joinValues(items, (item) => item.brand),
       'Product IDs': joinValues(items, (item) => item.productId),
       'Purchased items detail': formatPurchasedItems(order),
-      'Razorpay order ID': order.razorpayOrderId || '',
-      'Razorpay payment ID': order.razorpayPaymentId || '',
+      'Payment provider': order.paymentProvider || 'razorpay',
+      'Payment reference ID':
+        order.paymentProvider === 'paypal'
+          ? order.paypalCaptureId || order.paypalOrderId || ''
+          : order.razorpayPaymentId || '',
+      'Razorpay order ID': order.paymentProvider === 'paypal' ? '' : order.razorpayOrderId || '',
+      'Razorpay payment ID': order.paymentProvider === 'paypal' ? '' : order.razorpayPaymentId || '',
+      'PayPal capture ID': order.paymentProvider === 'paypal' ? order.paypalCaptureId || '' : '',
+      'PayPal order ID': order.paymentProvider === 'paypal' ? order.paypalOrderId || '' : '',
       'Last updated': formatExportDate(order.updatedAt),
     }
   })

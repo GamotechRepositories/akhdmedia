@@ -22,6 +22,24 @@ export const IconPlay = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
+export const IconPlayStroke = ({ className = 'size-6' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.5"
+    stroke="currentColor"
+    className={className}
+    aria-hidden
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+    />
+  </svg>
+);
+
 export const IconPreviewPlay = ({ className = 'h-4 w-4' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />

@@ -4,6 +4,8 @@ const TRANSACTION_SEARCH_FIELDS = [
   'orderNumber',
   'razorpayOrderId',
   'razorpayPaymentId',
+  'paypalOrderId',
+  'paypalCaptureId',
   'billingAddress.name',
   'billingAddress.email',
   'billingAddress.phone',

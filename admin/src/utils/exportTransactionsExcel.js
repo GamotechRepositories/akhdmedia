@@ -33,13 +33,17 @@ const buildRows = (transactions = []) =>
       'Customer Phone': txn.customerPhone || '',
       Status: txn.transactionStatusLabel || txn.transactionStatus || '',
       'Payment Status': txn.paymentStatus || '',
+      'Payment Provider': txn.paymentProvider || 'razorpay',
+      'Payment Reference ID': txn.transactionId || '',
       Amount: roundInr(txn.amount),
       Currency: txn.currency || 'INR',
       'Item Count': txn.itemCount || items.length || 0,
       'Product Names': joinValues(items, (item) => item.name),
       'Clip IDs': joinValues(items, (item) => item.clipId),
       'License Numbers': joinValues(items, (item) => item.licenseNumber),
-      'Razorpay Payment ID': txn.razorpayPaymentId || '',
+      'Razorpay Payment ID': txn.paymentProvider === 'paypal' ? '' : txn.razorpayPaymentId || '',
+      'PayPal Capture ID': txn.paymentProvider === 'paypal' ? txn.paypalCaptureId || '' : '',
+      'PayPal Order ID': txn.paymentProvider === 'paypal' ? txn.paypalOrderId || '' : '',
       'Last Updated': formatDate(txn.updatedAt),
     }
   })

@@ -207,9 +207,19 @@ const TransactionDetail = () => {
             <ReadOnlyField label="Order ID" value={transaction.orderId} />
             <ReadOnlyField
               label="Transaction ID"
-              value={transaction.transactionId || transaction.razorpayPaymentId}
+              value={transaction.transactionId || '—'}
             />
-            <ReadOnlyField label="Razorpay payment ID" value={transaction.razorpayPaymentId} />
+            {transaction.paymentProvider === 'paypal' ? (
+              <>
+                <ReadOnlyField label="PayPal capture ID" value={transaction.paypalCaptureId || '—'} />
+                <ReadOnlyField label="PayPal order ID" value={transaction.paypalOrderId || '—'} />
+              </>
+            ) : (
+              <>
+                <ReadOnlyField label="Razorpay payment ID" value={transaction.razorpayPaymentId || '—'} />
+                <ReadOnlyField label="Razorpay order ID" value={transaction.razorpayOrderId || '—'} />
+              </>
+            )}
           </div>
           <div className="mt-4">
             <Link

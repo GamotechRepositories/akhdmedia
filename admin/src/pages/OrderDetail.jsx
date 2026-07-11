@@ -194,17 +194,50 @@ const OrderDetail = () => {
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Razorpay order ID</dt>
-              <dd className="break-all font-mono text-xs text-slate-900">
-                {order.razorpayOrderId || '—'}
+              <dt className="text-slate-500">Payment provider</dt>
+              <dd className="font-medium capitalize text-slate-900">
+                {order.paymentProvider || 'razorpay'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Razorpay payment ID</dt>
+              <dt className="text-slate-500">Transaction ID</dt>
               <dd className="break-all font-mono text-xs text-slate-900">
-                {order.razorpayPaymentId || '—'}
+                {(order.paymentProvider === 'paypal'
+                  ? order.paypalCaptureId || order.paypalOrderId
+                  : order.razorpayPaymentId) || '—'}
               </dd>
             </div>
+            {order.paymentProvider === 'paypal' ? (
+              <>
+                <div>
+                  <dt className="text-slate-500">PayPal capture ID</dt>
+                  <dd className="break-all font-mono text-xs text-slate-900">
+                    {order.paypalCaptureId || '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">PayPal order ID</dt>
+                  <dd className="break-all font-mono text-xs text-slate-900">
+                    {order.paypalOrderId || '—'}
+                  </dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <dt className="text-slate-500">Razorpay order ID</dt>
+                  <dd className="break-all font-mono text-xs text-slate-900">
+                    {order.razorpayOrderId || '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Razorpay payment ID</dt>
+                  <dd className="break-all font-mono text-xs text-slate-900">
+                    {order.razorpayPaymentId || '—'}
+                  </dd>
+                </div>
+              </>
+            )}
             <div>
               <dt className="text-slate-500">Status</dt>
               <dd className="font-medium capitalize text-slate-900">{order.status}</dd>

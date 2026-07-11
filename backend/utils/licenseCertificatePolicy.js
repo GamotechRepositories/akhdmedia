@@ -268,6 +268,134 @@ const LICENSE_POLICY_BLOCKS = [
   },
 ]
 
+const AI_USAGE_POLICY_BLOCKS = [
+  { type: 'divider' },
+  { type: 'h2', text: 'AI USAGE POLICY / Strict Prohibition on AI Use' },
+  { type: 'h1', text: '1. Introduction' },
+  {
+    type: 'paragraph',
+    text: 'Welcome to AKHD MEDIA & CO. This AI Usage Policy governs the use of all content available on AKHDMEDIA.COM in connection with Artificial Intelligence (AI), Machine Learning (ML), Large Language Models (LLMs), Generative AI, and any similar technologies.',
+  },
+  {
+    type: 'paragraph',
+    text: 'By accessing, purchasing, downloading, or using any content from our website, you acknowledge and agree to comply with this Policy.',
+  },
+  { type: 'h1', text: '2. Ownership of Content' },
+  {
+    type: 'paragraph',
+    text: 'All videos, preview clips, thumbnails, metadata, graphics, logos, text, and all other materials available on AKHDMEDIA.COM are the exclusive intellectual property of AKHD MEDIA & CO.',
+  },
+  {
+    type: 'paragraph',
+    text: 'Purchasing a license grants only the limited usage rights specified in the applicable license and does not transfer ownership or copyright of the content.',
+  },
+  { type: 'h1', text: '3. Strict Prohibition on AI Use' },
+  {
+    type: 'paragraph',
+    text: 'AKHD MEDIA & CO strictly prohibits the use of any of its content for Artificial Intelligence (AI) purposes. We do not grant, sell, license, authorize, or permit the use of any of our content for AI-related activities under any circumstances.',
+  },
+  { type: 'paragraph', text: 'This prohibition applies to all content available on AKHDMEDIA.COM, including but not limited to:' },
+  {
+    type: 'bullets',
+    items: [
+      'Licensed videos',
+      'Preview videos',
+      'Watermarked previews',
+      'Thumbnails',
+      'Images',
+      'Metadata',
+      'Captions',
+      'Text',
+      'Graphics',
+      'Logos',
+      'Any other digital content published by AKHD MEDIA & CO',
+    ],
+  },
+  { type: 'h1', text: '4. Prohibited AI Activities' },
+  { type: 'paragraph', text: 'Our content must not be used for, including but not limited to:' },
+  {
+    type: 'bullets',
+    items: [
+      'Training Artificial Intelligence (AI) models.',
+      'Training Machine Learning (ML) systems.',
+      'Large Language Models (LLMs).',
+      'Generative AI systems.',
+      'AI dataset creation.',
+      'Computer vision systems.',
+      'Facial recognition technologies.',
+      'Biometric identification systems.',
+      'Deepfake generation.',
+      'Synthetic media creation.',
+      'AI-assisted image or video generation.',
+      'Automated data collection for AI development.',
+      'Web scraping or harvesting content for AI purposes.',
+      'Fine-tuning existing AI models.',
+      'Any present or future AI-related technologies.',
+    ],
+  },
+  { type: 'h1', text: '5. No AI Rights Are Granted' },
+  { type: 'paragraph', text: 'No license sold by AKHD MEDIA & CO includes any right to:' },
+  {
+    type: 'bullets',
+    items: [
+      'Train AI systems.',
+      'Develop AI products.',
+      'Build AI datasets.',
+      'Improve AI models.',
+      'Feed our content into AI software.',
+      'Use our content for automated learning systems.',
+    ],
+  },
+  {
+    type: 'paragraph',
+    text: 'AI rights are expressly excluded from every license offered by AKHD MEDIA & CO.',
+  },
+  { type: 'h1', text: '6. Monitoring and Enforcement' },
+  {
+    type: 'paragraph',
+    text: 'AKHD MEDIA & CO reserves the right to investigate any suspected unauthorized AI use of its content.',
+  },
+  { type: 'paragraph', text: 'Any violation of this Policy may result in:' },
+  {
+    type: 'bullets',
+    items: [
+      'Immediate termination of the license.',
+      'Permanent suspension of user accounts.',
+      'Revocation of access to licensed content.',
+      'Legal action for copyright infringement.',
+      'Claims for damages, injunctive relief, and any other remedies available under applicable law.',
+    ],
+  },
+  { type: 'h1', text: '7. Relationship with Other Policies' },
+  { type: 'paragraph', text: 'This AI Usage Policy forms an integral part of our:' },
+  {
+    type: 'bullets',
+    items: [
+      'Terms & Conditions',
+      'License Information Policy',
+      'Copyright Policy',
+      'Acceptable Use Policy',
+    ],
+  },
+  {
+    type: 'paragraph',
+    text: 'Any violation of this Policy shall also constitute a violation of those policies.',
+  },
+  { type: 'h1', text: '8. Policy Updates' },
+  {
+    type: 'paragraph',
+    text: 'AKHD MEDIA & CO reserves the right to amend or update this AI Usage Policy at any time. Any changes become effective immediately upon publication on AKHDMEDIA.COM.',
+  },
+  { type: 'divider' },
+  { type: 'h3', text: 'Contact' },
+  {
+    type: 'paragraph',
+    text: 'AKHD MEDIA & CO, Ground Floor, RC/C3, 13 Nehru Nagar, New Vidharbha Cooperative Society, Golibar Road, Near Paramount CHS, Santacruz East, Mumbai, Maharashtra – 400055, India. Website: https://www.akhdmedia.com. Email: support@akhdmedia.com.',
+  },
+]
+
+const ALL_LICENSE_POLICY_BLOCKS = [...LICENSE_POLICY_BLOCKS, ...AI_USAGE_POLICY_BLOCKS]
+
 const replaceBrand = (text, brandName) =>
   String(text).replace(/AKHD MEDIA & CO/g, brandName)
 
@@ -280,7 +408,7 @@ export const appendLicensePolicyPages = (doc, brandName = BRAND.name) => {
   drawGoldFrame(doc, pageWidth, pageHeight)
   let y = drawPolicyPageHeader(doc, pageWidth, brandName, true)
 
-  LICENSE_POLICY_BLOCKS.forEach((block) => {
+  ALL_LICENSE_POLICY_BLOCKS.forEach((block) => {
     if (block.type === 'h1') {
       y = ensureSpace(doc, y, 8, pageWidth, pageHeight, brandName)
       writeAt(doc, replaceBrand(block.text, brandName), PAGE_MARGIN, y, {
