@@ -7,6 +7,9 @@ import '../../providers/auth_provider.dart';
 
 const kPreviewAuthLimit = Duration(seconds: 10);
 
+const kPreviewSignInMessage =
+    'Sign in to continue watching all the videos, details and full previews.';
+
 void enforcePreviewVideoAuthGate(
   BuildContext context,
   VideoPlayerController controller, {
@@ -32,6 +35,46 @@ void enforcePreviewVideoAuthGate(
   if (isGateTriggered()) return;
   setGateTriggered(true);
 
-  final redirect = GoRouterState.of(context).uri.toString();
-  context.push('/login?redirect=${Uri.encodeComponent(redirect)}');
+  showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogContext) => Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Sign in',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              kPreviewSignInMessage,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                final redirect = GoRouterState.of(context).uri.toString();
+                context.push('/login?redirect=${Uri.encodeComponent(redirect)}');
+              },
+              child: const Text('Sign in'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ).then((_) {
+    if (context.mounted && !context.read<AuthProvider>().isAuthenticated) {
+      setGateTriggered(false);
+    }
+  });
 }

@@ -38,8 +38,6 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
     _items = buildProductMediaItems(widget.product);
     _selectedIndex = _items.indexWhere((item) => item.isVideo);
     if (_selectedIndex < 0) _selectedIndex = 0;
-    _isInitializing = _items[_selectedIndex].isVideo;
-    _initVideoIfNeeded();
   }
 
   @override
@@ -52,7 +50,6 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
       if (_selectedIndex < 0) _selectedIndex = 0;
       _videoAspectRatio = 16 / 9;
       _previewGateTriggered = false;
-      _initVideoIfNeeded();
     }
   }
 
@@ -64,16 +61,16 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
 
   ProductMediaItem get _selectedItem => _items[_selectedIndex];
 
-  Future<void> _initVideoIfNeeded() async {
+  Future<void> _ensureVideoInitialized() async {
     final item = _selectedItem;
-    if (!item.isVideo) {
-      setState(() {
-        _isPlaying = false;
-        _isInitializing = false;
-        _isBuffering = false;
-      });
-      return;
-    }
+    if (!item.isVideo) return;
+
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) return;
+
+    _videoController?.removeListener(_onVideoUpdate);
+    await _videoController?.dispose();
+    _videoController = null;
 
     setState(() {
       _isInitializing = true;
@@ -81,16 +78,16 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
       _isPlaying = false;
     });
 
-    final controller = VideoPlayerController.networkUrl(Uri.parse(item.src));
-    _videoController = controller;
-    controller.addListener(_onVideoUpdate);
+    final nextController = VideoPlayerController.networkUrl(Uri.parse(item.src));
+    _videoController = nextController;
+    nextController.addListener(_onVideoUpdate);
 
     try {
-      await controller.initialize();
-      controller.setLooping(true);
-      controller.setVolume(_isMuted ? 0 : 1);
+      await nextController.initialize();
+      nextController.setLooping(true);
+      nextController.setVolume(_isMuted ? 0 : 1);
 
-      final size = controller.value.size;
+      final size = nextController.value.size;
       if (size.width > 0 && size.height > 0) {
         _videoAspectRatio = size.width / size.height;
       }
@@ -133,16 +130,26 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
     setState(() {
       _selectedIndex = index;
       _videoAspectRatio = 16 / 9;
-      _isInitializing = _items[index].isVideo;
       _previewGateTriggered = false;
     });
-    await _initVideoIfNeeded();
   }
 
   Future<void> _togglePlay() async {
-    final controller = _videoController;
-    if (controller == null || !controller.value.isInitialized) return;
+    final item = _selectedItem;
+    if (!item.isVideo || _isInitializing) return;
 
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      setState(() => _isBuffering = true);
+      await _ensureVideoInitialized();
+      if (!mounted ||
+          _videoController == null ||
+          !_videoController!.value.isInitialized) {
+        setState(() => _isBuffering = false);
+        return;
+      }
+    }
+
+    final controller = _videoController!;
     if (controller.value.isPlaying) {
       await controller.pause();
       return;
@@ -178,18 +185,18 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
   }
 
   Future<void> _openVideoFullscreen() async {
-    final controller = _videoController;
     final item = _selectedItem;
-    if (controller == null ||
-        !controller.value.isInitialized ||
-        !item.isVideo ||
-        _isInitializing) {
-      return;
-    }
+    if (!item.isVideo || _isInitializing) return;
 
-    final wasPlaying = controller.value.isPlaying;
-    final position = controller.value.position;
-    await controller.pause();
+    final controller = _videoController;
+    final wasInitialized = controller?.value.isInitialized ?? false;
+    final wasPlaying = wasInitialized && (controller?.value.isPlaying ?? false);
+    final position =
+        wasInitialized ? controller!.value.position : Duration.zero;
+
+    if (wasInitialized) {
+      await controller!.pause();
+    }
 
     if (!mounted) return;
 
@@ -214,11 +221,28 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
 
     if (!mounted || result == null) return;
 
-    await controller.seekTo(result.position);
-    setState(() => _isMuted = result.isMuted);
-    controller.setVolume(_isMuted ? 0 : 1);
-    if (result.wasPlaying) {
-      await controller.play();
+    if (wasInitialized && _videoController != null) {
+      await _videoController!.seekTo(result.position);
+      setState(() => _isMuted = result.isMuted);
+      _videoController!.setVolume(_isMuted ? 0 : 1);
+      if (result.wasPlaying) {
+        await _videoController!.play();
+      }
+      return;
+    }
+
+    if (result.wasPlaying || result.position > Duration.zero) {
+      await _ensureVideoInitialized();
+      final inlineController = _videoController;
+      if (inlineController == null || !inlineController.value.isInitialized) {
+        return;
+      }
+      await inlineController.seekTo(result.position);
+      setState(() => _isMuted = result.isMuted);
+      inlineController.setVolume(_isMuted ? 0 : 1);
+      if (result.wasPlaying) {
+        await inlineController.play();
+      }
     }
   }
 
@@ -297,9 +321,7 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                         const Positioned.fill(
                           child: VideoPreviewDemoBadge(),
                         ),
-                      if (_selectedItem.isVideo &&
-                          _videoController != null &&
-                          !_isInitializing) ...[
+                      if (_selectedItem.isVideo) ...[
                         Positioned(
                           right: 8,
                           top: 8,
@@ -314,22 +336,23 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                             tooltip: 'Fullscreen',
                           ),
                         ),
-                        Positioned(
-                          right: 8,
-                          bottom: 8,
-                          child: IconButton(
-                            onPressed: _toggleMute,
-                            style: IconButton.styleFrom(
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.75),
-                              foregroundColor: Colors.white,
-                            ),
-                            icon: Icon(
-                              _isMuted ? Icons.volume_off : Icons.volume_up,
-                              size: 18,
+                        if (_videoController?.value.isInitialized == true)
+                          Positioned(
+                            right: 8,
+                            bottom: 8,
+                            child: IconButton(
+                              onPressed: _toggleMute,
+                              style: IconButton.styleFrom(
+                                backgroundColor:
+                                    Colors.black.withValues(alpha: 0.75),
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: Icon(
+                                _isMuted ? Icons.volume_off : Icons.volume_up,
+                                size: 18,
+                              ),
                             ),
                           ),
-                        ),
                       ] else if (!_selectedItem.isVideo &&
                           _selectedItem.src.isNotEmpty)
                         Positioned(
@@ -463,7 +486,7 @@ class _VideoLayer extends StatelessWidget {
               child: _VideoLoadingIndicator(),
             ),
           ),
-        if (ready && !_showLoading)
+        if (!isPlaying && !_showLoading)
           PreviewVideoPlayOverlay(
             isPlaying: isPlaying,
             onTogglePlay: onTogglePlay,
@@ -687,23 +710,15 @@ class _LightboxVideoSlide extends StatefulWidget {
 class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
   VideoPlayerController? _controller;
   bool _isMuted = true;
-  bool _isInitializing = true;
+  bool _isInitializing = false;
   bool _isBuffering = false;
   bool _isPlaying = false;
   bool _previewGateTriggered = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.isActive) _initVideo();
-  }
-
-  @override
   void didUpdateWidget(covariant _LightboxVideoSlide oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) {
-      _initVideo();
-    } else if (!widget.isActive && oldWidget.isActive) {
+    if (!widget.isActive && oldWidget.isActive) {
       _disposeVideo();
     }
   }
@@ -714,7 +729,10 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
     super.dispose();
   }
 
-  Future<void> _initVideo() async {
+  Future<void> _ensureVideoInitialized() async {
+    final controller = _controller;
+    if (controller != null && controller.value.isInitialized) return;
+
     _disposeVideo();
     setState(() {
       _isInitializing = true;
@@ -723,15 +741,15 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
       _previewGateTriggered = false;
     });
 
-    final controller =
+    final nextController =
         VideoPlayerController.networkUrl(Uri.parse(widget.item.src));
-    _controller = controller;
-    controller.addListener(_onVideoUpdate);
+    _controller = nextController;
+    nextController.addListener(_onVideoUpdate);
 
     try {
-      await controller.initialize();
-      controller.setLooping(true);
-      controller.setVolume(_isMuted ? 0 : 1);
+      await nextController.initialize();
+      nextController.setLooping(true);
+      nextController.setVolume(_isMuted ? 0 : 1);
     } finally {
       if (mounted) setState(() => _isInitializing = false);
     }
@@ -764,9 +782,20 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
   }
 
   Future<void> _togglePlay() async {
-    final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
+    if (_isInitializing) return;
 
+    if (_controller == null || !_controller!.value.isInitialized) {
+      setState(() => _isBuffering = true);
+      await _ensureVideoInitialized();
+      if (!mounted ||
+          _controller == null ||
+          !_controller!.value.isInitialized) {
+        setState(() => _isBuffering = false);
+        return;
+      }
+    }
+
+    final controller = _controller!;
     if (controller.value.isPlaying) {
       await controller.pause();
       return;
@@ -800,7 +829,7 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
               color: Colors.black,
               child: Center(
                 child: AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
+                  aspectRatio: controller!.value.aspectRatio,
                   child: ClipRect(
                     clipBehavior: Clip.hardEdge,
                     child: VideoPlayer(controller),
@@ -818,7 +847,7 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
               color: Colors.black.withValues(alpha: 0.45),
               child: const Center(child: _VideoLoadingIndicator()),
             ),
-          if (ready && !showLoading)
+          if (!_isPlaying && !showLoading)
             PreviewVideoPlayOverlay(
               isPlaying: _isPlaying,
               onTogglePlay: _togglePlay,
@@ -880,7 +909,7 @@ class _VideoFullscreenPage extends StatefulWidget {
 class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
   VideoPlayerController? _controller;
   bool _isMuted = true;
-  bool _isInitializing = true;
+  bool _isInitializing = false;
   bool _isBuffering = false;
   bool _isPlaying = false;
   bool _previewGateTriggered = false;
@@ -890,10 +919,32 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
     super.initState();
     _isMuted = widget.isMuted;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _initVideo();
+    if (widget.autoPlay) {
+      _initVideo(autoPlay: true);
+    }
   }
 
-  Future<void> _initVideo() async {
+  Future<void> _ensureVideoInitialized() async {
+    final controller = _controller;
+    if (controller != null && controller.value.isInitialized) return;
+
+    await _initVideo(autoPlay: false);
+  }
+
+  Future<void> _initVideo({required bool autoPlay}) async {
+    if (_isInitializing) return;
+
+    _controller?.removeListener(_onVideoUpdate);
+    await _controller?.dispose();
+    _controller = null;
+
+    setState(() {
+      _isInitializing = true;
+      _isBuffering = autoPlay;
+      _isPlaying = false;
+      _previewGateTriggered = false;
+    });
+
     final controller =
         VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
     _controller = controller;
@@ -906,7 +957,7 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
       if (widget.initialPosition > Duration.zero) {
         await controller.seekTo(widget.initialPosition);
       }
-      if (widget.autoPlay) {
+      if (autoPlay) {
         setState(() => _isBuffering = true);
         await controller.play();
       }
@@ -933,9 +984,20 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
   }
 
   Future<void> _togglePlay() async {
-    final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
+    if (_isInitializing) return;
 
+    if (_controller == null || !_controller!.value.isInitialized) {
+      setState(() => _isBuffering = true);
+      await _ensureVideoInitialized();
+      if (!mounted ||
+          _controller == null ||
+          !_controller!.value.isInitialized) {
+        setState(() => _isBuffering = false);
+        return;
+      }
+    }
+
+    final controller = _controller!;
     if (controller.value.isPlaying) {
       await controller.pause();
       return;
@@ -1014,7 +1076,7 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
                   color: Colors.black.withValues(alpha: 0.45),
                   child: const Center(child: _VideoLoadingIndicator()),
                 ),
-              if (ready && !showLoading)
+              if (!_isPlaying && !showLoading)
                 PreviewVideoPlayOverlay(
                   isPlaying: _isPlaying,
                   onTogglePlay: _togglePlay,

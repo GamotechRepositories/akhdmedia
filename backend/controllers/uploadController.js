@@ -1,6 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import {
   createPresignedUploadForTarget,
+  deletePublicFile,
   getPrivateDownloadUrl,
   toAbsolutePrivateUrl,
   uploadPrivateFileToTarget,
@@ -95,4 +96,22 @@ export const uploadMedia = asyncHandler(async (req, res) => {
   }
 
   res.status(400).json({ message: 'Invalid upload type' })
+})
+
+export const deletePublicMedia = asyncHandler(async (req, res) => {
+  const url = req.body?.url?.trim() || ''
+  const clipId = req.body?.clipId?.trim() || ''
+
+  if (!url) {
+    res.status(400).json({ message: 'url is required' })
+    return
+  }
+
+  if (!clipId) {
+    res.status(400).json({ message: 'clipId is required' })
+    return
+  }
+
+  const result = await deletePublicFile(url, { clipId })
+  res.json(result)
 })

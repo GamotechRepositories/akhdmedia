@@ -330,6 +330,9 @@ export const uploadCroppedPreviewToS3 = async (file, onProgress, options = {}) =
 export const uploadMedia = (file, type, onProgress, options = {}) =>
   uploadMediaViaS3(file, type, onProgress, options)
 
+export const deletePublicMedia = ({ url, clipId }) =>
+  api.delete('/upload/public', { data: { url, clipId } })
+
 export const createProduct = (payload) => api.post('/products', payload)
 
 export const updateProduct = (id, payload) => api.put(`/products/${id}`, payload)

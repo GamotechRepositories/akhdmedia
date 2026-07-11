@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
+  DeleteObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
@@ -74,6 +75,100 @@ export const getFilenameFromKey = (key = '') => {
   if (!key || /^https?:\/\//i.test(key)) return ''
   const parts = key.split('/')
   return parts[parts.length - 1] || ''
+}
+
+export const stripUrlQuery = (url = '') => {
+  const trimmed = url?.trim() || ''
+  if (!trimmed) return ''
+  return trimmed.split('?')[0].split('#')[0]
+}
+
+export const publicUrlToS3Key = (url = '') => {
+  const cleaned = stripUrlQuery(url)
+  if (!cleaned) return ''
+
+  if (cleaned.startsWith(`${AWS_S3_PUBLIC_PREFIX}/`)) return cleaned
+  if (cleaned.startsWith('public/')) return cleaned
+
+  const localMatch = cleaned.match(/\/uploads\/public\/(.+)$/i)
+  if (localMatch) return `${AWS_S3_PUBLIC_PREFIX}/${localMatch[1]}`
+
+  try {
+    const parsed = new URL(cleaned)
+    const pathKey = parsed.pathname.replace(/^\/+/, '')
+    if (pathKey.startsWith(`${AWS_S3_PUBLIC_PREFIX}/`)) return pathKey
+    if (pathKey.startsWith('products/')) return `${AWS_S3_PUBLIC_PREFIX}/${pathKey}`
+    return pathKey
+  } catch {
+    return ''
+  }
+}
+
+const isDeletableProductPublicMediaKey = (s3Key = '', clipId = '') => {
+  const id = clipId?.trim()?.toUpperCase()
+  if (!id || !s3Key) return false
+  const escapedPrefix = AWS_S3_PUBLIC_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const pattern = new RegExp(
+    `^${escapedPrefix}/products/${id}/(demo-|poster-)`,
+    'i',
+  )
+  return pattern.test(s3Key)
+}
+
+export const deletePublicFile = async (urlOrKey = '', { clipId = '' } = {}) => {
+  const s3Key =
+    urlOrKey.includes('://') || urlOrKey.startsWith('/uploads')
+      ? publicUrlToS3Key(urlOrKey)
+      : urlOrKey
+
+  if (!s3Key) {
+    throw new Error('Invalid file URL')
+  }
+
+  if (clipId && !isDeletableProductPublicMediaKey(s3Key, clipId)) {
+    throw new Error('Only demo videos and video posters for this product can be deleted')
+  }
+
+  if (isAwsEnabled()) {
+    await getS3().send(
+      new DeleteObjectCommand({
+        Bucket: getAwsS3Bucket(),
+        Key: s3Key,
+      }),
+    )
+    return { ok: true, key: s3Key }
+  }
+
+  const relativeKey = s3Key.replace(/^public\//, '')
+  const filePath = path.join(LOCAL_PUBLIC_DIR, relativeKey)
+  await fsPromises.unlink(filePath).catch(() => {})
+  return { ok: true, key: s3Key }
+}
+
+export const cleanupReplacedProductDemoMedia = async (existing = {}, payload = {}) => {
+  const clipId = payload.clipId || existing.clipId
+  const replacements = [
+    [existing.demoVideo, payload.demoVideo],
+    [existing.videoPoster, payload.videoPoster],
+  ]
+
+  for (const [previousUrl, nextUrl] of replacements) {
+    const oldUrl = stripUrlQuery(previousUrl)
+    const newUrl = stripUrlQuery(nextUrl)
+    if (!oldUrl || oldUrl === newUrl) continue
+
+    const s3Key = publicUrlToS3Key(oldUrl)
+    if (!/\/products\/[^/]+\/(demo-|poster-)/i.test(s3Key)) continue
+
+    try {
+      await deletePublicFile(oldUrl, { clipId })
+    } catch (error) {
+      console.warn(
+        `[storage] Failed to delete replaced public file ${s3Key}:`,
+        error?.message || error,
+      )
+    }
+  }
 }
 
 const getPublicBaseUrl = () => {

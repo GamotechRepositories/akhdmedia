@@ -36,19 +36,18 @@ const AuthModalShell = ({
 
   return (
     <div
-      className="fixed inset-0 z-[80] overflow-y-auto bg-black/35 px-4 py-6 backdrop-blur-md sm:py-10"
+      className="fixed inset-0 z-[80] flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-black/35 px-4 py-6 backdrop-blur-md sm:py-10"
       onClick={handleBackdropClick}
       role="presentation"
     >
-      <div className="flex min-h-full items-start justify-center sm:min-h-[100dvh] sm:items-center">
-        <div
-          className="relative w-full max-w-md"
-          onClick={(event) => event.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={title ? 'auth-modal-title' : undefined}
-        >
-          <div className="relative mb-4 sm:mb-6">
+      <div
+        className="relative my-auto w-full max-w-md"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'auth-modal-title' : undefined}
+      >
+        <div className="relative mb-4 sm:mb-6">
             {title ? (
               <div className="px-12 text-center">
                 <h1 id="auth-modal-title" className="text-2xl font-bold text-white">
@@ -71,7 +70,6 @@ const AuthModalShell = ({
           </div>
 
           {children}
-        </div>
       </div>
     </div>
   )

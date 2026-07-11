@@ -14,6 +14,7 @@ import {
 import { enrichAdminProduct } from '../utils/enrichAdminProduct.js'
 import { attachMasterVideoSignedUrl } from '../utils/attachMasterVideoSignedUrl.js'
 import { applyActorSelection } from '../utils/applyActorToProduct.js'
+import { cleanupReplacedProductDemoMedia } from '../services/storageService.js'
 const getCategoryMap = async () => {
   const categories = await Category.find()
   return buildCategoryMap(categories)
@@ -204,6 +205,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   payload.clipId = await resolveClipId(payload.clipId, existing.clipId || '')
   await assertClipIdAvailable(payload.clipId, existing._id.toString())
   await attachMasterVideoSignedUrl(payload)
+  await cleanupReplacedProductDemoMedia(existing, payload)
 
   const product = await Product.findByIdAndUpdate(req.params.id, payload, {
     new: true,

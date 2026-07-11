@@ -50,6 +50,8 @@ const getDefaultMediaIndex = (items) => {
 };
 
 const PREVIEW_AUTH_LIMIT_SECONDS = 10;
+const PREVIEW_SIGN_IN_MESSAGE =
+  'Sign in to continue watching all the videos, details and full previews.';
 
 const ProductMediaGallery = ({ product }) => {
   const navigate = useNavigate();
@@ -83,6 +85,7 @@ const ProductMediaGallery = ({ product }) => {
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoBufferedEnd, setVideoBufferedEnd] = useState(0);
+  const [showPreviewSignInModal, setShowPreviewSignInModal] = useState(false);
 
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
@@ -106,6 +109,47 @@ const ProductMediaGallery = ({ product }) => {
       pendingPlayRef.current = null;
     }
   }, []);
+
+  const clearVideoSource = useCallback(() => {
+    loadedVideoSrcRef.current = '';
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    }
+  }, []);
+
+  const loadVideoSource = useCallback(async () => {
+    const video = videoRef.current;
+    const nextSrc = selectedItem?.src || '';
+    if (!video || !nextSrc) return false;
+
+    if (loadedVideoSrcRef.current === nextSrc && video.getAttribute('src')) {
+      return true;
+    }
+
+    loadedVideoSrcRef.current = nextSrc;
+    video.src = nextSrc;
+    video.load();
+    previewGateTriggeredRef.current = false;
+    setVideoCurrentTime(0);
+    setVideoDuration(0);
+    setVideoBufferedEnd(0);
+
+    await new Promise((resolve) => {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        resolve();
+        return;
+      }
+      const onReady = () => resolve();
+      video.addEventListener('canplay', onReady, { once: true });
+      video.addEventListener('error', onReady, { once: true });
+      window.setTimeout(onReady, 10000);
+    });
+
+    return true;
+  }, [selectedItem?.src]);
 
   /**
    * Play the video. Safe to call multiple times — cancels previous attempt.
@@ -215,13 +259,22 @@ const ProductMediaGallery = ({ product }) => {
 
     setIsVideoPlaying(false);
     setIsVideoBuffering(false);
+    setShowPreviewSignInModal(true);
+  }, [isAuthenticated]);
 
+  const closePreviewSignInModal = useCallback(() => {
+    setShowPreviewSignInModal(false);
+    previewGateTriggeredRef.current = false;
+  }, []);
+
+  const goToPreviewSignIn = useCallback(() => {
+    setShowPreviewSignInModal(false);
     navigate('/login', {
       state: {
         from: `${location.pathname}${location.search}`,
       },
     });
-  }, [isAuthenticated, location.pathname, location.search, navigate]);
+  }, [location.pathname, location.search, navigate]);
 
   // ─── Fullscreen / Immersive helpers ─────────────────────────────────────
 
@@ -590,22 +643,10 @@ const ProductMediaGallery = ({ product }) => {
     };
   }, [isLightboxOpen, exitFullscreen]);
 
-  // ─── Video src preload ───────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!isVideoSelected || !selectedItem?.src) return undefined;
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'video';
-    link.href = selectedItem.src;
-    document.head.appendChild(link);
-    return () => link.remove();
-  }, [isVideoSelected, selectedItem?.src, product?.id]);
-
   // ─── Reset on product change ─────────────────────────────────────────────
 
   useEffect(() => {
-    loadedVideoSrcRef.current = '';
+    clearVideoSource();
     cancelPendingPlay();
     inTransitionRef.current = false;
     pendingLightboxResumeRef.current = null;
@@ -621,27 +662,6 @@ const ProductMediaGallery = ({ product }) => {
     setVideoDuration(0);
     setVideoBufferedEnd(0);
   }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Load new video src ──────────────────────────────────────────────────
-
-  useEffect(() => {
-    const video = videoRef.current;
-    const nextSrc = selectedItem?.src || '';
-    if (!video || !isVideoSelected || !nextSrc) return;
-
-    if (loadedVideoSrcRef.current !== nextSrc) {
-      loadedVideoSrcRef.current = nextSrc;
-      cancelPendingPlay();
-      video.load();
-      setIsVideoPlaying(false);
-      setIsVideoBuffering(false);
-      userPausedRef.current = true;
-      previewGateTriggeredRef.current = false;
-      setVideoCurrentTime(0);
-      setVideoDuration(0);
-      setVideoBufferedEnd(0);
-    }
-  }, [product?.id, selectedItem?.src, isVideoSelected, cancelPendingPlay]);
 
   // ─── Progress tracking ───────────────────────────────────────────────────
 
@@ -674,6 +694,7 @@ const ProductMediaGallery = ({ product }) => {
   useEffect(() => {
     if (isAuthenticated) {
       previewGateTriggeredRef.current = false;
+      setShowPreviewSignInModal(false);
     }
   }, [isAuthenticated]);
 
@@ -769,13 +790,19 @@ const ProductMediaGallery = ({ product }) => {
         return;
       }
 
-      // Currently paused → play it
+      // Currently paused → load source on first play, then start playback
       userPausedRef.current = false;
-      // If ended, restart from beginning
+      setIsVideoBuffering(true);
+      const loaded = await loadVideoSource();
+      if (!loaded) {
+        userPausedRef.current = true;
+        setIsVideoBuffering(false);
+        return;
+      }
       if (video.ended) video.currentTime = 0;
       await safePlay({ fromUserGesture: true });
     },
-    [safePlay, safePause],
+    [safePlay, safePause, loadVideoSource],
   );
 
   const toggleVideoMute = useCallback(() => {
@@ -786,7 +813,7 @@ const ProductMediaGallery = ({ product }) => {
   }, [isMuted]);
 
   const handleSeek = useCallback(
-    (event) => {
+    async (event) => {
       const video = videoRef.current;
       const bar = progressBarRef.current;
       if (!video || !bar || !videoDuration) return;
@@ -797,6 +824,17 @@ const ProductMediaGallery = ({ product }) => {
 
       if (!isAuthenticated) {
         targetTime = Math.min(targetTime, PREVIEW_AUTH_LIMIT_SECONDS);
+      }
+
+      if (!loadedVideoSrcRef.current) {
+        userPausedRef.current = false;
+        setIsVideoBuffering(true);
+        const loaded = await loadVideoSource();
+        if (!loaded) {
+          userPausedRef.current = true;
+          setIsVideoBuffering(false);
+          return;
+        }
       }
 
       video.currentTime = targetTime;
@@ -813,23 +851,21 @@ const ProductMediaGallery = ({ product }) => {
       // If user was paused, seeking should restart playback
       if (userPausedRef.current) {
         userPausedRef.current = false;
-        safePlay({ fromUserGesture: true, seekTo: targetTime });
+        await safePlay({ fromUserGesture: true, seekTo: targetTime });
       }
     },
-    [videoDuration, safePlay, isAuthenticated, openPreviewSignIn, safePause],
+    [videoDuration, safePlay, isAuthenticated, openPreviewSignIn, safePause, loadVideoSource],
   );
 
   const selectMedia = useCallback((index) => {
     setIsLightboxOpen(false);
     cancelPendingPlay();
-    const video = videoRef.current;
-    if (video) video.pause();
+    clearVideoSource();
     userPausedRef.current = true;
     previewGateTriggeredRef.current = false;
     setSelectedMediaIndex(index);
     setIsVideoPlaying(false);
-    loadedVideoSrcRef.current = '';
-  }, [cancelPendingPlay]);
+  }, [cancelPendingPlay, clearVideoSource]);
 
   const handlePrevMedia = useCallback(() => {
     selectMedia(selectedMediaIndex === 0 ? mediaItems.length - 1 : selectedMediaIndex - 1);
@@ -896,12 +932,11 @@ const ProductMediaGallery = ({ product }) => {
         <div className="relative flex h-full w-full items-center justify-center">
           <video
             ref={videoRef}
-            src={selectedItem.src}
             poster={selectedItem.poster}
             className={`${isImmersive ? 'h-full w-full' : 'max-h-full max-w-full'} cursor-pointer object-contain ${PROTECTED_MEDIA_CLASS}`}
             playsInline
             muted={isMuted}
-            preload="metadata"
+            preload="none"
             onClick={toggleVideoPlay}
             {...getProtectedVideoProps()}
           />
@@ -1062,6 +1097,45 @@ const ProductMediaGallery = ({ product }) => {
       )}
 
       {lightboxPortal}
+
+      {showPreviewSignInModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[10100] flex min-h-[100dvh] items-center justify-center overflow-y-auto bg-black/50 px-4 py-6"
+            onClick={closePreviewSignInModal}
+          >
+            <div
+              className="my-auto w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="preview-sign-in-title"
+            >
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                <svg className="h-6 w-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <h2 id="preview-sign-in-title" className="text-lg font-bold text-gray-900">
+                Sign in
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-gray-600">{PREVIEW_SIGN_IN_MESSAGE}</p>
+              <button
+                type="button"
+                onClick={goToPreviewSignIn}
+                className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Sign in
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {isVideoSelected && !isImmersive && renderVideoProgressBar('inline')}
 

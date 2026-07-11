@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import {
   createProduct,
+  deletePublicMedia,
   fetchActors,
   fetchCategories,
   fetchProduct,
@@ -322,6 +323,14 @@ const ProductForm = () => {
 
   const saveVideoPoster = async (blob) => {
     const posterFile = new File([blob], 'video-thumbnail.jpg', { type: 'image/jpeg' })
+    const oldPoster = form.videoPoster?.split('?')[0] || ''
+    if (
+      oldPoster &&
+      form.clipId &&
+      oldPoster.includes(`/products/${form.clipId}/poster-`)
+    ) {
+      await deletePublicMedia({ url: oldPoster, clipId: form.clipId }).catch(() => {})
+    }
     const response = await uploadMedia(posterFile, 'video-poster', null, {
       clipId: form.clipId,
     })
@@ -518,6 +527,68 @@ const ProductForm = () => {
       ]),
     )
 
+  const buildSubmitPayload = (overrides = {}) => {
+    const nextForm = { ...form, ...overrides }
+
+    return {
+      ...nextForm,
+      pricingMode: nextForm.pricingMode,
+      images: nextForm.images.filter(Boolean),
+      price: Number(nextForm.price),
+      gstPercentage: Number(nextForm.gstPercentage),
+      rating: Number(nextForm.rating),
+      actorListingOrder: parseListingOrder(nextForm.actorListingOrder),
+      categoryListingOrder: parseListingOrder(nextForm.categoryListingOrder),
+      availableTiers: derivedAvailableTiers,
+      resolutionPricing: Object.fromEntries(
+        derivedAvailableTiers.map((tier) => {
+          const tierData = nextForm.resolutionPricing[tier] || {}
+          return [
+            tier,
+            {
+              resolution: tierData.resolution?.trim() || RESOLUTION_TIERS[tier]?.resolution || '',
+              size: tierData.size?.trim() || RESOLUTION_TIERS[tier]?.size || '',
+              price: isUniformPricing
+                ? Number(nextForm.price)
+                : Number(tierData.price),
+            },
+          ]
+        }),
+      ),
+      videoPoster: isVideo
+        ? nextForm.images.find(Boolean) || nextForm.videoPoster?.trim() || ''
+        : nextForm.images.find(Boolean) || '',
+      masterVideoKey: nextForm.masterVideoKey?.trim() || '',
+      masterVideoFilename: nextForm.masterVideoFilename?.trim() || '',
+      masterVideoTier: nextForm.masterVideoTier?.trim() || '',
+      deliveryFiles: isVideo ? {} : buildImageDeliveryFiles(),
+    }
+  }
+
+  const handleDeleteDemoVideo = async () => {
+    const currentUrl = form.demoVideo?.split('?')[0] || ''
+    if (!currentUrl || !form.clipId?.trim()) return
+
+    await deletePublicMedia({
+      url: currentUrl,
+      clipId: form.clipId.trim(),
+    })
+
+    const posterUrl = form.videoPoster?.split('?')[0] || ''
+    if (
+      posterUrl &&
+      posterUrl.includes(`/products/${form.clipId}/poster-`)
+    ) {
+      await deletePublicMedia({
+        url: posterUrl,
+        clipId: form.clipId.trim(),
+      }).catch(() => {})
+      updateField('videoPoster', '')
+    }
+
+    updateField('demoVideo', '')
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     const clientError = validateClient()
@@ -529,39 +600,7 @@ const ProductForm = () => {
     setSaving(true)
     setError('')
 
-    const payload = {
-      ...form,
-      pricingMode: form.pricingMode,
-      images: form.images.filter(Boolean),
-      price: Number(form.price),
-      gstPercentage: Number(form.gstPercentage),
-      rating: Number(form.rating),
-      actorListingOrder: parseListingOrder(form.actorListingOrder),
-      categoryListingOrder: parseListingOrder(form.categoryListingOrder),
-      availableTiers: derivedAvailableTiers,
-      resolutionPricing: Object.fromEntries(
-        derivedAvailableTiers.map((tier) => {
-          const tierData = form.resolutionPricing[tier] || {}
-          return [
-            tier,
-            {
-              resolution: tierData.resolution?.trim() || RESOLUTION_TIERS[tier]?.resolution || '',
-              size: tierData.size?.trim() || RESOLUTION_TIERS[tier]?.size || '',
-              price: isUniformPricing
-                ? Number(form.price)
-                : Number(tierData.price),
-            },
-          ]
-        }),
-      ),
-      videoPoster: isVideo
-        ? form.images.find(Boolean) || form.videoPoster?.trim() || ''
-        : form.images.find(Boolean) || '',
-      masterVideoKey: form.masterVideoKey?.trim() || '',
-      masterVideoFilename: form.masterVideoFilename?.trim() || '',
-      masterVideoTier: form.masterVideoTier?.trim() || '',
-      deliveryFiles: isVideo ? {} : buildImageDeliveryFiles(),
-    }
+    const payload = buildSubmitPayload()
 
     try {
       if (isEdit) {
@@ -896,6 +935,10 @@ const ProductForm = () => {
                 onPosterCaptured={handlePosterCaptured}
                 valueKind="url"
                 placeholder="https://..."
+                allowDelete
+                deleteLabel="Delete demo video"
+                deleteBeforeReplace
+                onDelete={handleDeleteDemoVideo}
               />
             </div>
           )}

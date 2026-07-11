@@ -73,33 +73,12 @@ class AuthScreenShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Padding(
+    final formContent = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showBack)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                onPressed: backEnabled ? onBack : null,
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.grey.shade600,
-                  size: 18,
-                ),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.7),
-                  padding: const EdgeInsets.all(8),
-                  minimumSize: const Size(36, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-            ),
-          if (showBack) const SizedBox(height: 4),
-          child,
-        ],
+        children: [child],
       ),
     );
 
@@ -145,7 +124,35 @@ class AuthScreenShell extends StatelessWidget {
             child: scrollable
                 ? SingleChildScrollView(
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                    child: content,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showBack) ...[
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(
+                                onPressed: backEnabled ? onBack : null,
+                                icon: Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.grey.shade600,
+                                  size: 18,
+                                ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.white.withValues(alpha: 0.7),
+                                  padding: const EdgeInsets.all(8),
+                                  minimumSize: const Size(36, 36),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          child,
+                        ],
+                      ),
+                    ),
                   )
                 : LayoutBuilder(
                     builder: (context, constraints) {
@@ -154,16 +161,64 @@ class AuthScreenShell extends StatelessWidget {
                         child: ConstrainedBox(
                           constraints: BoxConstraints(minHeight: constraints.maxHeight),
                           child: centerContent
-                              ? Align(
-                                  alignment: Alignment.center,
-                                  child: content,
-                                )
-                              : content,
+                              ? Center(child: formContent)
+                              : Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (showBack) ...[
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: IconButton(
+                                            onPressed: backEnabled ? onBack : null,
+                                            icon: Icon(
+                                              Icons.arrow_back_ios_new_rounded,
+                                              color: Colors.grey.shade600,
+                                              size: 18,
+                                            ),
+                                            style: IconButton.styleFrom(
+                                              backgroundColor: Colors.white.withValues(alpha: 0.7),
+                                              padding: const EdgeInsets.all(8),
+                                              minimumSize: const Size(36, 36),
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                      ],
+                                      child,
+                                    ],
+                                  ),
+                                ),
                         ),
                       );
                     },
                   ),
           ),
+          if (!scrollable && showBack)
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 4),
+                  child: IconButton(
+                    onPressed: backEnabled ? onBack : null,
+                    icon: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.grey.shade600,
+                      size: 18,
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.7),
+                      padding: const EdgeInsets.all(8),
+                      minimumSize: const Size(36, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

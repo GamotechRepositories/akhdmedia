@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { uploadMedia } from '../api/client'
+import { useEffect, useRef, useState } from 'react'
+import { deletePublicMedia, uploadMedia } from '../api/client'
 import { captureVideoPosterFromFile } from '../utils/captureVideoPoster'
 import {
   formatFileSize,
@@ -7,6 +7,129 @@ import {
   formatUploadSpeed,
 } from '../utils/formatFileSize'
 import { inputClass } from './ui/adminUi'
+
+const waitForVideoReady = (video) =>
+  new Promise((resolve) => {
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      resolve()
+      return
+    }
+
+    const onReady = () => resolve()
+    video.addEventListener('canplay', onReady, { once: true })
+    video.addEventListener('error', onReady, { once: true })
+    window.setTimeout(onReady, 10000)
+  })
+
+const AdminLazyVideoPreview = ({ src, label = 'Video' }) => {
+  const videoRef = useRef(null)
+  const loadedSrcRef = useRef('')
+  const [activeSrc, setActiveSrc] = useState('')
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    loadedSrcRef.current = ''
+    setActiveSrc('')
+    setIsPlaying(false)
+    setIsLoading(false)
+
+    const video = videoRef.current
+    if (video) {
+      video.pause()
+      video.removeAttribute('src')
+      video.load()
+    }
+  }, [src])
+
+  const ensureVideoLoaded = async () => {
+    if (!src) return false
+
+    const video = videoRef.current
+    if (!video) return false
+
+    if (loadedSrcRef.current !== src) {
+      loadedSrcRef.current = src
+      setActiveSrc(src)
+      video.src = src
+      video.load()
+      await waitForVideoReady(video)
+    }
+
+    return true
+  }
+
+  const handleTogglePlay = async () => {
+    if (!src || isLoading) return
+
+    const video = videoRef.current
+    if (!video) return
+
+    if (loadedSrcRef.current && !video.paused && !video.ended) {
+      video.pause()
+      setIsPlaying(false)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const loaded = await ensureVideoLoaded()
+      if (!loaded) return
+
+      await video.play()
+      setIsPlaying(true)
+    } catch {
+      setIsPlaying(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!src) return null
+
+  return (
+    <div className="relative mt-2 overflow-hidden rounded-md bg-black">
+      <video
+        ref={videoRef}
+        preload="none"
+        controls={Boolean(activeSrc)}
+        playsInline
+        className="max-h-[28rem] w-full object-contain"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      />
+
+      {!activeSrc && (
+        <div className="pointer-events-none absolute inset-0 flex min-h-[12rem] flex-col items-center justify-center bg-slate-900 px-4 text-center">
+          <p className="text-xs font-medium text-slate-300">{label} uploaded</p>
+          <p className="mt-1 text-[11px] text-slate-500">Click play to load preview</p>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+        </div>
+      )}
+
+      {!activeSrc && !isLoading && (
+        <button
+          type="button"
+          onClick={handleTogglePlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/20 transition hover:bg-black/35"
+          aria-label={`Play ${label.toLowerCase()} preview`}
+        >
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/75 text-white shadow-lg">
+            <svg className="ml-1 h-7 w-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
 
 const MediaUpload = ({
   label,
@@ -28,6 +151,10 @@ const MediaUpload = ({
   actorSlug = '',
   previewIndex = 0,
   tier = '',
+  allowDelete = false,
+  deleteLabel = 'Delete file',
+  deleteBeforeReplace = false,
+  onDelete,
 }) => {
   const inputRef = useRef(null)
   const progressRef = useRef(0)
@@ -37,6 +164,46 @@ const MediaUpload = ({
   const [uploadEta, setUploadEta] = useState('')
   const [uploadedSize, setUploadedSize] = useState(fileSize || 0)
   const [error, setError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const getStoredUrl = () => (valueKind === 'url' ? value : accessUrl || '')?.split('?')[0] || ''
+
+  const removeStoredFile = async () => {
+    const storedUrl = getStoredUrl()
+    if (!storedUrl || !clipId?.trim()) return
+
+    await deletePublicMedia({
+      url: storedUrl,
+      clipId: clipId.trim(),
+    })
+  }
+
+  const handleDelete = async () => {
+    const storedUrl = getStoredUrl()
+    if (!storedUrl || deleting || uploading) return
+
+    const confirmed = window.confirm(
+      'Delete this file from storage? This cannot be undone.',
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    setError('')
+
+    try {
+      if (onDelete) {
+        await onDelete(storedUrl)
+      } else {
+        await removeStoredFile()
+        onChange('', { filename: '', url: '', size: 0 })
+        setUploadedSize(0)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const reportProgress = (progress) => {
     const payload =
@@ -63,6 +230,10 @@ const MediaUpload = ({
     setError('')
 
     try {
+      if (deleteBeforeReplace && getStoredUrl()) {
+        await removeStoredFile()
+      }
+
       const posterCapturePromise = autoCapturePoster
         ? captureVideoPosterFromFile(file).catch(() => null)
         : null
@@ -157,12 +328,22 @@ const MediaUpload = ({
             if (inputRef.current) inputRef.current.value = ''
             inputRef.current?.click()
           }}
-          disabled={uploading || disabled || !uploadReady}
+          disabled={uploading || deleting || disabled || !uploadReady}
           className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
         >
           {uploadButtonLabel}
         </button>
-        {value && !uploading && (
+        {allowDelete && value && !uploading && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || !clipId?.trim()}
+            className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+          >
+            {deleting ? 'Deleting…' : deleteLabel}
+          </button>
+        )}
+        {value && !uploading && !deleting && (
           <span className="text-[11px] font-medium text-emerald-600">
             {filename ? `Saved: ${filename}` : 'Uploaded'}
             {displaySize ? ` · ${displaySize}` : ''}
@@ -248,10 +429,13 @@ const MediaUpload = ({
       )}
 
       {previewUrl && !isImage && isVideoUpload && (
-        <video
+        <AdminLazyVideoPreview
           src={previewUrl}
-          controls
-          className="mt-2 max-h-[28rem] w-full rounded-md bg-black object-contain"
+          label={
+            uploadType === 'master-video' || uploadType === 'delivery-video'
+              ? 'Master video'
+              : 'Preview video'
+          }
         />
       )}
 
