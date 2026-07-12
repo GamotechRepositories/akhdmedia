@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { DEMO_VIDEO_SOURCE_LIST, DEFAULT_DEMO_VIDEO_SOURCE } from '../constants/demoVideoSource.js'
 import { MEDIA_TYPE_LIST, MEDIA_TYPES } from '../constants/mediaTypes.js'
 import { PRICING_MODE_LIST, PRICING_MODES } from '../constants/pricingModes.js'
 import { RESOLUTION_ORDER } from '../constants/resolutionTiers.js'
@@ -63,7 +64,13 @@ const productSchema = new mongoose.Schema(
     rating: { type: Number, default: 0, min: 0, max: 5 },
     description: { type: String, default: '' },
     images: { type: [String], default: [] },
+    demoVideoSource: {
+      type: String,
+      enum: DEMO_VIDEO_SOURCE_LIST,
+      default: DEFAULT_DEMO_VIDEO_SOURCE,
+    },
     demoVideo: { type: String, default: '' },
+    demoVideoYoutubeUrl: { type: String, default: '' },
     videoPoster: { type: String, default: '' },
     deliveryFiles: {
       type: Map,

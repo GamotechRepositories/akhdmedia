@@ -15,6 +15,8 @@ class Product {
     required this.description,
     required this.images,
     required this.demoVideo,
+    required this.demoVideoSource,
+    required this.demoVideoYoutubeUrl,
     required this.videoPoster,
     required this.isActive,
     required this.isPurchasable,
@@ -37,6 +39,8 @@ class Product {
   final String description;
   final List<String> images;
   final String demoVideo;
+  final String demoVideoSource;
+  final String demoVideoYoutubeUrl;
   final String videoPoster;
   final bool isActive;
   final bool isPurchasable;
@@ -48,7 +52,16 @@ class Product {
 
   bool get isVideo => mediaType == 'video';
 
+  bool get isYoutubeDemo => isVideo && demoVideoSource == 'youtube';
+
   String get thumbnailUrl {
+    if (isYoutubeDemo) {
+      if (images.isNotEmpty && images[0].trim().isNotEmpty) {
+        return images[0].trim();
+      }
+      return videoPoster.trim();
+    }
+
     for (final image in images) {
       if (image.trim().isNotEmpty) return image;
     }
@@ -109,6 +122,8 @@ class Product {
           .map((e) => e.toString())
           .toList(),
       demoVideo: json['demoVideo']?.toString() ?? '',
+      demoVideoSource: json['demoVideoSource']?.toString() ?? 's3',
+      demoVideoYoutubeUrl: json['demoVideoYoutubeUrl']?.toString() ?? '',
       videoPoster: json['videoPoster']?.toString() ?? '',
       isActive: json['isActive'] != false,
       isPurchasable: json['isPurchasable'] != false,

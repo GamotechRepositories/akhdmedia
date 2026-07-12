@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import ProtectedMediaFrame from '../ui/ProtectedMediaFrame';
 import OptimizedImage from '../ui/OptimizedImage';
 import VideoThumbnail from '../ui/VideoThumbnail';
+import YoutubeShortPreview from './YoutubeShortPreview';
 import FourCircleLoader from '../ui/FourCircleLoader';
 import {
   exitDocumentFullscreen,
@@ -45,8 +46,8 @@ const getBufferedEnd = (video) => {
 };
 
 const getDefaultMediaIndex = (items) => {
-  const videoIndex = items.findIndex((item) => item.type === 'video');
-  return videoIndex === -1 ? 0 : videoIndex;
+  const demoIndex = items.findIndex((item) => item.type === 'video' || item.type === 'youtube');
+  return demoIndex === -1 ? 0 : demoIndex;
 };
 
 const PREVIEW_AUTH_LIMIT_SECONDS = 10;
@@ -86,9 +87,12 @@ const ProductMediaGallery = ({ product }) => {
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoBufferedEnd, setVideoBufferedEnd] = useState(0);
   const [showPreviewSignInModal, setShowPreviewSignInModal] = useState(false);
+  const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
 
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
+  const isYoutubeSelected = selectedItem?.type === 'youtube';
+  const isPreviewDemoSelected = isVideoSelected || isYoutubeSelected;
   const isImmersive = isLightboxOpen || isFullscreen || isNativeVideoFullscreen;
   const controlButtonClass = `${videoControlButtonClass} ${isImmersive ? '!z-[120]' : ''}`;
   const playOverlayClass = isImmersive
@@ -385,10 +389,16 @@ const ProductMediaGallery = ({ product }) => {
         inTransitionRef.current = false;
       }, 2000);
 
+      if (isYoutubeSelected) {
+        setIsYoutubePlaying(true);
+      }
+
       // Phones / tablets — overlay keeps watermark; native video FS shows only the <video>
       if (prefersOverlayFullscreen()) {
         setIsLightboxOpen(true);
-        void resumePlayback(snapshot, { fromUserGesture });
+        if (!isYoutubeSelected) {
+          void resumePlayback(snapshot, { fromUserGesture });
+        }
         return;
       }
 
@@ -414,7 +424,9 @@ const ProductMediaGallery = ({ product }) => {
             await requestElementFullscreen(target);
             isFullscreenRef.current = true;
             setIsFullscreen(true);
-            void resumePlayback(snapshot, { fromUserGesture });
+            if (!isYoutubeSelected) {
+              void resumePlayback(snapshot, { fromUserGesture });
+            }
             return;
           } catch {
             // try next target
@@ -424,9 +436,11 @@ const ProductMediaGallery = ({ product }) => {
 
       // Last resort — CSS overlay (browser chrome stays visible)
       setIsLightboxOpen(true);
-      void resumePlayback(snapshot, { fromUserGesture });
+      if (!isYoutubeSelected) {
+        void resumePlayback(snapshot, { fromUserGesture });
+      }
     },
-    [captureSnapshot, resumePlayback, isVideoSelected],
+    [captureSnapshot, resumePlayback, isVideoSelected, isYoutubeSelected],
   );
 
   const exitFullscreen = useCallback(async () => {
@@ -657,6 +671,7 @@ const ProductMediaGallery = ({ product }) => {
     setIsVideoBuffering(false);
     userPausedRef.current = true;
     setIsMuted(true);
+    setIsYoutubePlaying(false);
     setIsLightboxOpen(false);
     setVideoCurrentTime(0);
     setVideoDuration(0);
@@ -863,6 +878,7 @@ const ProductMediaGallery = ({ product }) => {
     clearVideoSource();
     userPausedRef.current = true;
     previewGateTriggeredRef.current = false;
+    setIsYoutubePlaying(false);
     setSelectedMediaIndex(index);
     setIsVideoPlaying(false);
   }, [cancelPendingPlay, clearVideoSource]);
@@ -928,7 +944,18 @@ const ProductMediaGallery = ({ product }) => {
 
   const mediaContent = (
     <>
-      {isVideoSelected ? (
+      {isYoutubeSelected ? (
+        <YoutubeShortPreview
+          url={selectedItem.src}
+          poster={selectedItem.poster}
+          isAuthenticated={isAuthenticated}
+          onPreviewLimit={openPreviewSignIn}
+          autoPlay={isYoutubePlaying}
+          onPlayingChange={setIsYoutubePlaying}
+          className={isImmersive ? 'h-full w-full' : 'max-h-full max-w-full'}
+          immersive={isImmersive}
+        />
+      ) : isVideoSelected ? (
         <div className="relative flex h-full w-full items-center justify-center">
           <video
             ref={videoRef}
@@ -1012,9 +1039,9 @@ const ProductMediaGallery = ({ product }) => {
       <div
         className={`pointer-events-auto absolute rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ${
           compact ? 'left-3 top-3' : 'left-4 top-4'
-        } ${isVideoSelected ? '' : 'uppercase'}`}
+        } ${isPreviewDemoSelected ? '' : 'uppercase'}`}
       >
-        {isVideoSelected ? '40 Sec Preview Demo Only!' : 'Preview'}
+        {isPreviewDemoSelected ? (isYoutubeSelected ? 'YouTube Short Preview' : '40 Sec Preview Demo Only!') : 'Preview'}
       </div>
 
       <button
@@ -1032,7 +1059,19 @@ const ProductMediaGallery = ({ product }) => {
       </button>
 
       {mediaItems.length > 1 && !isImmersive && (
-        <div className={`pointer-events-auto absolute flex gap-1.5 ${compact ? 'bottom-3 right-3' : 'bottom-4 right-4'}`}>
+        <div
+          className={`pointer-events-auto absolute flex gap-1.5 ${
+            compact ? 'bottom-3' : 'bottom-4'
+          } ${
+            isYoutubeSelected && isYoutubePlaying
+              ? compact
+                ? 'left-3'
+                : 'left-4'
+              : compact
+                ? 'right-3'
+                : 'right-4'
+          }`}
+        >
           <button
             type="button"
             onClick={handlePrevMedia}
@@ -1140,7 +1179,7 @@ const ProductMediaGallery = ({ product }) => {
       {isVideoSelected && !isImmersive && renderVideoProgressBar('inline')}
 
       {mediaItems.length > 1 && (
-        <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5 ${isVideoSelected ? 'mt-2' : 'mt-3'}`}>
+        <div className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:gap-2.5 ${isPreviewDemoSelected ? 'mt-2' : 'mt-3'}`}>
           {mediaItems.map((item, index) => (
             <button
               key={`${item.type}-${index}`}
@@ -1170,6 +1209,29 @@ const ProductMediaGallery = ({ product }) => {
                       alt="Video preview"
                       className="h-full w-full object-cover"
                     />
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </>
+              ) : item.type === 'youtube' ? (
+                <>
+                  {item.poster ? (
+                    <OptimizedImage
+                      src={item.poster}
+                      alt="YouTube Short preview"
+                      width={192}
+                      height={108}
+                      quality={70}
+                      loading="lazy"
+                      className={`h-full w-full object-cover ${PROTECTED_MEDIA_CLASS}`}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-900 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+                      YouTube
+                    </div>
                   )}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                     <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">

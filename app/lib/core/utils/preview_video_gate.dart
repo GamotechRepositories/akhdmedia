@@ -10,32 +10,13 @@ const kPreviewAuthLimit = Duration(seconds: 10);
 const kPreviewSignInMessage =
     'Sign in to continue watching all the videos, details and full previews.';
 
-void enforcePreviewVideoAuthGate(
-  BuildContext context,
-  VideoPlayerController controller, {
-  required bool Function() isGateTriggered,
-  required void Function(bool value) setGateTriggered,
-}) {
-  if (!context.mounted) return;
+Future<void> showPreviewSignInPrompt(BuildContext context) {
+  if (!context.mounted) return Future.value();
 
   final auth = context.read<AuthProvider>();
-  if (auth.isAuthenticated) {
-    if (isGateTriggered()) setGateTriggered(false);
-    return;
-  }
+  if (auth.isAuthenticated) return Future.value();
 
-  final position = controller.value.position;
-  if (position < kPreviewAuthLimit) return;
-
-  controller.pause();
-  if (position > kPreviewAuthLimit) {
-    controller.seekTo(kPreviewAuthLimit);
-  }
-
-  if (isGateTriggered()) return;
-  setGateTriggered(true);
-
-  showDialog<void>(
+  return showDialog<void>(
     context: context,
     barrierDismissible: true,
     builder: (dialogContext) => Dialog(
@@ -72,7 +53,35 @@ void enforcePreviewVideoAuthGate(
         ),
       ),
     ),
-  ).then((_) {
+  );
+}
+
+void enforcePreviewVideoAuthGate(
+  BuildContext context,
+  VideoPlayerController controller, {
+  required bool Function() isGateTriggered,
+  required void Function(bool value) setGateTriggered,
+}) {
+  if (!context.mounted) return;
+
+  final auth = context.read<AuthProvider>();
+  if (auth.isAuthenticated) {
+    if (isGateTriggered()) setGateTriggered(false);
+    return;
+  }
+
+  final position = controller.value.position;
+  if (position < kPreviewAuthLimit) return;
+
+  controller.pause();
+  if (position > kPreviewAuthLimit) {
+    controller.seekTo(kPreviewAuthLimit);
+  }
+
+  if (isGateTriggered()) return;
+  setGateTriggered(true);
+
+  showPreviewSignInPrompt(context).then((_) {
     if (context.mounted && !context.read<AuthProvider>().isAuthenticated) {
       setGateTriggered(false);
     }

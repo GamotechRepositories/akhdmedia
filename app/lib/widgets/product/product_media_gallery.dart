@@ -5,12 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
+import 'package:provider/provider.dart';
+
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/preview_video_gate.dart';
 import '../../core/utils/product_media.dart';
 import '../../models/product.dart';
+import '../../providers/auth_provider.dart';
 import '../common/preview_media_watermark.dart';
 import '../common/preview_play_icon.dart';
+import 'youtube_short_preview.dart';
 
 class ProductMediaGallery extends StatefulWidget {
   const ProductMediaGallery({super.key, required this.product});
@@ -31,12 +35,13 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
   bool _isBuffering = false;
   double _videoAspectRatio = 16 / 9;
   bool _previewGateTriggered = false;
+  bool _youtubePlaying = false;
 
   @override
   void initState() {
     super.initState();
     _items = buildProductMediaItems(widget.product);
-    _selectedIndex = _items.indexWhere((item) => item.isVideo);
+    _selectedIndex = _items.indexWhere((item) => item.isPlayablePreview);
     if (_selectedIndex < 0) _selectedIndex = 0;
   }
 
@@ -46,10 +51,11 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
     if (oldWidget.product.id != widget.product.id) {
       _disposeVideo();
       _items = buildProductMediaItems(widget.product);
-      _selectedIndex = _items.indexWhere((item) => item.isVideo);
+      _selectedIndex = _items.indexWhere((item) => item.isPlayablePreview);
       if (_selectedIndex < 0) _selectedIndex = 0;
       _videoAspectRatio = 16 / 9;
       _previewGateTriggered = false;
+      _youtubePlaying = false;
     }
   }
 
@@ -131,6 +137,7 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
       _selectedIndex = index;
       _videoAspectRatio = 16 / 9;
       _previewGateTriggered = false;
+      _youtubePlaying = false;
     });
   }
 
@@ -178,6 +185,11 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
     final item = _selectedItem;
     if (item.isVideo) {
       await _openVideoFullscreen();
+      return;
+    }
+    if (item.isYoutube) {
+      setState(() => _youtubePlaying = true);
+      await _openMediaLightbox();
       return;
     }
     if (item.src.isEmpty) return;
@@ -257,6 +269,7 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
           return _MediaLightboxPage(
             items: _items,
             initialIndex: _selectedIndex,
+            youtubeAutoPlay: _youtubePlaying,
           );
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -268,7 +281,16 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
 
   double _frameAspectRatio() {
     if (_selectedItem.isVideo) return _videoAspectRatio;
+    if (_selectedItem.isYoutube) return 9 / 16;
     return 3 / 4;
+  }
+
+  void _openPreviewSignIn() {
+    if (_previewGateTriggered) return;
+    _previewGateTriggered = true;
+    showPreviewSignInPrompt(context).then((_) {
+      if (mounted) _previewGateTriggered = false;
+    });
   }
 
   double _frameHeight(double width) {
@@ -299,7 +321,20 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (_selectedItem.isVideo)
+                      if (_selectedItem.isYoutube)
+                        YoutubeShortPreview(
+                          url: _selectedItem.src,
+                          poster: _selectedItem.poster,
+                          isAuthenticated: context.watch<AuthProvider>().isAuthenticated,
+                          onPreviewLimit: _openPreviewSignIn,
+                          autoPlay: _youtubePlaying,
+                          onPlayingChange: (playing) {
+                            if (_youtubePlaying != playing) {
+                              setState(() => _youtubePlaying = playing);
+                            }
+                          },
+                        )
+                      else if (_selectedItem.isVideo)
                         _VideoLayer(
                           controller: _videoController,
                           poster: _selectedItem.poster,
@@ -317,11 +352,11 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                           ),
                         ),
                       const Positioned.fill(child: PreviewMediaWatermark()),
-                      if (_selectedItem.isVideo)
+                      if (_selectedItem.isPlayablePreview)
                         const Positioned.fill(
                           child: VideoPreviewDemoBadge(),
                         ),
-                      if (_selectedItem.isVideo) ...[
+                      if (_selectedItem.isPlayablePreview) ...[
                         Positioned(
                           right: 8,
                           top: 8,
@@ -402,11 +437,11 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            if (item.isVideo)
+                            if (item.isPlayablePreview)
                               _ThumbImage(url: item.poster ?? '')
                             else
                               _ThumbImage(url: item.src),
-                            if (item.isVideo)
+                            if (item.isPlayablePreview)
                               Center(
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
@@ -414,8 +449,8 @@ class _ProductMediaGalleryState extends State<ProductMediaGallery> {
                                     color: Colors.black.withValues(alpha: 0.65),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
-                                    Icons.play_arrow,
+                                  child: Icon(
+                                    item.isYoutube ? Icons.play_circle_outline : Icons.play_arrow,
                                     color: Colors.white,
                                     size: 16,
                                   ),
@@ -571,10 +606,12 @@ class _MediaLightboxPage extends StatefulWidget {
   const _MediaLightboxPage({
     required this.items,
     required this.initialIndex,
+    this.youtubeAutoPlay = false,
   });
 
   final List<ProductMediaItem> items;
   final int initialIndex;
+  final bool youtubeAutoPlay;
 
   @override
   State<_MediaLightboxPage> createState() => _MediaLightboxPageState();
@@ -619,6 +656,18 @@ class _MediaLightboxPageState extends State<_MediaLightboxPage> {
                 onPageChanged: (index) => setState(() => _currentIndex = index),
                 itemBuilder: (context, index) {
                   final item = widget.items[index];
+                  if (item.isYoutube) {
+                    return ProtectedMediaFrame(
+                      child: YoutubeShortPreview(
+                        url: item.src,
+                        poster: item.poster,
+                        isAuthenticated: context.watch<AuthProvider>().isAuthenticated,
+                        onPreviewLimit: () => showPreviewSignInPrompt(context),
+                        immersive: true,
+                        autoPlay: widget.youtubeAutoPlay && index == widget.initialIndex,
+                      ),
+                    );
+                  }
                   if (item.isVideo) {
                     return _LightboxVideoSlide(
                       item: item,

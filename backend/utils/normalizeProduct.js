@@ -1,4 +1,10 @@
 import { MEDIA_TYPES } from '../constants/mediaTypes.js'
+import { DEMO_VIDEO_SOURCES } from '../constants/demoVideoSource.js'
+import {
+  isValidYoutubeUrl,
+  normalizeDemoVideoSource,
+  normalizeYoutubeEmbedUrl,
+} from './youtubeShort.js'
 import { PRICING_MODES } from '../constants/pricingModes.js'
 import {
   RESOLUTION_ORDER,
@@ -138,8 +144,16 @@ export const normalizeProductPayload = (body = {}) => {
   }
 
   if (mediaType === MEDIA_TYPES.VIDEO) {
+    payload.demoVideoSource = normalizeDemoVideoSource(body.demoVideoSource)
+    payload.demoVideoYoutubeUrl = normalizeYoutubeEmbedUrl(body.demoVideoYoutubeUrl)
     payload.demoVideo = stripUrlQuery(body.demoVideo)
     payload.videoPoster = stripUrlQuery(body.videoPoster) || images[0] || ''
+
+    if (payload.demoVideoSource === DEMO_VIDEO_SOURCES.YOUTUBE) {
+      payload.demoVideo = ''
+    } else {
+      payload.demoVideoYoutubeUrl = ''
+    }
     payload.masterVideoKey = body.masterVideoKey?.trim() || ''
     payload.masterVideoFilename = body.masterVideoFilename?.trim() || ''
     payload.masterVideoTier = body.masterVideoTier?.trim() || ''
@@ -164,6 +178,8 @@ export const normalizeProductPayload = (body = {}) => {
     payload.masterVideoFilename = body.masterVideoFilename?.trim() || ''
     payload.masterVideoTier = body.masterVideoTier?.trim() || ''
     payload.demoVideo = ''
+    payload.demoVideoYoutubeUrl = ''
+    payload.demoVideoSource = DEMO_VIDEO_SOURCES.S3
     payload.videoPoster = images[0] || ''
     payload.videoInfo = {
       quality: body.videoInfo?.quality?.trim() || '',
@@ -221,7 +237,18 @@ export const validateProductPayload = (payload) => {
   }
 
   if (payload.mediaType === MEDIA_TYPES.VIDEO) {
-    if (!payload.demoVideo) errors.push('Demo video URL is required for video products')
+    if (payload.demoVideoSource === DEMO_VIDEO_SOURCES.YOUTUBE) {
+      if (!payload.demoVideoYoutubeUrl) {
+        errors.push('YouTube Short URL is required for video products')
+      } else if (!isValidYoutubeUrl(payload.demoVideoYoutubeUrl)) {
+        errors.push('Enter a valid YouTube Short or YouTube video URL')
+      }
+      if (!payload.images?.[0]?.trim()) {
+        errors.push('Preview Image 1 is required for YouTube Short products')
+      }
+    } else if (!payload.demoVideo) {
+      errors.push('Demo video URL is required for video products')
+    }
   }
 
   const hasMaster = Boolean(payload.masterVideoKey)

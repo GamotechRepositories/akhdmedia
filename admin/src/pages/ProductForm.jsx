@@ -27,6 +27,8 @@ import {
   secondaryBtnClass,
 } from '../components/ui/adminUi'
 import { MEDIA_TYPES } from '../constants/mediaTypes'
+import { DEMO_VIDEO_SOURCES, DEMO_VIDEO_SOURCE_OPTIONS } from '../constants/demoVideoSource'
+import { isValidYoutubeUrl, normalizeYoutubeEmbedUrl } from '../utils/youtubeShort'
 import { BRAND } from '../config/brand'
 import { captureVideoPosterFromUrl } from '../utils/captureVideoPoster'
 import { PRICING_MODES } from '../constants/pricingModes'
@@ -157,7 +159,9 @@ const mapProductToForm = (product) => {
     rating: product.rating || 0,
     description: product.description || '',
     images: buildPreviewImages(product),
+    demoVideoSource: product.demoVideoSource || DEMO_VIDEO_SOURCES.S3,
     demoVideo: product.demoVideo || '',
+    demoVideoYoutubeUrl: product.demoVideoYoutubeUrl || '',
     videoPoster: product.videoPoster || '',
     deliveryFiles: mergeDeliveryFiles(product),
     masterVideoKey: product.masterVideoKey || '',
@@ -194,7 +198,9 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   rating: 4.5,
   description: '',
   images: ['', '', ''],
+  demoVideoSource: DEMO_VIDEO_SOURCES.S3,
   demoVideo: '',
+  demoVideoYoutubeUrl: '',
   videoPoster: '',
   deliveryFiles: buildEmptyDeliveryFiles(),
   masterVideoKey: '',
@@ -446,6 +452,8 @@ const ProductForm = () => {
       actorListingOrder: current.actorListingOrder,
       categoryListingOrder: current.categoryListingOrder,
       demoVideo: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideo : '',
+      demoVideoSource: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideoSource : DEMO_VIDEO_SOURCES.S3,
+      demoVideoYoutubeUrl: mediaType === MEDIA_TYPES.VIDEO ? current.demoVideoYoutubeUrl : '',
       deliveryFiles: current.deliveryFiles,
     }))
   }
@@ -485,7 +493,17 @@ const ProductForm = () => {
     if (!form.masterVideoKey.trim()) {
       return `Upload the master ${isVideo ? 'video' : 'image'} in Step 3`
     }
-    if (isVideo && !form.demoVideo.trim()) return 'Demo video URL is required for video products'
+    if (isVideo && form.demoVideoSource === DEMO_VIDEO_SOURCES.YOUTUBE) {
+      if (!form.demoVideoYoutubeUrl.trim()) return 'YouTube Short URL is required'
+      if (!isValidYoutubeUrl(form.demoVideoYoutubeUrl)) {
+        return 'Enter a valid YouTube Short or YouTube video URL'
+      }
+      if (!form.images[0]?.trim()) {
+        return 'Preview Image 1 is required for YouTube Short products (used as the video thumbnail)'
+      }
+    } else if (isVideo && !form.demoVideo.trim()) {
+      return 'Demo video URL is required for video products'
+    }
     if (!derivedAvailableTiers.length) {
       return 'Select at least one quality for customers in Step 5'
     }
@@ -562,6 +580,18 @@ const ProductForm = () => {
       masterVideoFilename: nextForm.masterVideoFilename?.trim() || '',
       masterVideoTier: nextForm.masterVideoTier?.trim() || '',
       deliveryFiles: isVideo ? {} : buildImageDeliveryFiles(),
+      demoVideoYoutubeUrl:
+        nextForm.demoVideoSource === DEMO_VIDEO_SOURCES.YOUTUBE
+          ? normalizeYoutubeEmbedUrl(nextForm.demoVideoYoutubeUrl)
+          : '',
+    }
+  }
+
+  const handleYoutubeUrlBlur = () => {
+    if (form.demoVideoSource !== DEMO_VIDEO_SOURCES.YOUTUBE) return
+    const normalized = normalizeYoutubeEmbedUrl(form.demoVideoYoutubeUrl)
+    if (normalized && normalized !== form.demoVideoYoutubeUrl) {
+      updateField('demoVideoYoutubeUrl', normalized)
     }
   }
 
@@ -922,24 +952,78 @@ const ProductForm = () => {
           </div>
 
           {isVideo && (
-            <div className="mt-3">
-              <MediaUpload
-                key={`demo-video-${form.demoVideo || 'empty'}`}
-                label="Demo Video *"
-                accept="video/mp4,video/webm,video/quicktime"
-                uploadType="preview-video"
-                clipId={form.clipId}
-                value={form.demoVideo}
-                onChange={handleDemoVideoChange}
-                autoCapturePoster
-                onPosterCaptured={handlePosterCaptured}
-                valueKind="url"
-                placeholder="https://..."
-                allowDelete
-                deleteLabel="Delete demo video"
-                deleteBeforeReplace
-                onDelete={handleDeleteDemoVideo}
-              />
+            <div className="mt-3 space-y-3">
+              <div>
+                <p className="mb-2 text-xs font-semibold text-slate-700">Preview video source</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {DEMO_VIDEO_SOURCE_OPTIONS.map((option) => {
+                    const selected = form.demoVideoSource === option.value
+                    return (
+                      <label
+                        key={option.value}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${
+                          selected
+                            ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600/30'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="demoVideoSource"
+                          value={option.value}
+                          checked={selected}
+                          onChange={() => updateField('demoVideoSource', option.value)}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          <span className="block text-xs font-semibold text-slate-800">{option.label}</span>
+                          <span className="mt-1 block text-[11px] leading-relaxed text-slate-500">
+                            {option.description}
+                          </span>
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {form.demoVideoSource === DEMO_VIDEO_SOURCES.YOUTUBE ? (
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <label htmlFor="demoVideoYoutubeUrl" className="mb-2 block text-xs font-semibold text-slate-700">
+                    YouTube Short URL *
+                  </label>
+                  <input
+                    id="demoVideoYoutubeUrl"
+                    value={form.demoVideoYoutubeUrl}
+                    onChange={(e) => updateField('demoVideoYoutubeUrl', e.target.value)}
+                    onBlur={handleYoutubeUrlBlur}
+                    className={inputClass}
+                    placeholder="https://youtube.com/shorts/..."
+                  />
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    Paste any public YouTube Short or video link. It is converted to an embed URL and saved in the
+                    database only — no S3 upload. Upload Preview Image 1 above — it is used as the card thumbnail.
+                  </p>
+                </div>
+              ) : (
+                <MediaUpload
+                  key={`demo-video-${form.demoVideo || 'empty'}`}
+                  label="Demo Video *"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  uploadType="preview-video"
+                  clipId={form.clipId}
+                  value={form.demoVideo}
+                  onChange={handleDemoVideoChange}
+                  autoCapturePoster
+                  onPosterCaptured={handlePosterCaptured}
+                  valueKind="url"
+                  placeholder="https://..."
+                  allowDelete
+                  deleteLabel="Delete demo video"
+                  deleteBeforeReplace
+                  onDelete={handleDeleteDemoVideo}
+                />
+              )}
             </div>
           )}
         </FormStep>

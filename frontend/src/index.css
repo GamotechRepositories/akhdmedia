@@ -429,10 +429,13 @@ html.media-lightbox-open {
 
 .media-lightbox__frame video,
 .media-lightbox__frame img,
+.media-lightbox__frame iframe,
 .protected-media-shell:fullscreen video,
 .protected-media-shell:fullscreen img,
+.protected-media-shell:fullscreen iframe,
 .protected-media-shell:-webkit-full-screen video,
-.protected-media-shell:-webkit-full-screen img {
+.protected-media-shell:-webkit-full-screen img,
+.protected-media-shell:-webkit-full-screen iframe {
   width: 100%;
   height: 100%;
   max-width: 100%;

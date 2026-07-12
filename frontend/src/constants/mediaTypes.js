@@ -6,6 +6,16 @@ export const MEDIA_TYPES = {
 export const isVideoProduct = (product) =>
   (product?.mediaType ?? MEDIA_TYPES.VIDEO) === MEDIA_TYPES.VIDEO;
 
+export const isYoutubeDemoProduct = (product) =>
+  isVideoProduct(product) && (product?.demoVideoSource || 's3') === 'youtube';
+
+export const getYoutubePreviewPosterUrl = (product) => {
+  const previewOne = product?.images?.[0]?.trim();
+  if (previewOne) return previewOne;
+  // Admin syncs Preview Image 1 into videoPoster on save
+  return product?.videoPoster?.trim() || '';
+};
+
 export const isImageProduct = (product) =>
   product?.mediaType === MEDIA_TYPES.IMAGE;
 
@@ -24,19 +34,43 @@ export const buildProductMediaItems = (product) => {
       label: `Image ${index + 1}`,
     }));
 
-  if (!isVideoProduct(product) || !product.demoVideo) {
+  if (!isVideoProduct(product)) {
     return images;
   }
 
-  return [
-    {
-      type: 'video',
-      src: product.demoVideo,
-      poster: (product?.images ?? []).find(Boolean) || product?.videoPoster || undefined,
-      label: 'Demo Video',
-    },
-    ...images,
-  ];
+  const demoSource = product?.demoVideoSource || 's3';
+
+  const previewImageOne = getYoutubePreviewPosterUrl(product);
+  const poster =
+    demoSource === 'youtube'
+      ? previewImageOne || undefined
+      : (product?.images ?? []).find(Boolean) || product?.videoPoster || undefined;
+
+  if (demoSource === 'youtube' && product?.demoVideoYoutubeUrl?.trim()) {
+    return [
+      {
+        type: 'youtube',
+        src: product.demoVideoYoutubeUrl.trim(),
+        poster,
+        label: 'YouTube Short',
+      },
+      ...images,
+    ];
+  }
+
+  if (product.demoVideo) {
+    return [
+      {
+        type: 'video',
+        src: product.demoVideo,
+        poster,
+        label: 'Demo Video',
+      },
+      ...images,
+    ];
+  }
+
+  return images;
 };
 
 export const getResolutionSectionCopy = (product) =>

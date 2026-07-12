@@ -6,6 +6,7 @@ import {
   serializeResolutionPricing,
 } from './resolveImageSizes.js'
 import { hasDeliverableMasterFile } from './productDelivery.js'
+import { normalizeYoutubeEmbedUrl } from './youtubeShort.js'
 
 export const serializeDeliveryFiles = (deliveryFiles, availableTiers = []) => {
   const source =
@@ -61,7 +62,12 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     rating: product.rating,
     description: product.description,
     images: product.images,
+    demoVideoSource: product.demoVideoSource || 's3',
     demoVideo: product.demoVideo,
+    demoVideoYoutubeUrl:
+      product.demoVideoSource === 'youtube'
+        ? normalizeYoutubeEmbedUrl(product.demoVideoYoutubeUrl || '')
+        : product.demoVideoYoutubeUrl || '',
     videoPoster: product.videoPoster,
     videoInfo: product.videoInfo,
     isActive: product.isActive,

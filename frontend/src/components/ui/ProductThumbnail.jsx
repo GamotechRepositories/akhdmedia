@@ -14,11 +14,24 @@ const ProductThumbnail = ({
   const media = getProductCardMedia(product);
 
   if (media.type === 'video') {
+    if (!media.src?.trim()) {
+      return <div className={`bg-gray-900 ${className}`.trim()} aria-hidden />;
+    }
+
     return (
       <VideoThumbnail
         src={media.src}
         alt={alt || product?.name || 'Video preview'}
         className={className}
+      />
+    );
+  }
+
+  if (!media.src?.trim()) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-gray-900 ${className}`.trim()}
+        aria-label={alt || product?.name || 'Product preview'}
       />
     );
   }
