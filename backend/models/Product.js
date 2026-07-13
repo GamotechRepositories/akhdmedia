@@ -87,6 +87,12 @@ const productSchema = new mongoose.Schema(
     showInLatest: { type: Boolean, default: false },
     actorListingOrder: { type: Number, default: 0, min: 0 },
     categoryListingOrder: { type: Number, default: 0, min: 0 },
+    actorIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Actor' }],
+      default: [],
+      index: true,
+    },
+    actorNames: { type: [String], default: [] },
     actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Actor', default: null, index: true },
     actorName: { type: String, default: '' },
     actorSearchKeywords: { type: [String], default: [] },

@@ -24,7 +24,9 @@ class Product {
     this.rating,
     this.videoInfo,
     this.actorId,
+    this.actorIds = const [],
     this.actorName = '',
+    this.actorNames = const [],
   });
 
   final String id;
@@ -48,7 +50,35 @@ class Product {
   final num? rating;
   final Map<String, dynamic>? videoInfo;
   final String? actorId;
+  final List<String> actorIds;
   final String actorName;
+  final List<String> actorNames;
+
+  List<String> get resolvedActorIds {
+    if (actorIds.isNotEmpty) return actorIds;
+    if (actorId != null && actorId!.isNotEmpty) return [actorId!];
+    return const [];
+  }
+
+  List<String> get resolvedActorNames {
+    if (actorNames.isNotEmpty) return actorNames;
+    if (actorName.trim().isEmpty) return const [];
+    return actorName
+        .split(',')
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+  }
+
+  bool hasActor(String? targetActorId) {
+    if (targetActorId == null || targetActorId.isEmpty) return false;
+    return resolvedActorIds.contains(targetActorId);
+  }
+
+  bool sharesActorWith(Product other) {
+    final otherIds = other.resolvedActorIds.toSet();
+    return resolvedActorIds.any(otherIds.contains);
+  }
 
   bool get isVideo => mediaType == 'video';
 
@@ -133,7 +163,13 @@ class Product {
           ? json['videoInfo'] as Map<String, dynamic>
           : null,
       actorId: json['actorId']?.toString(),
+      actorIds: (json['actorIds'] as List<dynamic>? ?? [])
+          .map((value) => value.toString())
+          .toList(),
       actorName: json['actorName']?.toString() ?? '',
+      actorNames: (json['actorNames'] as List<dynamic>? ?? [])
+          .map((value) => value.toString())
+          .toList(),
     );
   }
 }

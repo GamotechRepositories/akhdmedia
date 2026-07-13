@@ -9,6 +9,7 @@ import {
 import { fetchCatalog } from '../services/catalogApi';
 import { getSubCategoryLabel as resolveSubCategoryLabel } from '../utils/catalogHelpers';
 import { matchesProductSearch } from '../utils/productSearch';
+import { getProductActorIds, productsShareActor } from '../utils/productActors';
 
 const CatalogContext = createContext(null);
 
@@ -59,15 +60,17 @@ export const CatalogProvider = ({ children }) => {
       const currentProduct = catalog.products.find((product) => product.id === productId);
       const otherProducts = catalog.products.filter((product) => product.id !== productId);
 
-      if (!currentProduct?.actorId) {
+      const currentActorIds = getProductActorIds(currentProduct);
+
+      if (!currentActorIds.length) {
         return otherProducts.slice(0, limit);
       }
 
-      const sameActorProducts = otherProducts.filter(
-        (product) => product.actorId && product.actorId === currentProduct.actorId,
+      const sameActorProducts = otherProducts.filter((product) =>
+        productsShareActor(currentProduct, product),
       );
       const otherActorProducts = otherProducts.filter(
-        (product) => !product.actorId || product.actorId !== currentProduct.actorId,
+        (product) => !productsShareActor(currentProduct, product),
       );
 
       return [...sameActorProducts, ...otherActorProducts].slice(0, limit);

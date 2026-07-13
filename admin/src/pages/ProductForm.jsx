@@ -19,7 +19,7 @@ import ResolutionTierEditor from '../components/ResolutionTierEditor'
 import MediaUpload from '../components/MediaUpload'
 import PreviewImageUpload from '../components/PreviewImageUpload'
 import MasterQualitySelector from '../components/MasterQualitySelector'
-import SearchableSelect from '../components/SearchableSelect'
+import SearchableMultiSelect from '../components/SearchableMultiSelect'
 import PageLoader from '../components/ui/PageLoader'
 import {
   compactFormClass,
@@ -140,6 +140,18 @@ const buildPreviewImages = (product = {}) => {
   return slots
 }
 
+const resolveActorIds = (product) => {
+  if (product.actorIds?.length) {
+    return product.actorIds.map((actorId) => String(actorId))
+  }
+
+  if (product.actorId) {
+    return [String(product.actorId)]
+  }
+
+  return []
+}
+
 const mapProductToForm = (product) => {
   const mediaType = product.mediaType || MEDIA_TYPES.VIDEO
 
@@ -151,7 +163,7 @@ const mapProductToForm = (product) => {
     categorySlug: product.categorySlug,
     subCategorySlug: product.subCategory || '',
     brand: product.brand || '',
-    actorId: product.actorId || '',
+    actorIds: resolveActorIds(product),
     price: product.price,
     gstPercentage: product.gstPercentage ?? 18,
     availableTiers: mergeAvailableTiers(product),
@@ -190,7 +202,7 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   categorySlug: '',
   subCategorySlug: '',
   brand: '',
-  actorId: '',
+  actorIds: [],
   price: 499,
   gstPercentage: 18,
   availableTiers: [],
@@ -442,7 +454,7 @@ const ProductForm = () => {
       categorySlug: current.categorySlug,
       subCategorySlug: current.subCategorySlug,
       brand: current.brand,
-      actorId: current.actorId,
+      actorIds: current.actorIds,
       price: current.price,
       gstPercentage: current.gstPercentage,
       rating: current.rating,
@@ -792,16 +804,16 @@ const ProductForm = () => {
             </label>
 
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Actor</span>
-              <SearchableSelect
-                value={form.actorId}
-                onChange={(value) => updateField('actorId', value)}
+              <span className="font-medium text-slate-700">Actors</span>
+              <SearchableMultiSelect
+                value={form.actorIds}
+                onChange={(value) => updateField('actorIds', value)}
                 options={actorOptions}
-                emptyLabel="No actor"
+                placeholder="Select actors..."
                 searchPlaceholder="Search actors..."
               />
               <p className="mt-1 text-[11px] text-slate-500">
-                Link this product to an actor so customers can find it by actor name or keywords in search.
+                Link this product to one or more actors so customers can find it by actor name or keywords in search.
               </p>
             </label>
 

@@ -74,6 +74,20 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     showInLatest: Boolean(product.showInLatest),
     actorListingOrder: product.actorListingOrder ?? product.allListingOrder ?? 0,
     categoryListingOrder: product.categoryListingOrder ?? 0,
+    actorIds: (product.actorIds?.length
+      ? product.actorIds
+      : product.actorId
+        ? [product.actorId]
+        : []
+    ).map((id) => id.toString()),
+    actorNames: product.actorNames?.length
+      ? product.actorNames
+      : product.actorName
+        ? product.actorName
+            .split(',')
+            .map((name) => name.trim())
+            .filter(Boolean)
+        : [],
     actorId: product.actorId?.toString() || '',
     actorName: product.actorName || '',
     actorSearchKeywords: product.actorSearchKeywords || [],

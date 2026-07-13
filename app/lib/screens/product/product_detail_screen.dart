@@ -862,15 +862,21 @@ class _SpecsSection extends StatelessWidget {
     final info = product.videoInfo ?? {};
     final specs = <_SpecData>[];
 
-    if (product.actorName.trim().isNotEmpty) {
-      final artistName = product.actorName.trim();
+    final actorIds = product.resolvedActorIds;
+    final actorNames = product.resolvedActorNames;
+
+    for (var index = 0; index < actorNames.length; index++) {
+      final artistName = actorNames[index];
+      final actorId = index < actorIds.length ? actorIds[index] : null;
       specs.add(
         _SpecData(
           label: 'Artist',
           value: artistName,
           isArtist: true,
           onTap: () => context.go(
-            '/videos?search=${Uri.encodeComponent(artistName)}',
+            actorId != null && actorId.isNotEmpty
+                ? '/videos?actor=${Uri.encodeComponent(actorId)}'
+                : '/videos?search=${Uri.encodeComponent(artistName)}',
           ),
         ),
       );

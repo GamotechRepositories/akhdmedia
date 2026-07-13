@@ -10,6 +10,7 @@ import {
   CATALOG_PRODUCT_GRID,
   CATALOG_PRODUCT_GRID_EXPANDED,
 } from '../constants/layout';
+import { productHasActor } from '../utils/productActors';
 import {
   useCatalogFilters,
   extractCatalogFacets,
@@ -96,7 +97,7 @@ const CategoryPage = () => {
 
   const baseProducts = useMemo(() => {
     if (actorId) {
-      return products.filter((product) => product.actorId === actorId);
+      return products.filter((product) => productHasActor(product, actorId));
     }
 
     if (searchQuery) {

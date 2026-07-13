@@ -94,20 +94,15 @@ class CatalogProvider extends ChangeNotifier {
     final current = getProductById(productId);
     if (current == null) return [];
 
-    if (current.actorId != null && current.actorId!.isNotEmpty) {
+    if (current.resolvedActorIds.isNotEmpty) {
       final sameActor = products
           .where(
-            (p) =>
-                p.id != productId &&
-                p.actorId != null &&
-                p.actorId == current.actorId,
+            (p) => p.id != productId && current.sharesActorWith(p),
           )
           .toList();
       final others = products
           .where(
-            (p) =>
-                p.id != productId &&
-                (p.actorId == null || p.actorId != current.actorId),
+            (p) => p.id != productId && !current.sharesActorWith(p),
           )
           .toList();
       return [...sameActor, ...others].take(limit).toList();
@@ -134,7 +129,7 @@ class CatalogProvider extends ChangeNotifier {
 
     return products.where((product) {
       if (actorId != null && actorId.isNotEmpty) {
-        return product.actorId == actorId;
+        return product.hasActor(actorId);
       }
       if (categorySlug != null &&
           categorySlug.isNotEmpty &&

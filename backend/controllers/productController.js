@@ -170,7 +170,7 @@ export const createProduct = asyncHandler(async (req, res) => {
   }
 
   const payload = validateProductPayload(
-    await applyActorSelection(normalizeProductPayload(req.body), req.body.actorId),
+    await applyActorSelection(normalizeProductPayload(req.body), req.body),
   )
   payload.clipId = await resolveClipId(payload.clipId)
   await assertClipIdAvailable(payload.clipId)
@@ -200,7 +200,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   }
 
   const payload = validateProductPayload(
-    await applyActorSelection(normalizeProductPayload(req.body), req.body.actorId),
+    await applyActorSelection(normalizeProductPayload(req.body), req.body),
   )
   payload.clipId = await resolveClipId(payload.clipId, existing.clipId || '')
   await assertClipIdAvailable(payload.clipId, existing._id.toString())

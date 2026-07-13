@@ -18,6 +18,7 @@ import {
 } from '../constants/mediaTypes';
 import { PURCHASE_UNAVAILABLE_MESSAGE } from '../constants/purchase';
 import { formatCurrency } from '../utils/formatters';
+import { buildArtistSpecs } from '../utils/productActors';
 import { shareProduct } from '../utils/shareProduct';
 import { IconShare } from '../components/icons/Icons';
 
@@ -218,26 +219,7 @@ const ProductDetail = () => {
     }
   };
 
-  const artistSpec =
-    product.actorName?.trim() && product.actorId
-      ? [
-          {
-            label: 'Artist',
-            value: product.actorName.trim(),
-            href: `/videos?search=${encodeURIComponent(product.actorName.trim())}`,
-            isArtist: true,
-          },
-        ]
-      : product.actorName?.trim()
-        ? [
-            {
-              label: 'Artist',
-              value: product.actorName.trim(),
-              href: `/videos?search=${encodeURIComponent(product.actorName.trim())}`,
-              isArtist: true,
-            },
-          ]
-        : [];
+  const artistSpec = buildArtistSpecs(product);
 
   const specItems = isVideo
     ? [
@@ -434,7 +416,7 @@ const ProductDetail = () => {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
                     {specItems.map((item) => (
                       <SpecItem
-                        key={item.label}
+                        key={item.key || item.label}
                         label={item.label}
                         value={item.value}
                         href={item.href}

@@ -1,5 +1,5 @@
 import Actor from '../models/Actor.js'
-import Product from '../models/Product.js'
+import { syncProductsForActor } from '../utils/applyActorToProduct.js'
 import asyncHandler from '../utils/asyncHandler.js'
 import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../utils/pagination.js'
 
@@ -143,13 +143,7 @@ export const updateActor = asyncHandler(async (req, res) => {
     return
   }
 
-  await Product.updateMany(
-    { actorId: actor._id },
-    {
-      actorName: actor.name,
-      actorSearchKeywords: actor.searchKeywords || [],
-    },
-  )
+  await syncProductsForActor(actor)
 
   res.json(actor)
 })
