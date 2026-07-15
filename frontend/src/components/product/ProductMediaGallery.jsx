@@ -129,17 +129,24 @@ const ProductMediaGallery = ({ product }) => {
     const nextSrc = selectedItem?.src || '';
     if (!video || !nextSrc) return false;
 
+    // Same logical source already attached to this element
     if (loadedVideoSrcRef.current === nextSrc && video.getAttribute('src')) {
       return true;
     }
 
+    // Re-attach after remount (e.g. mobile lightbox portal) — keep progress UI
+    const isReattach = loadedVideoSrcRef.current === nextSrc;
+
     loadedVideoSrcRef.current = nextSrc;
     video.src = nextSrc;
     video.load();
-    previewGateTriggeredRef.current = false;
-    setVideoCurrentTime(0);
-    setVideoDuration(0);
-    setVideoBufferedEnd(0);
+
+    if (!isReattach) {
+      previewGateTriggeredRef.current = false;
+      setVideoCurrentTime(0);
+      setVideoDuration(0);
+      setVideoBufferedEnd(0);
+    }
 
     await new Promise((resolve) => {
       if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -318,43 +325,50 @@ const ProductMediaGallery = ({ product }) => {
         const video = videoRef.current;
         if (!video) return;
 
-        if (!video.paused && !video.ended) {
+        // Mobile lightbox remounts <video> without src — reattach before play()
+        const loaded = await loadVideoSource();
+        if (!loaded || userPausedRef.current) return;
+
+        const activeVideo = videoRef.current;
+        if (!activeVideo) return;
+
+        if (!activeVideo.paused && !activeVideo.ended) {
           setIsVideoPlaying(true);
           setIsVideoBuffering(false);
           return;
         }
 
         if (Number.isFinite(time) && time > 0) {
-          const duration = Number.isFinite(video.duration) ? video.duration : 0;
+          const duration = Number.isFinite(activeVideo.duration) ? activeVideo.duration : 0;
           const safeTime = duration > 0 ? Math.min(time, Math.max(0, duration - 0.05)) : time;
-          if (Math.abs(video.currentTime - safeTime) > 0.25) {
-            video.currentTime = safeTime;
+          if (Math.abs(activeVideo.currentTime - safeTime) > 0.25) {
+            activeVideo.currentTime = safeTime;
           }
         }
 
-        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        if (activeVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
           await new Promise((resolve) => {
-            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            if (activeVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
               resolve();
               return;
             }
-            video.addEventListener('canplay', resolve, { once: true });
+            activeVideo.addEventListener('canplay', resolve, { once: true });
             window.setTimeout(resolve, 2000);
           });
         }
 
         try {
-          video.muted = isMuted;
-          await video.play();
+          activeVideo.muted = isMuted;
+          await activeVideo.play();
           setIsVideoPlaying(true);
           setIsVideoBuffering(false);
           return;
         } catch {
-          if (fromUserGesture && !video.muted) {
+          if (fromUserGesture && !activeVideo.muted) {
             try {
-              video.muted = true;
+              activeVideo.muted = true;
               setIsMuted(true);
-              await video.play();
+              await activeVideo.play();
               setIsVideoPlaying(true);
               setIsVideoBuffering(false);
               return;
@@ -371,7 +385,7 @@ const ProductMediaGallery = ({ product }) => {
         setIsVideoBuffering(false);
       }
     },
-    [isMuted],
+    [isMuted, loadVideoSource],
   );
 
   // ─── Fullscreen enter/exit ───────────────────────────────────────────────
@@ -391,9 +405,9 @@ const ProductMediaGallery = ({ product }) => {
       }, 2000);
 
       // Phones / tablets — overlay keeps watermark; native video FS shows only the <video>
+      // Do not resume on the old inline video — portal remounts a fresh <video>.
       if (prefersOverlayFullscreen()) {
         setIsLightboxOpen(true);
-        void resumePlayback(snapshot, { fromUserGesture });
         return;
       }
 
@@ -573,6 +587,47 @@ const ProductMediaGallery = ({ product }) => {
 
     return () => window.clearTimeout(timer);
   }, [isImmersive, isLightboxOpen, isFullscreen, isNativeVideoFullscreen, resumePlayback]);
+
+  // Mobile lightbox remounts the player into a portal — reattach src + resume after mount.
+  useEffect(() => {
+    if (!isLightboxOpen || !isVideoSelected) return undefined;
+
+    let cancelled = false;
+    const snapshot = playbackSnapshotRef.current;
+
+    const restore = async () => {
+      // Wait one frame so the portaled <video> is in the DOM and videoRef is updated
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+      if (cancelled) return;
+
+      const loaded = await loadVideoSource();
+      if (cancelled || !loaded) return;
+
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (Number.isFinite(snapshot.time) && snapshot.time > 0) {
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        const safeTime =
+          duration > 0 ? Math.min(snapshot.time, Math.max(0, duration - 0.05)) : snapshot.time;
+        video.currentTime = safeTime;
+        setVideoCurrentTime(safeTime);
+      }
+
+      // Continue playback if it was already playing when fullscreen was opened
+      if (!userPausedRef.current || snapshot.wasPlaying) {
+        userPausedRef.current = false;
+        setIsVideoBuffering(true);
+        await resumePlayback(snapshot, { fromUserGesture: true });
+      }
+    };
+
+    void restore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLightboxOpen, isVideoSelected, selectedItem?.src, loadVideoSource, resumePlayback]);
 
   // Resume inline video after mobile/tablet lightbox closes (portal remounts the player).
   useEffect(() => {
