@@ -106,6 +106,12 @@ export const NAV_ITEMS = [
     description: 'Registered customers',
   },
   {
+    to: '/deleted-accounts',
+    label: 'Deleted Accounts',
+    permission: ADMIN_PERMISSIONS.USERS_MANAGE,
+    description: 'User & admin deletions',
+  },
+  {
     to: '/user-mail',
     label: 'User Mail',
     permission: ADMIN_PERMISSIONS.USERS_MANAGE,
@@ -152,6 +158,7 @@ export const ROUTE_PERMISSIONS = [
   { path: '/transactions/:id', permission: ADMIN_PERMISSIONS.TRANSACTIONS_READ },
   { path: '/revenue', permission: ADMIN_PERMISSIONS.REVENUE_VIEW },
   { path: '/users', permission: ADMIN_PERMISSIONS.USERS_MANAGE },
+  { path: '/deleted-accounts', permission: ADMIN_PERMISSIONS.USERS_MANAGE },
   { path: '/user-mail', permission: ADMIN_PERMISSIONS.USERS_MANAGE },
   { path: '/user-mail/:id', permission: ADMIN_PERMISSIONS.USERS_MANAGE },
   { path: '/users/:id', permission: ADMIN_PERMISSIONS.USERS_MANAGE },

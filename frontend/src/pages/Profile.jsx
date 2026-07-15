@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
 import { useAuth } from '../context/AuthContext';
+import { confirmDeleteAccount, requestDeleteAccount } from '../services/authApi';
 
 const inputClass =
   'w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
@@ -34,14 +35,21 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [deleteStep, setDeleteStep] = useState(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteCode, setDeleteCode] = useState('');
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteInfo, setDeleteInfo] = useState('');
+
   useEffect(() => {
     setName(user?.name || '');
     setPhone(user?.phone || '');
   }, [user]);
 
   const handleLogout = async () => {
-    navigate('/', { replace: true })
-    await logout()
+    navigate('/', { replace: true });
+    await logout();
   };
 
   const startEditing = (field) => {
@@ -77,6 +85,57 @@ const Profile = () => {
       setError(submitError.message || 'Failed to update profile');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openDeleteAccount = () => {
+    setDeleteStep('reason');
+    setDeleteReason('');
+    setDeleteCode('');
+    setDeleteError('');
+    setDeleteInfo('');
+  };
+
+  const closeDeleteAccount = () => {
+    if (deleteSubmitting) return;
+    setDeleteStep(null);
+    setDeleteReason('');
+    setDeleteCode('');
+    setDeleteError('');
+    setDeleteInfo('');
+  };
+
+  const handleRequestDeleteCode = async (event) => {
+    event.preventDefault();
+    setDeleteError('');
+    setDeleteInfo('');
+    setDeleteSubmitting(true);
+
+    try {
+      const response = await requestDeleteAccount(deleteReason);
+      setDeleteInfo(response.message || `A confirmation code has been sent to ${user?.email}`);
+      setDeleteStep('code');
+    } catch (requestError) {
+      setDeleteError(requestError.message || 'Could not send confirmation code');
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  const handleConfirmDelete = async (event) => {
+    event.preventDefault();
+    setDeleteError('');
+    setDeleteSubmitting(true);
+
+    try {
+      await confirmDeleteAccount(deleteCode.trim());
+      setDeleteStep(null);
+      navigate('/', { replace: true });
+      await logout();
+    } catch (confirmError) {
+      setDeleteError(confirmError.message || 'Could not delete account');
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -228,10 +287,140 @@ const Profile = () => {
               >
                 Support
               </Link>
+              <button
+                type="button"
+                onClick={openDeleteAccount}
+                className="w-full rounded-xl border border-red-200 bg-white py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+              >
+                Delete Account
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {deleteStep && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4"
+          onClick={closeDeleteAccount}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+          >
+            <h2 id="delete-account-title" className="text-lg font-bold text-gray-900">
+              Delete account
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              This permanently removes your account and your login will be deleted.
+            </p>
+
+            {deleteStep === 'reason' ? (
+              <form onSubmit={handleRequestDeleteCode} className="mt-5 space-y-4">
+                <div>
+                  <label htmlFor="delete-reason" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Why are you deleting your account?
+                  </label>
+                  <textarea
+                    id="delete-reason"
+                    value={deleteReason}
+                    onChange={(event) => setDeleteReason(event.target.value)}
+                    required
+                    minLength={5}
+                    maxLength={500}
+                    rows={4}
+                    className={`${inputClass} resize-none`}
+                    placeholder="Tell us the reason (at least 5 characters)"
+                  />
+                </div>
+
+                {deleteError && (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {deleteError}
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={closeDeleteAccount}
+                    disabled={deleteSubmitting}
+                    className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={deleteSubmitting || deleteReason.trim().length < 5}
+                    className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {deleteSubmitting ? 'Sending...' : 'Send code'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleConfirmDelete} className="mt-5 space-y-4">
+                {deleteInfo && (
+                  <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                    {deleteInfo}
+                  </p>
+                )}
+
+                <div>
+                  <label htmlFor="delete-code" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Enter the 6-digit code sent to {user?.email}
+                  </label>
+                  <input
+                    id="delete-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={deleteCode}
+                    onChange={(event) =>
+                      setDeleteCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                    }
+                    required
+                    maxLength={6}
+                    className={`${inputClass} tracking-[0.35em]`}
+                    placeholder="000000"
+                  />
+                </div>
+
+                {deleteError && (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {deleteError}
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteStep('reason');
+                      setDeleteCode('');
+                      setDeleteError('');
+                    }}
+                    disabled={deleteSubmitting}
+                    className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={deleteSubmitting || deleteCode.trim().length !== 6}
+                    className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {deleteSubmitting ? 'Deleting...' : 'Delete account'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       <AlertModal
         open={Boolean(error)}

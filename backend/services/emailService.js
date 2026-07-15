@@ -343,6 +343,69 @@ export const sendPasswordResetEmail = async ({ email, name, resetToken }) => {
   return { sent: true }
 }
 
+export const sendAccountDeletionCodeEmail = async ({
+  email,
+  name,
+  code,
+  expiryMinutes = 10,
+}) => {
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — account deletion code not sent')
+    return { sent: false, reason: 'resend_not_configured' }
+  }
+
+  const currentYear = new Date().getFullYear()
+  const safeName = escapeHtml(name || 'there')
+  const safeCode = escapeHtml(String(code))
+  const expiryLabel = formatPasswordResetExpiryLabel(expiryMinutes)
+
+  const html = wrapBrandEmail({
+    title: 'Confirm account deletion',
+    currentYear,
+    bodyHtml: `
+      <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">Confirm account deletion</h1>
+      ${brandParagraph(`Hi ${safeName},`)}
+      ${brandParagraph(
+        `We received a request to permanently delete your ${BRAND_NAME} account. Use the confirmation code below to complete this request.`,
+      )}
+      <p style="margin:24px 0;font-size:32px;font-weight:700;letter-spacing:0.35em;text-align:center;color:#111827;">${safeCode}</p>
+      ${brandParagraph(
+        `This code expires in <strong>${escapeHtml(expiryLabel)}</strong>. If you did not request account deletion, you can safely ignore this email and your account will remain active.`,
+      )}
+      ${brandParagraph(`Warm regards,<br><strong>${BRAND_NAME} Team</strong>`)}
+    `,
+  })
+
+  const text = [
+    `Hi ${name || 'there'},`,
+    '',
+    `We received a request to permanently delete your ${BRAND_NAME} account.`,
+    `Your confirmation code is: ${code}`,
+    `This code expires in ${expiryLabel}.`,
+    '',
+    'If you did not request this, ignore this email.',
+    '',
+    `${BRAND_NAME} Team`,
+  ].join('\n')
+
+  const { error } = await resend.emails.send({
+    from: getResendFrom(),
+    to: email,
+    subject: `Confirm account deletion — ${BRAND_NAME}`,
+    html,
+    text,
+  })
+
+  if (error) {
+    console.error('[email] Resend API error (account deletion):', error)
+    throw new Error(error.message || 'Resend API error')
+  }
+
+  console.log(`[email] Account deletion code sent to ${email}`)
+  return { sent: true }
+}
+
 const SUPPORT_SUBJECT_LABELS = {
   download: 'Download issue',
   license_email: 'License email',

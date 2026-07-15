@@ -2,9 +2,12 @@ import asyncHandler from '../utils/asyncHandler.js'
 import AppError from '../utils/AppError.js'
 import mongoose from 'mongoose'
 import Admin from '../models/Admin.js'
-import Order from '../models/Order.js'
 import User from '../models/User.js'
 import UserEmailLog from '../models/UserEmailLog.js'
+import {
+  archiveAndDeleteUser,
+  listDeletedAccounts,
+} from '../services/accountDeletionService.js'
 import { getOrdersForUser } from '../services/orderService.js'
 import { sendAdminBroadcastEmail } from '../services/emailService.js'
 import { getResendFrom } from '../config/email.js'
@@ -151,12 +154,34 @@ export const deleteUser = asyncHandler(async (req, res) => {
     throw new AppError('This email belongs to an admin account', 400)
   }
 
-  await Order.updateMany({ userId: user._id }, { $set: { userId: null } })
-  await user.deleteOne()
+  const reason = String(req.body?.reason || '').trim() || 'Deleted by admin'
+
+  await archiveAndDeleteUser({
+    user,
+    reason,
+    deletedBy: 'admin',
+    admin: req.admin,
+  })
 
   res.json({
     success: true,
     message: 'User deleted successfully',
+  })
+})
+
+export const getDeletedAccounts = asyncHandler(async (req, res) => {
+  const pagination = parsePageLimit(req.query) || { page: 1, limit: 50, skip: 0 }
+  const { page, limit, skip } = pagination
+  const search = String(req.query.search || '').trim()
+
+  const { accounts, total } = await listDeletedAccounts({ page, limit, skip, search })
+
+  res.json({
+    success: true,
+    data: {
+      accounts,
+      pagination: buildPaginationMeta(page, limit, total),
+    },
   })
 })
 

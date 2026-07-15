@@ -15,10 +15,12 @@ const Login = () => {
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   const redirectTo = location.state?.from || '/'
+  const canSubmit = acceptedTerms && !submitting && !loading
 
   if (!loading && user) {
     return <Navigate to={redirectTo} replace />
@@ -27,6 +29,12 @@ const Login = () => {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+
+    if (!acceptedTerms) {
+      setError('Please agree to the Terms & Conditions and Privacy Policy')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -45,6 +53,11 @@ const Login = () => {
   }
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    if (!acceptedTerms) {
+      setError('Please agree to the Terms & Conditions and Privacy Policy')
+      return
+    }
+
     if (!credentialResponse?.credential) {
       setError('Google sign-in failed')
       return
@@ -119,10 +132,37 @@ const Login = () => {
             </div>
           </div>
 
+          <label className="mt-5 flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+            />
+            <span className="text-sm text-gray-700">
+              I agree to the{' '}
+              <Link
+                to="/terms-and-conditions"
+                onClick={(event) => event.stopPropagation()}
+                className="font-semibold underline underline-offset-2"
+              >
+                Terms &amp; Conditions
+              </Link>{' '}
+              and{' '}
+              <Link
+                to="/privacy-policy"
+                onClick={(event) => event.stopPropagation()}
+                className="font-semibold underline underline-offset-2"
+              >
+                Privacy Policy
+              </Link>
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={submitting || loading}
-            className="mt-6 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={!canSubmit}
+            className="mt-5 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Signing in...' : 'Sign In'}
           </button>
@@ -137,7 +177,7 @@ const Login = () => {
               <GoogleSignInButton
                 onSuccess={handleGoogleSuccess}
                 onError={() => setError('Google sign-in was cancelled or failed')}
-                disabled={submitting || loading}
+                disabled={!canSubmit}
               />
             </>
           )}

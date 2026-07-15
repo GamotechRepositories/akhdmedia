@@ -13,6 +13,7 @@ import {
   IconSupport,
   IconTransactions,
   IconMail,
+  IconTrash,
   IconUsers,
 } from '../components/icons/AdminIcons'
 import { NAV_ITEMS } from '../constants/adminPermissions'
@@ -31,6 +32,7 @@ const NAV_ICONS = {
   '/transactions': IconTransactions,
   '/revenue': IconRevenue,
   '/users': IconUsers,
+  '/deleted-accounts': IconTrash,
   '/user-mail': IconMail,
   '/support': IconSupport,
   '/admins': IconAdmins,
@@ -52,6 +54,7 @@ const pageTitles = {
   '/transactions': 'Transactions',
   '/revenue': 'Revenue',
   '/users': 'Users',
+  '/deleted-accounts': 'Deleted Accounts',
   '/user-mail': 'User Mail',
   '/support': 'Support',
   '/admins': 'Admin Team',

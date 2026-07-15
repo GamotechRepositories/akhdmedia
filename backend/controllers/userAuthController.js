@@ -1,6 +1,10 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import { GOOGLE_CLIENT_ID } from '../config/google.js'
 import {
+  confirmAccountDeletion,
+  requestAccountDeletion,
+} from '../services/accountDeletionService.js'
+import {
   authenticateUser,
   authenticateWithGoogle,
   formatUserResponse,
@@ -108,5 +112,25 @@ export const updateProfile = asyncHandler(async (req, res) => {
     data: {
       user: formatUserResponse(user),
     },
+  })
+})
+
+export const requestDeleteAccount = asyncHandler(async (req, res) => {
+  const result = await requestAccountDeletion(req.user.id, req.body.reason)
+
+  res.json({
+    success: true,
+    message: `A confirmation code has been sent to ${result.email}`,
+    data: result,
+  })
+})
+
+export const confirmDeleteAccount = asyncHandler(async (req, res) => {
+  await confirmAccountDeletion(req.user.id, req.body.code)
+  res.clearCookie(getUserCookieName(), getUserCookieOptions())
+
+  res.json({
+    success: true,
+    message: 'Your account has been deleted successfully',
   })
 })

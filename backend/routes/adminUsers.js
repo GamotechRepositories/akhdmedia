@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   deleteUser,
+  getDeletedAccounts,
   getSavedUserSelection,
   getUserEmailHistory,
   getUserEmailSettings,
@@ -13,6 +14,7 @@ import {
 const router = Router()
 
 router.get('/', listUsers)
+router.get('/deleted', getDeletedAccounts)
 router.get('/email-settings', getUserEmailSettings)
 router.post('/email', sendUserEmail)
 router.get('/selection', getSavedUserSelection)

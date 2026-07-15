@@ -40,6 +40,16 @@ export const updateProfile = async (name, phone) => {
   return data
 }
 
+export const requestDeleteAccount = async (reason) => {
+  const { data } = await api.post('/user/auth/delete-account/request', { reason })
+  return data
+}
+
+export const confirmDeleteAccount = async (code) => {
+  const { data } = await api.post('/user/auth/delete-account/confirm', { code })
+  return data
+}
+
 export const getUserOrders = async () => {
   const { data } = await api.get('/user/orders')
   return data

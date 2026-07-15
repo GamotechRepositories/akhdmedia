@@ -428,6 +428,15 @@ export const fetchUserEmailHistory = (id) => api.get(`/admin/users/${id}/email-h
 
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
 
+export const fetchDeletedAccounts = ({ page = 1, limit = 50, search = '' } = {}) =>
+  api.get('/admin/users/deleted', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+    },
+  })
+
 export const sendUsersEmail = (payload) => api.post('/admin/users/email', payload)
 export const fetchUserEmailSettings = () => api.get('/admin/users/email-settings')
 export const fetchUsersSelection = () => api.get('/admin/users/selection')

@@ -15,6 +15,7 @@ import Transactions from './pages/Transactions'
 import TransactionDetail from './pages/TransactionDetail'
 import Revenue from './pages/Revenue'
 import Users from './pages/Users'
+import DeletedAccounts from './pages/DeletedAccounts'
 import UserMail from './pages/UserMail'
 import UserMailHistory from './pages/UserMailHistory'
 import UserDetail from './pages/UserDetail'
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="transactions/:id" element={<TransactionDetail />} />
           <Route path="revenue" element={<Revenue />} />
           <Route path="users" element={<Users />} />
+          <Route path="deleted-accounts" element={<DeletedAccounts />} />
           <Route path="user-mail" element={<UserMail />} />
           <Route path="user-mail/:id" element={<UserMailHistory />} />
           <Route path="users/:id" element={<UserDetail />} />
