@@ -20,7 +20,7 @@ const Login = () => {
   const [error, setError] = useState('')
 
   const redirectTo = location.state?.from || '/'
-  const canSubmit = acceptedTerms && !submitting && !loading
+  const isBusy = submitting || loading
 
   if (!loading && user) {
     return <Navigate to={redirectTo} replace />
@@ -161,7 +161,7 @@ const Login = () => {
 
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={isBusy}
             className="mt-5 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Signing in...' : 'Sign In'}
@@ -177,7 +177,11 @@ const Login = () => {
               <GoogleSignInButton
                 onSuccess={handleGoogleSuccess}
                 onError={() => setError('Google sign-in was cancelled or failed')}
-                disabled={!canSubmit}
+                disabled={isBusy}
+                blocked={!acceptedTerms}
+                onBlocked={() =>
+                  setError('Please agree to the Terms & Conditions and Privacy Policy')
+                }
               />
             </>
           )}
@@ -198,7 +202,11 @@ const Login = () => {
 
       <AlertModal
         open={Boolean(error)}
-        title="Login failed"
+        title={
+          error.includes('Terms & Conditions')
+            ? 'Terms required'
+            : 'Login failed'
+        }
         message={error}
         onClose={() => setError('')}
       />

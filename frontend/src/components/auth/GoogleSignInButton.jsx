@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 
-const GoogleSignInButton = ({ onSuccess, onError, disabled = false }) => {
+const GoogleSignInButton = ({
+  onSuccess,
+  onError,
+  disabled = false,
+  blocked = false,
+  onBlocked,
+}) => {
   const containerRef = useRef(null)
   const [width, setWidth] = useState(320)
 
@@ -24,7 +30,7 @@ const GoogleSignInButton = ({ onSuccess, onError, disabled = false }) => {
   return (
     <div
       ref={containerRef}
-      className={`w-full ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`relative w-full ${disabled ? 'pointer-events-none opacity-60' : ''}`}
       aria-disabled={disabled}
     >
       <GoogleLogin
@@ -36,6 +42,18 @@ const GoogleSignInButton = ({ onSuccess, onError, disabled = false }) => {
         shape="rectangular"
         width={width}
       />
+      {blocked && !disabled && (
+        <button
+          type="button"
+          className="absolute inset-0 z-10 cursor-pointer rounded-md bg-transparent"
+          aria-label="Agree to terms before continuing with Google"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onBlocked?.()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -24,7 +24,7 @@ const Register = () => {
   const [error, setError] = useState('')
 
   const redirectTo = location.state?.from || '/'
-  const canSubmit = acceptedTerms && !submitting && !loading
+  const isBusy = submitting || loading
 
   if (!loading && user) {
     return <Navigate to={redirectTo} replace />
@@ -214,7 +214,7 @@ const Register = () => {
 
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={isBusy}
             className="mt-3.5 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Creating account...' : 'Create Account'}
@@ -230,7 +230,11 @@ const Register = () => {
               <GoogleSignInButton
                 onSuccess={handleGoogleSuccess}
                 onError={() => setError('Google sign-in was cancelled or failed')}
-                disabled={!canSubmit}
+                disabled={isBusy}
+                blocked={!acceptedTerms}
+                onBlocked={() =>
+                  setError('Please agree to the Terms & Conditions and Privacy Policy')
+                }
               />
             </>
           )}
@@ -251,7 +255,11 @@ const Register = () => {
 
       <AlertModal
         open={Boolean(error)}
-        title="Registration failed"
+        title={
+          error.includes('Terms & Conditions')
+            ? 'Terms required'
+            : 'Registration failed'
+        }
         message={error}
         onClose={() => setError('')}
       />
