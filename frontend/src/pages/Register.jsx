@@ -20,6 +20,7 @@ const Register = () => {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [termsError, setTermsError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -30,14 +31,21 @@ const Register = () => {
     return <Navigate to={redirectTo} replace />
   }
 
+  const showTermsRequired = () => {
+    setTermsError(true)
+    setError('Please agree to the Terms & Conditions and Privacy Policy')
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
 
     if (!acceptedTerms) {
-      setError('Please agree to the Terms & Conditions and Privacy Policy')
+      showTermsRequired()
       return
     }
+
+    setTermsError(false)
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -68,7 +76,7 @@ const Register = () => {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     if (!acceptedTerms) {
-      setError('Please agree to the Terms & Conditions and Privacy Policy')
+      showTermsRequired()
       return
     }
 
@@ -77,6 +85,7 @@ const Register = () => {
       return
     }
 
+    setTermsError(false)
     setError('')
     setSubmitting(true)
 
@@ -185,14 +194,27 @@ const Register = () => {
             </div>
           </div>
 
-          <label className="mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+          <label
+            className={`mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition ${
+              termsError
+                ? 'border-red-500 bg-red-50 ring-2 ring-red-500/20'
+                : 'border-gray-200 bg-gray-50'
+            }`}
+          >
             <input
               type="checkbox"
               checked={acceptedTerms}
-              onChange={(event) => setAcceptedTerms(event.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+              onChange={(event) => {
+                setAcceptedTerms(event.target.checked)
+                if (event.target.checked) setTermsError(false)
+              }}
+              className={`mt-0.5 h-4 w-4 shrink-0 rounded focus:ring-gray-900 ${
+                termsError
+                  ? 'border-red-500 text-red-600 focus:ring-red-500'
+                  : 'border-gray-300 text-gray-900'
+              }`}
             />
-            <span className="text-sm text-gray-700">
+            <span className={`text-sm ${termsError ? 'text-red-700' : 'text-gray-700'}`}>
               I agree to the{' '}
               <Link
                 to="/terms-and-conditions"
@@ -232,9 +254,7 @@ const Register = () => {
                 onError={() => setError('Google sign-in was cancelled or failed')}
                 disabled={isBusy}
                 blocked={!acceptedTerms}
-                onBlocked={() =>
-                  setError('Please agree to the Terms & Conditions and Privacy Policy')
-                }
+                onBlocked={showTermsRequired}
               />
             </>
           )}
