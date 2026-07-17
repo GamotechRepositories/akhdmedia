@@ -13,6 +13,8 @@ import {
   exitVideoFullscreen,
   getFullscreenElement,
   isVideoNativeFullscreen,
+  requestElementFullscreen,
+  supportsElementFullscreen,
 } from '../../utils/fullscreen';
 import {
   IconMaximize,
@@ -66,6 +68,7 @@ const ProductMediaGallery = ({ product }) => {
   const pendingPlayRef = useRef(null);      // AbortController for in-flight play()
   const pendingLightboxResumeRef = useRef(null);
   const previewGateTriggeredRef = useRef(false);
+  const browserFullscreenRef = useRef(false); // document fullscreen active alongside lightbox
 
   const mediaItems = buildProductMediaItems(product);
 
@@ -386,7 +389,8 @@ const ProductMediaGallery = ({ product }) => {
   // ─── Fullscreen enter/exit ───────────────────────────────────────────────
 
   // Single code path for all devices (same approach as the mobile app):
-  // a dedicated black overlay that centers media by its own aspect ratio.
+  // a dedicated black overlay that centers media by its own aspect ratio,
+  // plus browser fullscreen so the address bar / taskbar disappear too.
   // The lightbox-open effect reattaches the video source and resumes playback.
   const enterFullscreen = useCallback(async () => {
     const frame = frameRef.current;
@@ -401,6 +405,17 @@ const ProductMediaGallery = ({ product }) => {
     }, 2000);
 
     setIsLightboxOpen(true);
+
+    // Hide browser chrome (tabs, URL bar, taskbar) — like the app.
+    // Unsupported browsers (e.g. iPhone Safari) keep the overlay only.
+    if (supportsElementFullscreen() && !getFullscreenElement()) {
+      try {
+        await requestElementFullscreen(document.documentElement);
+        browserFullscreenRef.current = true;
+      } catch {
+        browserFullscreenRef.current = false;
+      }
+    }
   }, [captureSnapshot, isYoutubeSelected]);
 
   const exitFullscreen = useCallback(async () => {
@@ -422,6 +437,9 @@ const ProductMediaGallery = ({ product }) => {
 
     const video = videoRef.current;
     const fsEl = getFullscreenElement();
+
+    // Clear before exiting so the fullscreenchange handler doesn't re-run exit
+    browserFullscreenRef.current = false;
 
     if (fsEl) {
       try {
@@ -497,6 +515,14 @@ const ProductMediaGallery = ({ product }) => {
       if (wasFullscreen && !nowFullscreen && !inTransitionRef.current) {
         void resumePlayback(snapshot, { fromUserGesture: true });
       }
+
+      // Esc pressed while document fullscreen + lightbox: close the lightbox too
+      if (browserFullscreenRef.current && !fsEl) {
+        browserFullscreenRef.current = false;
+        if (isLightboxOpen) {
+          void exitFullscreen();
+        }
+      }
     };
 
     document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -505,7 +531,7 @@ const ProductMediaGallery = ({ product }) => {
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
     };
-  }, [resumePlayback]);
+  }, [resumePlayback, isLightboxOpen, exitFullscreen]);
 
   // Native iOS video fullscreen
   useEffect(() => {
