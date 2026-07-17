@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { buildProductMediaItems } from '../../constants/mediaTypes';
@@ -28,6 +28,8 @@ import {
   PROTECTED_MEDIA_CLASS,
   getProtectedVideoProps,
 } from '../../utils/mediaProtection';
+
+const EMPTY_INLINE_RECT = { top: 0, left: 0, width: 0, height: 0 };
 
 const fullscreenButtonClass =
   'group/fullscreen flex h-9 w-9 items-center justify-center rounded-lg border border-white/25 bg-black/85 text-white shadow-lg transition hover:scale-105 hover:border-white/40 hover:bg-black/95 active:scale-95 sm:h-10 sm:w-10';
@@ -59,6 +61,7 @@ const ProductMediaGallery = ({ product }) => {
   const frameRef = useRef(null);
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
+  const placeholderRef = useRef(null);
   const loadedVideoSrcRef = useRef('');
   const isFullscreenRef = useRef(false);
   const playbackSnapshotRef = useRef({ time: 0, wasPlaying: false });
@@ -67,9 +70,10 @@ const ProductMediaGallery = ({ product }) => {
   const userPausedRef = useRef(true);       // true until user clicks play
   const inTransitionRef = useRef(false);    // true during fullscreen enter/exit
   const pendingPlayRef = useRef(null);      // AbortController for in-flight play()
-  const pendingLightboxResumeRef = useRef(null);
   const previewGateTriggeredRef = useRef(false);
   const browserFullscreenRef = useRef(false); // document fullscreen active alongside lightbox
+  const resumeLockRef = useRef(false);        // prevent overlapping resume attempts
+  const lastAutoResumeAtRef = useRef(0);      // throttle iOS auto-pause recovery
 
   const mediaItems = buildProductMediaItems(product);
 
@@ -87,6 +91,7 @@ const ProductMediaGallery = ({ product }) => {
   const [videoBufferedEnd, setVideoBufferedEnd] = useState(0);
   const [showPreviewSignInModal, setShowPreviewSignInModal] = useState(false);
   const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
+  const [inlineRect, setInlineRect] = useState(EMPTY_INLINE_RECT);
 
   const selectedItem = mediaItems[selectedMediaIndex];
   const isVideoSelected = selectedItem?.type === 'video';
@@ -128,12 +133,16 @@ const ProductMediaGallery = ({ product }) => {
     const nextSrc = selectedItem?.src || '';
     if (!video || !nextSrc) return false;
 
-    // Same logical source already attached to this element
-    if (loadedVideoSrcRef.current === nextSrc && video.getAttribute('src')) {
+    const currentSrc = video.getAttribute('src') || video.currentSrc || '';
+    const alreadyLoaded =
+      loadedVideoSrcRef.current === nextSrc &&
+      (currentSrc === nextSrc || currentSrc.endsWith(nextSrc) || video.src === nextSrc);
+
+    // Same source already on this element — do not call load() again (iOS freezes)
+    if (alreadyLoaded) {
       return true;
     }
 
-    // Re-attach after remount (e.g. mobile lightbox portal) — keep progress UI
     const isReattach = loadedVideoSrcRef.current === nextSrc;
 
     loadedVideoSrcRef.current = nextSrc;
@@ -308,80 +317,86 @@ const ProductMediaGallery = ({ product }) => {
   const resumePlayback = useCallback(
     async (snapshot, { fromUserGesture = false } = {}) => {
       if (userPausedRef.current) return;
+      if (resumeLockRef.current) return;
 
       const { time, wasPlaying } = snapshot ?? playbackSnapshotRef.current;
       const shouldResume = wasPlaying || fromUserGesture;
       if (!shouldResume) return;
 
-      const delays = [0, 120, 300, 600, 1000];
+      resumeLockRef.current = true;
+      const delays = [0, 150, 400];
 
-      for (const delay of delays) {
-        if (delay > 0) {
-          await new Promise((resolve) => window.setTimeout(resolve, delay));
+      try {
+        for (const delay of delays) {
+          if (delay > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, delay));
+          }
+          if (userPausedRef.current) return;
+
+          const video = videoRef.current;
+          if (!video) return;
+
+          const loaded = await loadVideoSource();
+          if (!loaded || userPausedRef.current) return;
+
+          const activeVideo = videoRef.current;
+          if (!activeVideo) return;
+
+          if (!activeVideo.paused && !activeVideo.ended) {
+            setIsVideoPlaying(true);
+            setIsVideoBuffering(false);
+            return;
+          }
+
+          if (Number.isFinite(time) && time > 0) {
+            const duration = Number.isFinite(activeVideo.duration) ? activeVideo.duration : 0;
+            const safeTime = duration > 0 ? Math.min(time, Math.max(0, duration - 0.05)) : time;
+            if (Math.abs(activeVideo.currentTime - safeTime) > 0.25) {
+              activeVideo.currentTime = safeTime;
+            }
+          }
+
+          if (activeVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            await new Promise((resolve) => {
+              if (activeVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                resolve();
+                return;
+              }
+              activeVideo.addEventListener('canplay', resolve, { once: true });
+              window.setTimeout(resolve, 1500);
+            });
+          }
+
+          try {
+            activeVideo.muted = isMuted;
+            await activeVideo.play();
+            setIsVideoPlaying(true);
+            setIsVideoBuffering(false);
+            return;
+          } catch {
+            // Autoplay policies (esp. iOS) — retry muted
+            if (!activeVideo.muted) {
+              try {
+                activeVideo.muted = true;
+                setIsMuted(true);
+                await activeVideo.play();
+                setIsVideoPlaying(true);
+                setIsVideoBuffering(false);
+                return;
+              } catch {
+                // try next delay
+              }
+            }
+          }
         }
-        if (userPausedRef.current) return;
 
         const video = videoRef.current;
-        if (!video) return;
-
-        // Mobile lightbox remounts <video> without src — reattach before play()
-        const loaded = await loadVideoSource();
-        if (!loaded || userPausedRef.current) return;
-
-        const activeVideo = videoRef.current;
-        if (!activeVideo) return;
-
-        if (!activeVideo.paused && !activeVideo.ended) {
-          setIsVideoPlaying(true);
+        if (video) {
+          setIsVideoPlaying(!video.paused && !video.ended);
           setIsVideoBuffering(false);
-          return;
         }
-
-        if (Number.isFinite(time) && time > 0) {
-          const duration = Number.isFinite(activeVideo.duration) ? activeVideo.duration : 0;
-          const safeTime = duration > 0 ? Math.min(time, Math.max(0, duration - 0.05)) : time;
-          if (Math.abs(activeVideo.currentTime - safeTime) > 0.25) {
-            activeVideo.currentTime = safeTime;
-          }
-        }
-
-        if (activeVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-          await new Promise((resolve) => {
-            if (activeVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-              resolve();
-              return;
-            }
-            activeVideo.addEventListener('canplay', resolve, { once: true });
-            window.setTimeout(resolve, 2000);
-          });
-        }
-
-        try {
-          activeVideo.muted = isMuted;
-          await activeVideo.play();
-          setIsVideoPlaying(true);
-          setIsVideoBuffering(false);
-          return;
-        } catch {
-          if (fromUserGesture && !activeVideo.muted) {
-            try {
-              activeVideo.muted = true;
-              setIsMuted(true);
-              await activeVideo.play();
-              setIsVideoPlaying(true);
-              setIsVideoBuffering(false);
-              return;
-            } catch {
-              // try next delay
-            }
-          }
-        }
-      }
-
-      const video = videoRef.current;
-      if (video) {
-        setIsVideoPlaying(!video.paused && !video.ended);
-        setIsVideoBuffering(false);
+      } finally {
+        resumeLockRef.current = false;
       }
     },
     [isMuted, loadVideoSource],
@@ -389,13 +404,11 @@ const ProductMediaGallery = ({ product }) => {
 
   // ─── Fullscreen enter/exit ───────────────────────────────────────────────
 
-  // Single code path for all devices (same approach as the mobile app):
-  // a dedicated black overlay that centers media by its own aspect ratio,
-  // plus browser fullscreen so the address bar / taskbar disappear too.
-  // The lightbox-open effect reattaches the video source and resumes playback.
+  // Single code path for all devices: CSS lightbox overlay (same <video> — no remount).
+  // Desktop/Android also request document fullscreen to hide browser chrome.
+  // iOS stays overlay-only — document fullscreen interrupts inline playback.
   const enterFullscreen = useCallback(async () => {
     const frame = frameRef.current;
-    // YouTube embed has its own fullscreen — skip custom immersive mode
     if (!frame || isYoutubeSelected) return;
 
     captureSnapshot();
@@ -403,14 +416,10 @@ const ProductMediaGallery = ({ product }) => {
 
     window.setTimeout(() => {
       inTransitionRef.current = false;
-    }, 2000);
+    }, 600);
 
     setIsLightboxOpen(true);
 
-    // Hide browser chrome (tabs, URL bar, taskbar) — like the app.
-    // Apple devices (iPhone + iPad) stay overlay-only: requesting document
-    // fullscreen on iOS/iPadOS interrupts the remounting <video> and Safari
-    // auto-pauses it a moment later. Desktop/Android get real fullscreen.
     if (!isIOSDevice() && supportsElementFullscreen() && !getFullscreenElement()) {
       try {
         await requestElementFullscreen(document.documentElement);
@@ -419,29 +428,25 @@ const ProductMediaGallery = ({ product }) => {
         browserFullscreenRef.current = false;
       }
     }
-  }, [captureSnapshot, isYoutubeSelected]);
+
+    // Same video element stays mounted — keep playing if it was already playing
+    const snapshot = playbackSnapshotRef.current;
+    if (snapshot.wasPlaying && !userPausedRef.current) {
+      void resumePlayback(snapshot, { fromUserGesture: true });
+    }
+  }, [captureSnapshot, isYoutubeSelected, resumePlayback]);
 
   const exitFullscreen = useCallback(async () => {
-    const closingLightbox = isLightboxOpen;
     const snapshot = captureSnapshot();
 
-    if (closingLightbox && snapshot.wasPlaying && !userPausedRef.current) {
-      pendingLightboxResumeRef.current = snapshot;
-    }
-
-    if (closingLightbox) {
+    inTransitionRef.current = true;
+    window.setTimeout(() => {
       inTransitionRef.current = false;
-    } else {
-      inTransitionRef.current = true;
-      window.setTimeout(() => {
-        inTransitionRef.current = false;
-      }, 2000);
-    }
+    }, 600);
 
     const video = videoRef.current;
     const fsEl = getFullscreenElement();
 
-    // Clear before exiting so the fullscreenchange handler doesn't re-run exit
     browserFullscreenRef.current = false;
 
     if (fsEl) {
@@ -459,10 +464,10 @@ const ProductMediaGallery = ({ product }) => {
     setIsNativeVideoFullscreen(false);
     setIsLightboxOpen(false);
 
-    if (!closingLightbox) {
+    if (snapshot.wasPlaying && !userPausedRef.current) {
       void resumePlayback(snapshot, { fromUserGesture: true });
     }
-  }, [captureSnapshot, resumePlayback, isLightboxOpen]);
+  }, [captureSnapshot, resumePlayback]);
 
   const handleExitImmersive = useCallback(
     (event) => {
@@ -557,83 +562,41 @@ const ProductMediaGallery = ({ product }) => {
     };
   }, [isVideoSelected, selectedItem?.src, resumePlayback]);
 
-  // Resume after lightbox / immersive state settles (same video element, no remount)
-  useEffect(() => {
-    if (!isImmersive || userPausedRef.current) return undefined;
+  // Keep the portaled player aligned with the layout placeholder while inline.
+  useLayoutEffect(() => {
+    const placeholder = placeholderRef.current;
+    if (!placeholder) return undefined;
 
-    const snapshot = playbackSnapshotRef.current;
-    if (!snapshot.wasPlaying) return undefined;
-
-    const timer = window.setTimeout(() => {
-      void resumePlayback(snapshot, { fromUserGesture: true });
-    }, 50);
-
-    return () => window.clearTimeout(timer);
-  }, [isImmersive, isLightboxOpen, isFullscreen, isNativeVideoFullscreen, resumePlayback]);
-
-  // Mobile lightbox remounts the player into a portal — reattach src + resume after mount.
-  useEffect(() => {
-    if (!isLightboxOpen || !isVideoSelected) return undefined;
-
-    let cancelled = false;
-    const snapshot = playbackSnapshotRef.current;
-
-    const restore = async () => {
-      // Wait one frame so the portaled <video> is in the DOM and videoRef is updated
-      await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
-      if (cancelled) return;
-
-      const loaded = await loadVideoSource();
-      if (cancelled || !loaded) return;
-
-      const video = videoRef.current;
-      if (!video) return;
-
-      if (Number.isFinite(snapshot.time) && snapshot.time > 0) {
-        const duration = Number.isFinite(video.duration) ? video.duration : 0;
-        const safeTime =
-          duration > 0 ? Math.min(snapshot.time, Math.max(0, duration - 0.05)) : snapshot.time;
-        video.currentTime = safeTime;
-        setVideoCurrentTime(safeTime);
-      }
-
-      // Continue playback if it was already playing when fullscreen was opened
-      if (!userPausedRef.current || snapshot.wasPlaying) {
-        userPausedRef.current = false;
-        setIsVideoBuffering(true);
-        await resumePlayback(snapshot, { fromUserGesture: true });
-      }
+    const syncRect = () => {
+      if (isLightboxOpen) return;
+      const rect = placeholder.getBoundingClientRect();
+      setInlineRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
     };
 
-    void restore();
+    syncRect();
+
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncRect) : null;
+    ro?.observe(placeholder);
+    window.addEventListener('resize', syncRect);
+    window.addEventListener('scroll', syncRect, true);
+    window.visualViewport?.addEventListener('resize', syncRect);
+    window.visualViewport?.addEventListener('scroll', syncRect);
 
     return () => {
-      cancelled = true;
+      ro?.disconnect();
+      window.removeEventListener('resize', syncRect);
+      window.removeEventListener('scroll', syncRect, true);
+      window.visualViewport?.removeEventListener('resize', syncRect);
+      window.visualViewport?.removeEventListener('scroll', syncRect);
     };
-  }, [isLightboxOpen, isVideoSelected, selectedItem?.src, loadVideoSource, resumePlayback]);
+  }, [isLightboxOpen, selectedMediaIndex, product?.id]);
 
-  // Resume inline video after mobile/tablet lightbox closes (portal remounts the player).
-  useEffect(() => {
-    if (isLightboxOpen || !pendingLightboxResumeRef.current) return undefined;
-
-    const snapshot = pendingLightboxResumeRef.current;
-    pendingLightboxResumeRef.current = null;
-    inTransitionRef.current = false;
-
-    const delays = [0, 120, 300, 600, 1000];
-    const timers = delays.map((delay) =>
-      window.setTimeout(() => {
-        if (userPausedRef.current || isLightboxOpen) return;
-        void resumePlayback(snapshot, { fromUserGesture: true });
-      }, delay),
-    );
-
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
-  }, [isLightboxOpen, resumePlayback]);
-
-  // Portal lightbox to <body> via createPortal (keeps React click handlers working).
+  // Portal lightbox class on html/body for chrome hide + scroll lock helpers.
   useEffect(() => {
     document.documentElement.classList.toggle('media-lightbox-open', isLightboxOpen);
     document.body.classList.toggle('media-lightbox-open', isLightboxOpen);
@@ -644,7 +607,7 @@ const ProductMediaGallery = ({ product }) => {
     };
   }, [isLightboxOpen]);
 
-  // ─── Lightbox keyboard + scroll lock ─────────────────────────────────────
+  // ─── Lightbox keyboard + scroll lock + iOS visualViewport sizing ─────────
 
   useEffect(() => {
     if (!isLightboxOpen) return undefined;
@@ -661,15 +624,24 @@ const ProductMediaGallery = ({ product }) => {
     document.body.style.width = '100%';
     document.body.style.overflow = 'hidden';
 
-    const updateVH = () => {
-      const h = window.visualViewport?.height || window.innerHeight;
-      document.documentElement.style.setProperty('--media-lightbox-height', `${h}px`);
+    const updateViewport = () => {
+      const vv = window.visualViewport;
+      const height = vv?.height || window.innerHeight;
+      const width = vv?.width || window.innerWidth;
+      const top = vv?.offsetTop || 0;
+      const left = vv?.offsetLeft || 0;
+      const root = document.documentElement;
+      root.style.setProperty('--media-lightbox-height', `${height}px`);
+      root.style.setProperty('--media-lightbox-width', `${width}px`);
+      root.style.setProperty('--media-lightbox-top', `${top}px`);
+      root.style.setProperty('--media-lightbox-left', `${left}px`);
     };
-    updateVH();
+    updateViewport();
 
     window.addEventListener('keydown', onKeyDown);
-    window.visualViewport?.addEventListener('resize', updateVH);
-    window.visualViewport?.addEventListener('scroll', updateVH);
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
 
     return () => {
       document.body.style.position = '';
@@ -678,10 +650,15 @@ const ProductMediaGallery = ({ product }) => {
       document.body.style.right = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
-      document.documentElement.style.removeProperty('--media-lightbox-height');
+      const root = document.documentElement;
+      root.style.removeProperty('--media-lightbox-height');
+      root.style.removeProperty('--media-lightbox-width');
+      root.style.removeProperty('--media-lightbox-top');
+      root.style.removeProperty('--media-lightbox-left');
       window.removeEventListener('keydown', onKeyDown);
-      window.visualViewport?.removeEventListener('resize', updateVH);
-      window.visualViewport?.removeEventListener('scroll', updateVH);
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
       window.scrollTo(0, scrollY);
     };
   }, [isLightboxOpen, exitFullscreen]);
@@ -692,7 +669,6 @@ const ProductMediaGallery = ({ product }) => {
     clearVideoSource();
     cancelPendingPlay();
     inTransitionRef.current = false;
-    pendingLightboxResumeRef.current = null;
     previewGateTriggeredRef.current = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedMediaIndex(getDefaultMediaIndex(mediaItems));
@@ -733,8 +709,7 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('durationchange', sync);
       video.removeEventListener('seeked', sync);
     };
-    // isLightboxOpen: the portal remounts <video>, so listeners must rebind
-  }, [isVideoSelected, selectedItem?.src, product?.id, isLightboxOpen]);
+  }, [isVideoSelected, selectedItem?.src, product?.id]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -756,7 +731,7 @@ const ProductMediaGallery = ({ product }) => {
 
     video.addEventListener('timeupdate', enforcePreviewLimit);
     return () => video.removeEventListener('timeupdate', enforcePreviewLimit);
-  }, [isVideoSelected, isAuthenticated, selectedItem?.src, product?.id, openPreviewSignIn, isLightboxOpen]);
+  }, [isVideoSelected, isAuthenticated, selectedItem?.src, product?.id, openPreviewSignIn]);
 
   // ─── Buffering indicators ────────────────────────────────────────────────
 
@@ -775,11 +750,24 @@ const ProductMediaGallery = ({ product }) => {
       setIsVideoBuffering(false);
     };
     const onPause = () => {
-      // Only update state if this is a real pause (not a transition artifact)
-      if (!inTransitionRef.current) {
-        setIsVideoPlaying(false);
-        setIsVideoBuffering(false);
+      // Ignore brief pauses during fullscreen enter/exit transitions
+      if (inTransitionRef.current) return;
+
+      if (!userPausedRef.current && !previewGateTriggeredRef.current && !video.ended) {
+        const now = Date.now();
+        // Throttle: iOS can emit pause in a loop if play() is rejected
+        if (now - lastAutoResumeAtRef.current > 1800) {
+          lastAutoResumeAtRef.current = now;
+          void resumePlayback(
+            { time: video.currentTime, wasPlaying: true },
+            { fromUserGesture: false },
+          );
+          return;
+        }
       }
+
+      setIsVideoPlaying(false);
+      setIsVideoBuffering(false);
     };
     const onEnded = () => {
       if (!inTransitionRef.current) {
@@ -808,8 +796,7 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
     };
-    // isLightboxOpen: the portal remounts <video>, so listeners must rebind
-  }, [isVideoSelected, selectedItem?.src, product?.id, isLightboxOpen]);
+  }, [isVideoSelected, selectedItem?.src, product?.id, resumePlayback]);
 
   // ─── Keep muted state in sync ────────────────────────────────────────────
 
@@ -1157,7 +1144,7 @@ const ProductMediaGallery = ({ product }) => {
     <ProtectedMediaFrame
       ref={frameRef}
       watermark
-      className={mode === 'lightbox' ? 'media-lightbox__frame' : inlineFrameClassName}
+      className={mode === 'lightbox' ? 'media-lightbox__frame' : 'media-inline-portaled__frame h-full w-full'}
     >
       {renderMediaChrome(mode === 'inline')}
       <div className={mode === 'lightbox' ? 'media-lightbox__media' : 'relative h-full w-full'}>
@@ -1166,29 +1153,44 @@ const ProductMediaGallery = ({ product }) => {
     </ProtectedMediaFrame>
   );
 
-  const lightboxPortal = isLightboxOpen
-    ? createPortal(
-        <div
-          className="media-lightbox"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Fullscreen media preview"
-        >
-          {renderMediaFrame('lightbox')}
-        </div>,
-        document.body,
-      )
-    : null;
+  const playerMode = isLightboxOpen ? 'lightbox' : 'inline';
+  const hasInlineRect = inlineRect.width > 0 && inlineRect.height > 0;
+
+  const playerPortal = createPortal(
+    <div
+      className={isLightboxOpen ? 'media-lightbox' : 'media-inline-portaled'}
+      role={isLightboxOpen ? 'dialog' : undefined}
+      aria-modal={isLightboxOpen ? true : undefined}
+      aria-label={isLightboxOpen ? 'Fullscreen media preview' : undefined}
+      style={
+        isLightboxOpen
+          ? undefined
+          : {
+              top: inlineRect.top,
+              left: inlineRect.left,
+              width: inlineRect.width,
+              height: inlineRect.height,
+              visibility: hasInlineRect ? 'visible' : 'hidden',
+              pointerEvents: hasInlineRect ? 'auto' : 'none',
+            }
+      }
+    >
+      {renderMediaFrame(playerMode)}
+    </div>,
+    document.body,
+  );
 
   return (
     <div className="w-full min-w-0 max-w-full">
-      {isLightboxOpen ? (
-        <div className={`${inlineFrameClassName} pointer-events-none invisible`} aria-hidden />
-      ) : (
-        <div className="relative w-full">{renderMediaFrame('inline')}</div>
-      )}
+      {/* Layout spacer — real player is always portaled to <body> so fullscreen
+          escapes stacking contexts and the <video> never remounts. */}
+      <div
+        ref={placeholderRef}
+        className={`${inlineFrameClassName} pointer-events-none invisible`}
+        aria-hidden
+      />
 
-      {lightboxPortal}
+      {playerPortal}
 
       {showPreviewSignInModal &&
         createPortal(
