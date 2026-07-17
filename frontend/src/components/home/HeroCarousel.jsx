@@ -9,6 +9,7 @@ import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 import {
   HERO_BANNER_DESKTOP_RATIO,
   HERO_BANNER_MOBILE_RATIO,
+  HERO_BANNER_TABLET_RATIO,
   resolveImageFocus,
 } from '../../constants/heroBanner';
 import HeroSlideOverlay from './HeroSlideOverlay';
@@ -17,10 +18,10 @@ import {
   DEFAULT_HEADLINE_POSITION,
 } from '../../constants/heroTypography';
 
-const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) => {
+const HeroSlide = ({ slide, isActive, compact = false, device = 'desktop', motionEnabled = true }) => {
   const hasLink = Boolean(slide.link?.trim());
   const hasOverlay = Boolean(slide.headline?.trim() || slide.cta?.trim());
-  const imageFocus = resolveImageFocus(slide.imageFocus);
+  const imageFocus = resolveImageFocus(slide.imageFocus, device);
   const slideClassName = `absolute inset-0 transition-opacity duration-700 ease-in-out ${
     isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
   }`;
@@ -38,8 +39,8 @@ const HeroSlide = ({ slide, isActive, compact = false, motionEnabled = true }) =
           <OptimizedImage
             src={slide.image}
             alt=""
-            width={compact ? 900 : 1400}
-            height={compact ? 675 : 560}
+            width={compact ? 900 : device === 'tablet' ? 1200 : 1400}
+            height={compact ? 675 : device === 'tablet' ? 750 : 560}
             quality={80}
             loading={isActive ? 'eager' : 'lazy'}
             fetchPriority={isActive ? 'high' : undefined}
@@ -113,7 +114,11 @@ const CarouselControls = ({ heroSlides, activeIndex, prev, next, goTo, compact =
       </>
     )}
 
-    <div className={`absolute left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:gap-2 ${compact ? 'bottom-3' : 'bottom-4 sm:bottom-5'}`}>
+    <div
+      className={`absolute left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:gap-2 ${
+        compact ? 'bottom-3' : 'bottom-4 sm:bottom-5'
+      }`}
+    >
       {heroSlides.map((slide, index) => (
         <button
           key={slide.id}
@@ -121,7 +126,9 @@ const CarouselControls = ({ heroSlides, activeIndex, prev, next, goTo, compact =
           aria-label={`Go to slide ${index + 1}`}
           onClick={() => goTo(index)}
           className={`rounded-full transition-all duration-300 ${
-            index === activeIndex ? 'w-6 bg-white sm:w-8' : 'w-1.5 bg-white/40 hover:bg-white/70 sm:w-2'
+            index === activeIndex
+              ? 'w-6 bg-white sm:w-8'
+              : 'w-1.5 bg-white/40 hover:bg-white/70 sm:w-2'
           } h-1.5 sm:h-1.5`}
         />
       ))}
@@ -145,7 +152,7 @@ const mapSettingsHeroSlides = (slides = []) =>
       showShadow: slide.showShadow === true,
       headlinePosition: slide.headlinePosition || DEFAULT_HEADLINE_POSITION,
       ctaPosition: slide.ctaPosition || DEFAULT_CTA_POSITION,
-      imageFocus: resolveImageFocus(slide.imageFocus),
+      imageFocus: slide.imageFocus || {},
       headlineFontSize: slide.headlineFontSize,
       headlineFontFamily: slide.headlineFontFamily,
       ctaScale: slide.ctaScale,
@@ -198,7 +205,7 @@ const HeroCarousel = () => {
       onMouseLeave={resume}
       aria-label="Featured collections"
     >
-      {/* Mobile & tablet carousel — swipe to change slide */}
+      {/* Mobile — phones */}
       <div
         className="relative mx-auto w-full max-w-[2000px] touch-pan-y [container-type:size] md:hidden"
         style={{ aspectRatio: HERO_BANNER_MOBILE_RATIO }}
@@ -211,6 +218,7 @@ const HeroCarousel = () => {
             slide={slide}
             isActive={index === activeIndex}
             compact
+            device="mobile"
             motionEnabled={motionEnabled}
           />
         ))}
@@ -224,16 +232,42 @@ const HeroCarousel = () => {
         />
       </div>
 
-      {/* Desktop carousel — 3:1 matches admin preview & recommended upload size */}
+      {/* iPad / tablet */}
       <div
-        className="relative mx-auto hidden w-full max-w-[2000px] [container-type:size] md:block"
+        className="relative mx-auto hidden w-full max-w-[2000px] touch-pan-y [container-type:size] md:block lg:hidden"
+        style={{ aspectRatio: HERO_BANNER_TABLET_RATIO }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {heroSlides.map((slide, index) => (
+          <HeroSlide
+            key={`tablet-${slide.id}`}
+            slide={slide}
+            isActive={index === activeIndex}
+            device="tablet"
+            motionEnabled={motionEnabled}
+          />
+        ))}
+        <CarouselControls
+          heroSlides={heroSlides}
+          activeIndex={activeIndex}
+          prev={prev}
+          next={next}
+          goTo={goTo}
+        />
+      </div>
+
+      {/* Desktop */}
+      <div
+        className="relative mx-auto hidden w-full max-w-[2000px] [container-type:size] lg:block"
         style={{ aspectRatio: HERO_BANNER_DESKTOP_RATIO }}
       >
         {heroSlides.map((slide, index) => (
           <HeroSlide
-            key={slide.id}
+            key={`desktop-${slide.id}`}
             slide={slide}
             isActive={index === activeIndex}
+            device="desktop"
             motionEnabled={motionEnabled}
           />
         ))}

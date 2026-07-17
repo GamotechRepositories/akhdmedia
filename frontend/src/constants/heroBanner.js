@@ -1,6 +1,6 @@
 export const HERO_BANNER_DESKTOP_RATIO = '3 / 1'
-export const HERO_BANNER_MOBILE_RATIO = '16 / 10'
 export const HERO_BANNER_TABLET_RATIO = '16 / 10'
+export const HERO_BANNER_MOBILE_RATIO = '16 / 10'
 
 /** height / width — used to keep headline–button gap consistent across aspect ratios */
 export const HERO_BANNER_DESKTOP_HEIGHT_RATIO = 1 / 3
@@ -22,12 +22,35 @@ export const HERO_OVERLAY_REFERENCE_WIDTH = 896
 
 export const DEFAULT_IMAGE_FOCUS = { scale: 1, x: 50, y: 50 }
 
-export const resolveImageFocus = (focus) => {
-  const scale = Number(focus?.scale)
+const clampFocusScale = (scale) => {
+  const numeric = Number(scale)
+  if (!Number.isFinite(numeric)) return DEFAULT_IMAGE_FOCUS.scale
+  return Math.min(3, Math.max(1, numeric))
+}
 
-  return {
-    scale: Number.isFinite(scale) ? Math.min(3, Math.max(1, scale)) : DEFAULT_IMAGE_FOCUS.scale,
-    x: Number.isFinite(Number(focus?.x)) ? Number(focus.x) : DEFAULT_IMAGE_FOCUS.x,
-    y: Number.isFinite(Number(focus?.y)) ? Number(focus.y) : DEFAULT_IMAGE_FOCUS.y,
+const clampFocusPercent = (value, fallback = DEFAULT_IMAGE_FOCUS.x) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.min(100, Math.max(0, Math.round(numeric)))
+}
+
+export const normalizeImageFocusPoint = (focus) => ({
+  scale: clampFocusScale(focus?.scale),
+  x: clampFocusPercent(focus?.x, DEFAULT_IMAGE_FOCUS.x),
+  y: clampFocusPercent(focus?.y, DEFAULT_IMAGE_FOCUS.y),
+})
+
+/**
+ * Resolve crop for a device. Desktop values live on the root object;
+ * tablet/mobile may override via nested keys (fallback to desktop).
+ */
+export const resolveImageFocus = (focus, device = 'desktop') => {
+  const desktop = normalizeImageFocusPoint(focus)
+  if (device === 'tablet' && focus?.tablet) {
+    return normalizeImageFocusPoint(focus.tablet)
   }
+  if (device === 'mobile' && focus?.mobile) {
+    return normalizeImageFocusPoint(focus.mobile)
+  }
+  return desktop
 }

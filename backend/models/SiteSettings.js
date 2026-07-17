@@ -16,11 +16,22 @@ const overlayPositionSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const imageFocusPointSchema = new mongoose.Schema(
+  {
+    scale: { type: Number, default: 1, min: 1, max: 3 },
+    x: { type: Number, default: 50, min: 0, max: 100 },
+    y: { type: Number, default: 50, min: 0, max: 100 },
+  },
+  { _id: false },
+)
+
 const imageFocusSchema = new mongoose.Schema(
   {
     scale: { type: Number, default: 1, min: 1, max: 3 },
     x: { type: Number, default: 50, min: 0, max: 100 },
     y: { type: Number, default: 50, min: 0, max: 100 },
+    tablet: { type: imageFocusPointSchema, required: false },
+    mobile: { type: imageFocusPointSchema, required: false },
   },
   { _id: false },
 )

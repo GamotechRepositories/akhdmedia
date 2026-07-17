@@ -59,7 +59,7 @@ const clampImageFocusPercent = (value, fallback) => {
   return Math.min(100, Math.max(0, Math.round(numeric)))
 }
 
-const sanitizeImageFocus = (focus) => {
+const sanitizeImageFocusPoint = (focus) => {
   const scale = Number(focus?.scale)
   return {
     scale: Number.isFinite(scale)
@@ -68,6 +68,20 @@ const sanitizeImageFocus = (focus) => {
     x: clampImageFocusPercent(focus?.x, 50),
     y: clampImageFocusPercent(focus?.y, 50),
   }
+}
+
+const sanitizeImageFocus = (focus) => {
+  const base = sanitizeImageFocusPoint(focus)
+  const result = { ...base }
+
+  if (focus?.tablet && typeof focus.tablet === 'object') {
+    result.tablet = sanitizeImageFocusPoint(focus.tablet)
+  }
+  if (focus?.mobile && typeof focus.mobile === 'object') {
+    result.mobile = sanitizeImageFocusPoint(focus.mobile)
+  }
+
+  return result
 }
 
 const sanitizeHeroFontId = (value, fallback = 'system') => {

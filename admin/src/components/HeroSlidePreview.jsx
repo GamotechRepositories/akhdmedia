@@ -2,13 +2,17 @@ import { useCallback, useRef, useState } from 'react'
 import {
   DEFAULT_IMAGE_FOCUS,
   HERO_BANNER_DESKTOP_RATIO,
+  HERO_BANNER_MOBILE_HINT,
   HERO_BANNER_MOBILE_RATIO,
   HERO_BANNER_RECOMMENDED,
-  HERO_BANNER_MOBILE_HINT,
+  HERO_BANNER_TABLET_HINT,
+  HERO_BANNER_TABLET_RATIO,
   HERO_BANNER_UPLOAD_GUIDE,
   IMAGE_FOCUS_ZOOM_STEP,
   MAX_IMAGE_FOCUS_SCALE,
   MIN_IMAGE_FOCUS_SCALE,
+  mergeImageFocusForDevice,
+  resolveImageFocus,
 } from '../constants/heroBanner'
 import {
   DEFAULT_CTA_POSITION,
@@ -27,30 +31,28 @@ const PREVIEW_MODES = [
     label: 'Desktop',
     aspectRatio: HERO_BANNER_DESKTOP_RATIO,
     sizeLabel: `${HERO_BANNER_RECOMMENDED.label} (${HERO_BANNER_RECOMMENDED.ratio})`,
+    frameClass: 'max-w-4xl',
+    compact: false,
+  },
+  {
+    id: 'tablet',
+    label: 'iPad',
+    aspectRatio: HERO_BANNER_TABLET_RATIO,
+    sizeLabel: `${HERO_BANNER_TABLET_HINT.label} (${HERO_BANNER_TABLET_HINT.ratio})`,
+    frameClass: 'max-w-2xl',
+    compact: false,
   },
   {
     id: 'mobile',
     label: 'Mobile',
     aspectRatio: HERO_BANNER_MOBILE_RATIO,
     sizeLabel: `${HERO_BANNER_MOBILE_HINT.label} (${HERO_BANNER_MOBILE_HINT.ratio})`,
+    frameClass: 'max-w-sm',
+    compact: true,
   },
 ]
 
-const clampFocusPercent = (value) => Math.min(100, Math.max(0, Math.round(value)))
 const clampOverlayPercent = (value) => Math.min(95, Math.max(0, Math.round(value)))
-
-const getImageFocus = (slide) => {
-  const focus = slide?.imageFocus
-  const scale = Number(focus?.scale)
-
-  return {
-    scale: Number.isFinite(scale)
-      ? Math.min(MAX_IMAGE_FOCUS_SCALE, Math.max(MIN_IMAGE_FOCUS_SCALE, scale))
-      : DEFAULT_IMAGE_FOCUS.scale,
-    x: clampFocusPercent(Number.isFinite(Number(focus?.x)) ? Number(focus.x) : DEFAULT_IMAGE_FOCUS.x),
-    y: clampFocusPercent(Number.isFinite(Number(focus?.y)) ? Number(focus.y) : DEFAULT_IMAGE_FOCUS.y),
-  }
-}
 
 const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const containerRef = useRef(null)
@@ -63,9 +65,9 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const hasImage = Boolean(slide.image?.trim())
   const hasHeadline = Boolean(slide.headline?.trim())
   const hasButton = Boolean(slide.cta?.trim())
-  const imageFocus = getImageFocus(slide)
   const activePreview = PREVIEW_MODES.find((mode) => mode.id === previewMode) || PREVIEW_MODES[0]
-  const compact = previewMode === 'mobile'
+  const compact = activePreview.compact
+  const imageFocus = resolveImageFocus(slide.imageFocus, previewMode)
   const { headline: headlinePosition, cta: ctaPosition, stacked } = resolveOverlayPositions(slide, {
     compact,
   })
@@ -73,11 +75,18 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const ctaStyle = resolveCtaTypography(slide, { compact })
   const ctaOffsetX = Math.max(0, ctaPosition.x - headlinePosition.x)
 
+  const commitFocus = useCallback(
+    (nextPoint) => {
+      onImageFocusChange(mergeImageFocusForDevice(slide.imageFocus, previewMode, nextPoint))
+    },
+    [onImageFocusChange, previewMode, slide.imageFocus],
+  )
+
   const updateFocus = useCallback(
     (patch) => {
-      onImageFocusChange({ ...imageFocus, ...patch })
+      commitFocus({ ...imageFocus, ...patch })
     },
-    [imageFocus, onImageFocusChange],
+    [commitFocus, imageFocus],
   )
 
   const updateOverlayPositionFromPointer = useCallback(
@@ -130,15 +139,13 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
     const dx = event.clientX - panState.current.startX
     const dy = event.clientY - panState.current.startY
     const panStrength = 0.35 * panState.current.initialFocus.scale
-    const nextX =
-      panState.current.initialFocus.x - (dx / rect.width) * 100 * panStrength
-    const nextY =
-      panState.current.initialFocus.y - (dy / rect.height) * 100 * panStrength
+    const nextX = panState.current.initialFocus.x - (dx / rect.width) * 100 * panStrength
+    const nextY = panState.current.initialFocus.y - (dy / rect.height) * 100 * panStrength
 
-    onImageFocusChange({
+    commitFocus({
       ...panState.current.initialFocus,
-      x: clampFocusPercent(nextX),
-      y: clampFocusPercent(nextY),
+      x: Math.min(100, Math.max(0, Math.round(nextX))),
+      y: Math.min(100, Math.max(0, Math.round(nextY))),
     })
   }
 
@@ -189,13 +196,19 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
     )
   }
 
+  const hintByMode = {
+    desktop: 'Desktop homepage uses this exact crop. Drag/zoom here to set the desktop crop.',
+    tablet: `iPad preview uses ${HERO_BANNER_TABLET_HINT.ratio}. Drag/zoom here to set a separate iPad crop (falls back to desktop if unset).`,
+    mobile: `Mobile preview uses ${HERO_BANNER_MOBILE_HINT.ratio}. Drag/zoom here to set a separate mobile crop (falls back to desktop if unset).`,
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">Homepage preview</p>
           <p className="mt-0.5 text-[11px] text-slate-500">
-            Drag image to move · +/- zoom · drag headline &amp; button to position
+            Switch device → drag image to move · +/- zoom · drag headline &amp; button to position
           </p>
         </div>
         <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
@@ -219,9 +232,7 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
       <div className="rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2.5 text-xs leading-relaxed text-sky-950">
         <span className="font-semibold">Recommended banner size:</span>{' '}
         {HERO_BANNER_RECOMMENDED.label} ({HERO_BANNER_RECOMMENDED.ratio} ratio).{' '}
-        {previewMode === 'mobile'
-          ? `Mobile preview uses ${HERO_BANNER_MOBILE_HINT.ratio} — same image is center-cropped taller on phones.`
-          : 'Desktop homepage uses this exact crop.'}
+        {hintByMode[previewMode]}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -257,19 +268,19 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
         </button>
         <button
           type="button"
-          onClick={() => onImageFocusChange({ ...DEFAULT_IMAGE_FOCUS })}
+          onClick={() => commitFocus({ ...DEFAULT_IMAGE_FOCUS })}
           className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
-          Reset crop
+          Reset {activePreview.label} crop
         </button>
         <span className="text-[11px] text-slate-500">
-          Zoom {Math.round(imageFocus.scale * 100)}%
+          {activePreview.label} zoom {Math.round(imageFocus.scale * 100)}%
         </span>
       </div>
 
       <div
         ref={containerRef}
-        className="relative mx-auto w-full max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-gray-950 shadow-inner [container-type:size]"
+        className={`relative mx-auto w-full overflow-hidden rounded-xl border border-slate-200 bg-gray-950 shadow-inner [container-type:size] ${activePreview.frameClass}`}
         style={{ aspectRatio: activePreview.aspectRatio }}
       >
         <div
