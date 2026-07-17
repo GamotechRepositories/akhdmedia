@@ -12,6 +12,7 @@ import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
   getFullscreenElement,
+  isIOSDevice,
   isVideoNativeFullscreen,
   requestElementFullscreen,
   supportsElementFullscreen,
@@ -407,8 +408,10 @@ const ProductMediaGallery = ({ product }) => {
     setIsLightboxOpen(true);
 
     // Hide browser chrome (tabs, URL bar, taskbar) — like the app.
-    // Unsupported browsers (e.g. iPhone Safari) keep the overlay only.
-    if (supportsElementFullscreen() && !getFullscreenElement()) {
+    // Apple devices (iPhone + iPad) stay overlay-only: requesting document
+    // fullscreen on iOS/iPadOS interrupts the remounting <video> and Safari
+    // auto-pauses it a moment later. Desktop/Android get real fullscreen.
+    if (!isIOSDevice() && supportsElementFullscreen() && !getFullscreenElement()) {
       try {
         await requestElementFullscreen(document.documentElement);
         browserFullscreenRef.current = true;
