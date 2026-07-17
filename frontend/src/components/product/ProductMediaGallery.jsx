@@ -12,12 +12,7 @@ import {
   exitDocumentFullscreen,
   exitVideoFullscreen,
   getFullscreenElement,
-  isIOSDevice,
   isVideoNativeFullscreen,
-  prefersOverlayFullscreen,
-  requestElementFullscreen,
-  requestVideoFullscreen,
-  supportsElementFullscreen,
 } from '../../utils/fullscreen';
 import {
   IconMaximize,
@@ -390,63 +385,23 @@ const ProductMediaGallery = ({ product }) => {
 
   // ─── Fullscreen enter/exit ───────────────────────────────────────────────
 
-  const enterFullscreen = useCallback(
-    async ({ fromUserGesture = true } = {}) => {
-      const frame = frameRef.current;
-      const video = videoRef.current;
-      // YouTube embed has its own fullscreen — skip custom immersive mode
-      if (!frame || isYoutubeSelected) return;
+  // Single code path for all devices (same approach as the mobile app):
+  // a dedicated black overlay that centers media by its own aspect ratio.
+  // The lightbox-open effect reattaches the video source and resumes playback.
+  const enterFullscreen = useCallback(async () => {
+    const frame = frameRef.current;
+    // YouTube embed has its own fullscreen — skip custom immersive mode
+    if (!frame || isYoutubeSelected) return;
 
-      const snapshot = captureSnapshot();
-      inTransitionRef.current = true;
+    captureSnapshot();
+    inTransitionRef.current = true;
 
-      window.setTimeout(() => {
-        inTransitionRef.current = false;
-      }, 2000);
+    window.setTimeout(() => {
+      inTransitionRef.current = false;
+    }, 2000);
 
-      // Phones / tablets — overlay keeps watermark; native video FS shows only the <video>
-      // Do not resume on the old inline video — portal remounts a fresh <video>.
-      if (prefersOverlayFullscreen()) {
-        setIsLightboxOpen(true);
-        return;
-      }
-
-      // iOS Safari — native video fullscreen hides browser chrome
-      if (isIOSDevice() && video && isVideoSelected) {
-        try {
-          const entered = await requestVideoFullscreen(video);
-          if (entered) {
-            setIsNativeVideoFullscreen(true);
-            void resumePlayback(snapshot, { fromUserGesture });
-            return;
-          }
-        } catch {
-          // fall through
-        }
-      }
-
-      // Android / desktop — Fullscreen API hides browser navigation bar
-      if (supportsElementFullscreen()) {
-        const targets = [frame, video].filter(Boolean);
-        for (const target of targets) {
-          try {
-            await requestElementFullscreen(target);
-            isFullscreenRef.current = true;
-            setIsFullscreen(true);
-            void resumePlayback(snapshot, { fromUserGesture });
-            return;
-          } catch {
-            // try next target
-          }
-        }
-      }
-
-      // Last resort — CSS overlay (browser chrome stays visible)
-      setIsLightboxOpen(true);
-      void resumePlayback(snapshot, { fromUserGesture });
-    },
-    [captureSnapshot, resumePlayback, isVideoSelected, isYoutubeSelected],
-  );
+    setIsLightboxOpen(true);
+  }, [captureSnapshot, isYoutubeSelected]);
 
   const exitFullscreen = useCallback(async () => {
     const closingLightbox = isLightboxOpen;
@@ -501,18 +456,17 @@ const ProductMediaGallery = ({ product }) => {
     async (event) => {
       event?.preventDefault?.();
       event?.stopPropagation?.();
+      const fsEl = getFullscreenElement();
       const isCurrentlyImmersive =
         isFullscreen || isLightboxOpen || isNativeVideoFullscreen ||
-        Boolean(
-          frameRef.current &&
-            (getFullscreenElement() === frameRef.current ||
-              getFullscreenElement() === videoRef.current),
-        );
+        // fsEl must be non-null: with an image selected videoRef.current is
+        // null, and null === null would falsely report "already fullscreen"
+        Boolean(fsEl && (fsEl === frameRef.current || fsEl === videoRef.current));
 
       if (isCurrentlyImmersive) {
         await exitFullscreen();
       } else {
-        await enterFullscreen({ fromUserGesture: true });
+        await enterFullscreen();
       }
     },
     [isFullscreen, isLightboxOpen, isNativeVideoFullscreen, exitFullscreen, enterFullscreen],
@@ -918,24 +872,30 @@ const ProductMediaGallery = ({ product }) => {
     [videoDuration, safePlay, isAuthenticated, openPreviewSignIn, safePause, loadVideoSource],
   );
 
-  const selectMedia = useCallback((index) => {
-    setIsLightboxOpen(false);
+  const selectMedia = useCallback((index, { keepLightbox = false } = {}) => {
+    if (!keepLightbox) setIsLightboxOpen(false);
     cancelPendingPlay();
     clearVideoSource();
     userPausedRef.current = true;
     previewGateTriggeredRef.current = false;
+    playbackSnapshotRef.current = { time: 0, wasPlaying: false };
     setIsYoutubePlaying(false);
     setSelectedMediaIndex(index);
     setIsVideoPlaying(false);
   }, [cancelPendingPlay, clearVideoSource]);
 
   const handlePrevMedia = useCallback(() => {
-    selectMedia(selectedMediaIndex === 0 ? mediaItems.length - 1 : selectedMediaIndex - 1);
-  }, [selectMedia, selectedMediaIndex, mediaItems.length]);
+    // Keep fullscreen overlay open while navigating (same as the app lightbox)
+    selectMedia(selectedMediaIndex === 0 ? mediaItems.length - 1 : selectedMediaIndex - 1, {
+      keepLightbox: isLightboxOpen,
+    });
+  }, [selectMedia, selectedMediaIndex, mediaItems.length, isLightboxOpen]);
 
   const handleNextMedia = useCallback(() => {
-    selectMedia(selectedMediaIndex === mediaItems.length - 1 ? 0 : selectedMediaIndex + 1);
-  }, [selectMedia, selectedMediaIndex, mediaItems.length]);
+    selectMedia(selectedMediaIndex === mediaItems.length - 1 ? 0 : selectedMediaIndex + 1, {
+      keepLightbox: isLightboxOpen,
+    });
+  }, [selectMedia, selectedMediaIndex, mediaItems.length, isLightboxOpen]);
 
   // Leave custom immersive mode on YouTube — the embed has native fullscreen
   useEffect(() => {
@@ -1073,14 +1033,19 @@ const ProductMediaGallery = ({ product }) => {
           )}
         </div>
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
+        <div
+          className="flex h-full w-full items-center justify-center"
+          onClick={isImmersive ? undefined : toggleFullscreen}
+        >
           <OptimizedImage
             src={selectedItem.src}
             alt={product.name}
             width={1200}
             height={1200}
             quality={80}
-            className={`max-h-full max-w-full object-contain ${PROTECTED_MEDIA_CLASS}`}
+            className={`max-h-full max-w-full object-contain ${
+              isImmersive ? '' : 'cursor-zoom-in'
+            } ${PROTECTED_MEDIA_CLASS}`}
             loading="eager"
           />
         </div>
@@ -1115,7 +1080,7 @@ const ProductMediaGallery = ({ product }) => {
         </button>
       )}
 
-      {mediaItems.length > 1 && !isImmersive && (
+      {mediaItems.length > 1 && (!isImmersive || !isPreviewDemoSelected) && (
         <div
           className={`pointer-events-auto absolute flex gap-1.5 ${
             compact ? 'bottom-3' : 'bottom-4'
