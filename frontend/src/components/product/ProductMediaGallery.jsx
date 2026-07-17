@@ -704,7 +704,8 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('durationchange', sync);
       video.removeEventListener('seeked', sync);
     };
-  }, [isVideoSelected, selectedItem?.src, product?.id]);
+    // isLightboxOpen: the portal remounts <video>, so listeners must rebind
+  }, [isVideoSelected, selectedItem?.src, product?.id, isLightboxOpen]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -726,7 +727,7 @@ const ProductMediaGallery = ({ product }) => {
 
     video.addEventListener('timeupdate', enforcePreviewLimit);
     return () => video.removeEventListener('timeupdate', enforcePreviewLimit);
-  }, [isVideoSelected, isAuthenticated, selectedItem?.src, product?.id, openPreviewSignIn]);
+  }, [isVideoSelected, isAuthenticated, selectedItem?.src, product?.id, openPreviewSignIn, isLightboxOpen]);
 
   // ─── Buffering indicators ────────────────────────────────────────────────
 
@@ -778,7 +779,8 @@ const ProductMediaGallery = ({ product }) => {
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
     };
-  }, [isVideoSelected, selectedItem?.src, product?.id]);
+    // isLightboxOpen: the portal remounts <video>, so listeners must rebind
+  }, [isVideoSelected, selectedItem?.src, product?.id, isLightboxOpen]);
 
   // ─── Keep muted state in sync ────────────────────────────────────────────
 
