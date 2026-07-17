@@ -284,10 +284,14 @@ const HomeContent = () => {
         </div>
 
         {slide ? (
-          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* Headline */}
+            <div className="grid gap-3 border-b border-sky-100 bg-sky-50 p-4 sm:grid-cols-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-sky-800 sm:col-span-2">
+                Headline
+              </p>
               <label className="block text-sm sm:col-span-2">
-                <span className="font-medium text-slate-700">Headline</span>
+                <span className="font-medium text-slate-700">Text</span>
                 <input
                   value={slide.headline}
                   onChange={(e) => updateHeroSlide(safeSlideIndex, 'headline', e.target.value)}
@@ -297,7 +301,7 @@ const HomeContent = () => {
               </label>
 
               <label className="block text-sm">
-                <span className="font-medium text-slate-700">Headline font</span>
+                <span className="font-medium text-slate-700">Font</span>
                 <select
                   value={slide.headlineFontFamily || DEFAULT_HEADLINE_FONT}
                   onChange={(e) =>
@@ -315,7 +319,7 @@ const HomeContent = () => {
 
               <label className="block text-sm">
                 <span className="font-medium text-slate-700">
-                  Headline size ({slide.headlineFontSize || DEFAULT_HEADLINE_FONT_SIZE}px)
+                  Size ({slide.headlineFontSize || DEFAULT_HEADLINE_FONT_SIZE}px)
                 </span>
                 <input
                   type="range"
@@ -326,12 +330,18 @@ const HomeContent = () => {
                   onChange={(e) =>
                     updateHeroSlide(safeSlideIndex, 'headlineFontSize', Number(e.target.value))
                   }
-                  className="mt-2 w-full accent-slate-900"
+                  className="mt-2 w-full accent-sky-600"
                 />
               </label>
+            </div>
 
+            {/* Button */}
+            <div className="grid gap-3 border-b border-violet-100 bg-violet-50 p-4 sm:grid-cols-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-violet-800 sm:col-span-2">
+                Button
+              </p>
               <label className="block text-sm sm:col-span-2">
-                <span className="font-medium text-slate-700">Button text</span>
+                <span className="font-medium text-slate-700">Text</span>
                 <input
                   value={slide.cta}
                   onChange={(e) => updateHeroSlide(safeSlideIndex, 'cta', e.target.value)}
@@ -339,12 +349,13 @@ const HomeContent = () => {
                   placeholder="Browse"
                 />
                 <span className="mt-1 block text-[11px] text-slate-500">
-                  Leave empty to hide the button. The banner image still links to the selected category.
+                  Leave empty to hide the button. The banner image still links to the selected
+                  category.
                 </span>
               </label>
 
               <label className="block text-sm">
-                <span className="font-medium text-slate-700">Button font</span>
+                <span className="font-medium text-slate-700">Font</span>
                 <select
                   value={slide.ctaFontFamily || DEFAULT_CTA_FONT}
                   onChange={(e) =>
@@ -362,7 +373,7 @@ const HomeContent = () => {
 
               <label className="block text-sm">
                 <span className="font-medium text-slate-700">
-                  Button size ({Math.round((slide.ctaScale || DEFAULT_CTA_SCALE) * 100)}%)
+                  Size ({Math.round((slide.ctaScale || DEFAULT_CTA_SCALE) * 100)}%)
                 </span>
                 <input
                   type="range"
@@ -373,12 +384,18 @@ const HomeContent = () => {
                   onChange={(e) =>
                     updateHeroSlide(safeSlideIndex, 'ctaScale', Number(e.target.value))
                   }
-                  className="mt-2 w-full accent-slate-900"
+                  className="mt-2 w-full accent-violet-600"
                 />
               </label>
+            </div>
 
-              <label className="block text-sm sm:col-span-2">
-                <span className="font-medium text-slate-700">Category</span>
+            {/* Category */}
+            <div className="border-b border-emerald-100 bg-emerald-50 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-emerald-800">
+                Category
+              </p>
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Link to category</span>
                 <select
                   value={categorySlugFromLink(slide.link)}
                   onChange={(e) => updateHeroCategory(safeSlideIndex, e.target.value)}
@@ -395,8 +412,14 @@ const HomeContent = () => {
                   Optional. Makes the banner clickable on the {BRAND.websiteLabel}.
                 </span>
               </label>
+            </div>
 
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+            {/* Display options */}
+            <div className="space-y-3 border-b border-amber-100 bg-amber-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                Display options
+              </p>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <input
                   type="checkbox"
                   checked={slide.isActive !== false}
@@ -405,46 +428,62 @@ const HomeContent = () => {
                 Show this slide on homepage
               </label>
 
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <input
                   type="checkbox"
                   checked={slide.showShadow === true}
-                  onChange={(e) => updateHeroSlide(safeSlideIndex, 'showShadow', e.target.checked)}
+                  onChange={(e) =>
+                    updateHeroSlide(safeSlideIndex, 'showShadow', e.target.checked)
+                  }
                 />
                 Show black shadow on banner image
               </label>
             </div>
 
-            <MediaUpload
-              label="Banner image"
-              accept="image/*"
-              uploadType="hero-slide"
-              value={slide.image}
-              onChange={(url) => {
-                updateHeroSlide(safeSlideIndex, 'image', url)
-                updateHeroSlide(safeSlideIndex, 'imageFocus', { ...DEFAULT_IMAGE_FOCUS })
-              }}
-              placeholder="Upload or paste image URL"
-            />
+            {/* Banner image */}
+            <div className="border-b border-rose-100 bg-rose-50 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-rose-800">
+                Banner image
+              </p>
+              <MediaUpload
+                label="Image"
+                accept="image/*"
+                uploadType="hero-slide"
+                value={slide.image}
+                onChange={(url) => {
+                  updateHeroSlide(safeSlideIndex, 'image', url)
+                  updateHeroSlide(safeSlideIndex, 'imageFocus', { ...DEFAULT_IMAGE_FOCUS })
+                }}
+                placeholder="Upload or paste image URL"
+              />
+            </div>
 
-            <HeroSlidePreview
-              slide={slide}
-              onImageFocusChange={(imageFocus) =>
-                updateHeroSlide(safeSlideIndex, 'imageFocus', imageFocus)
-              }
-              onPositionChange={(field, position) =>
-                updateHeroSlidePosition(safeSlideIndex, field, position)
-              }
-            />
+            {/* Live preview */}
+            <div className="bg-slate-100 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-700">
+                Live preview
+              </p>
+              <HeroSlidePreview
+                slide={slide}
+                onImageFocusChange={(imageFocus) =>
+                  updateHeroSlide(safeSlideIndex, 'imageFocus', imageFocus)
+                }
+                onPositionChange={(field, position) =>
+                  updateHeroSlidePosition(safeSlideIndex, field, position)
+                }
+              />
+            </div>
 
-            <button
-              type="button"
-              onClick={() => handleSaveSlide(safeSlideIndex)}
-              disabled={savingSlideIndex === safeSlideIndex}
-              className={`${primaryBtnClass} disabled:opacity-60`}
-            >
-              {savingSlideIndex === safeSlideIndex ? 'Saving...' : `Save slide ${slideNumber}`}
-            </button>
+            <div className="border-t border-slate-200 bg-white p-4">
+              <button
+                type="button"
+                onClick={() => handleSaveSlide(safeSlideIndex)}
+                disabled={savingSlideIndex === safeSlideIndex}
+                className={`${primaryBtnClass} disabled:opacity-60`}
+              >
+                {savingSlideIndex === safeSlideIndex ? 'Saving...' : `Save slide ${slideNumber}`}
+              </button>
+            </div>
           </div>
         ) : null}
       </section>
@@ -458,7 +497,8 @@ const HomeContent = () => {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-teal-800">Messages</p>
             {tickerItems.map((item, index) => (
               <div key={index} className="flex gap-3">
                 <input
