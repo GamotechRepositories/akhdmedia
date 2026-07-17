@@ -62,7 +62,7 @@ const HeroSlide = ({ slide, isActive, compact = false, device = 'desktop', motio
 
   const overlayLayer = hasOverlay ? (
     <div className="pointer-events-none absolute inset-0 z-10">
-      <HeroSlideOverlay slide={slide} compact={compact} />
+      <HeroSlideOverlay slide={slide} compact={compact} device={device} />
     </div>
   ) : null;
 
@@ -157,6 +157,7 @@ const mapSettingsHeroSlides = (slides = []) =>
       headlineFontFamily: slide.headlineFontFamily,
       ctaScale: slide.ctaScale,
       ctaFontFamily: slide.ctaFontFamily,
+      deviceStyles: slide.deviceStyles || {},
     }));
 
 const HeroCarousel = () => {

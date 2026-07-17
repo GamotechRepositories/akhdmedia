@@ -2,10 +2,6 @@ import { useEffect, useState } from 'react'
 import { fetchCategories, fetchSiteContent, updateSiteContent } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import HeroSlidePreview from '../components/HeroSlidePreview'
-import {
-  DEFAULT_CTA_POSITION,
-  DEFAULT_HEADLINE_POSITION,
-} from '../constants/heroTypography'
 import MediaUpload from '../components/MediaUpload'
 import PageLoader from '../components/ui/PageLoader'
 import {
@@ -14,13 +10,18 @@ import {
   sectionClass,
 } from '../components/ui/adminUi'
 import { BRAND } from '../config/brand'
-import { DEFAULT_IMAGE_FOCUS, HERO_BANNER_UPLOAD_GUIDE } from '../constants/heroBanner'
+import { DEFAULT_IMAGE_FOCUS } from '../constants/heroBanner'
 import {
   DEFAULT_CTA_FONT,
+  DEFAULT_CTA_POSITION,
   DEFAULT_CTA_SCALE,
   DEFAULT_HEADLINE_FONT,
   DEFAULT_HEADLINE_FONT_SIZE,
+  DEFAULT_HEADLINE_POSITION,
+  HERO_EDIT_DEVICES,
   HERO_FONT_OPTIONS,
+  applyDeviceStylePatch,
+  resolveDeviceStyle,
 } from '../constants/heroTypography'
 
 const emptyTickerItem = () => ''
@@ -38,6 +39,7 @@ const emptyHeroSlide = () => ({
   headlineFontFamily: DEFAULT_HEADLINE_FONT,
   ctaScale: DEFAULT_CTA_SCALE,
   ctaFontFamily: DEFAULT_CTA_FONT,
+  deviceStyles: {},
   isActive: true,
   showShadow: false,
 })
@@ -49,6 +51,12 @@ const categorySlugFromLink = (link = '') => {
 
 const categoryLinkFromSlug = (slug = '') => (slug ? `/videos/${slug}` : '')
 
+const StepBadge = ({ n }) => (
+  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white">
+    {n}
+  </span>
+)
+
 const HomeContent = () => {
   const [tickerItems, setTickerItems] = useState([emptyTickerItem()])
   const [heroSlides, setHeroSlides] = useState([emptyHeroSlide()])
@@ -58,6 +66,7 @@ const HomeContent = () => {
   const [deletingSlideIndex, setDeletingSlideIndex] = useState(null)
   const [savingTicker, setSavingTicker] = useState(false)
   const [activeSlideIndex, setActiveSlideIndex] = useState(0)
+  const [editDevice, setEditDevice] = useState('desktop')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -112,12 +121,16 @@ const HomeContent = () => {
     )
   }
 
-  const updateHeroSlidePosition = (index, field, position) => {
+  const updateHeroSlideForDevice = (index, device, patch) => {
     setHeroSlides((current) =>
       current.map((slide, slideIndex) =>
-        slideIndex === index ? { ...slide, [field]: position } : slide,
+        slideIndex === index ? applyDeviceStylePatch(slide, device, patch) : slide,
       ),
     )
+  }
+
+  const updateHeroSlidePosition = (index, field, position) => {
+    updateHeroSlideForDevice(index, editDevice, { [field]: position })
   }
 
   const updateHeroCategory = (index, slug) => {
@@ -233,255 +246,348 @@ const HomeContent = () => {
   const safeSlideIndex = Math.min(activeSlideIndex, Math.max(0, heroSlides.length - 1))
   const slide = heroSlides[safeSlideIndex]
   const slideNumber = safeSlideIndex + 1
+  const deviceStyle = slide ? resolveDeviceStyle(slide, editDevice) : null
+  const editDeviceLabel =
+    HERO_EDIT_DEVICES.find((item) => item.id === editDevice)?.label || 'Desktop'
+  const deviceHint = {
+    desktop: 'Computer / laptop homepage look',
+    tablet: 'iPad homepage look',
+    mobile: 'Phone homepage look',
+  }
 
   return (
     <div className="space-y-4">
       <section className={`${sectionClass} space-y-4`}>
         <div>
           <h2 className="text-lg font-bold text-slate-900">Home banner</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Large hero carousel at the top of the {BRAND.websiteLabel} homepage. Add one or more slides.
+          <p className="mt-1 text-sm text-slate-600">
+            Large banner at the top of the {BRAND.websiteLabel} homepage. Follow the steps below —
+            style Desktop, iPad, and Mobile separately.
           </p>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">{HERO_BANNER_UPLOAD_GUIDE}</p>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
-          <label className="block min-w-[200px] flex-1 text-sm">
-            <span className="font-semibold text-indigo-950">Select slide</span>
-            <select
-              value={safeSlideIndex}
-              onChange={(e) => setActiveSlideIndex(Number(e.target.value))}
-              className={`${inputClass} mt-1`}
-            >
-              {heroSlides.map((heroSlide, index) => (
-                <option key={index} value={index}>
-                  Slide {index + 1}
-                  {heroSlide.headline?.trim()
-                    ? ` — ${heroSlide.headline.trim().slice(0, 40)}`
-                    : ''}
-                  {heroSlide.isActive === false ? ' (hidden)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
+        {slide && deviceStyle ? (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* Step 1 — choose slide */}
+            <div className="border-b border-indigo-100 bg-indigo-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <StepBadge n={1} />
+                <div>
+                  <p className="text-sm font-bold text-indigo-950">Choose which slide to edit</p>
+                  <p className="text-[11px] text-indigo-800/80">
+                    You can have more than one slide in the banner
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="block min-w-[200px] flex-1 text-sm">
+                  <span className="font-medium text-indigo-950">Current slide</span>
+                  <select
+                    value={safeSlideIndex}
+                    onChange={(e) => setActiveSlideIndex(Number(e.target.value))}
+                    className={`${inputClass} mt-1`}
+                  >
+                    {heroSlides.map((heroSlide, index) => (
+                      <option key={index} value={index}>
+                        Slide {index + 1}
+                        {heroSlide.headline?.trim()
+                          ? ` — ${heroSlide.headline.trim().slice(0, 40)}`
+                          : ''}
+                        {heroSlide.isActive === false ? ' (hidden)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-          <button
-            type="button"
-            onClick={addHeroSlide}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-          >
-            Add slide
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleDeleteHeroSlide(safeSlideIndex)}
-            disabled={deletingSlideIndex === safeSlideIndex || heroSlides.length === 1}
-            className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {deletingSlideIndex === safeSlideIndex ? 'Deleting...' : 'Delete slide'}
-          </button>
-        </div>
-
-        {slide ? (
-          <div className="space-y-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            {/* Headline */}
-            <div className="grid gap-3 border-b border-sky-100 bg-sky-50 p-4 sm:grid-cols-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-sky-800 sm:col-span-2">
-                Headline
-              </p>
-              <label className="block text-sm sm:col-span-2">
-                <span className="font-medium text-slate-700">Text</span>
-                <input
-                  value={slide.headline}
-                  onChange={(e) => updateHeroSlide(safeSlideIndex, 'headline', e.target.value)}
-                  className={inputClass}
-                  placeholder="Nature Footage in True 4K"
-                />
-              </label>
-
-              <label className="block text-sm">
-                <span className="font-medium text-slate-700">Font</span>
-                <select
-                  value={slide.headlineFontFamily || DEFAULT_HEADLINE_FONT}
-                  onChange={(e) =>
-                    updateHeroSlide(safeSlideIndex, 'headlineFontFamily', e.target.value)
-                  }
-                  className={inputClass}
+                <button
+                  type="button"
+                  onClick={addHeroSlide}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
                 >
-                  {HERO_FONT_OPTIONS.map((font) => (
-                    <option key={font.id} value={font.id}>
-                      {font.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  + New slide
+                </button>
 
-              <label className="block text-sm">
-                <span className="font-medium text-slate-700">
-                  Size ({slide.headlineFontSize || DEFAULT_HEADLINE_FONT_SIZE}px)
-                </span>
-                <input
-                  type="range"
-                  min={20}
-                  max={96}
-                  step={2}
-                  value={slide.headlineFontSize || DEFAULT_HEADLINE_FONT_SIZE}
-                  onChange={(e) =>
-                    updateHeroSlide(safeSlideIndex, 'headlineFontSize', Number(e.target.value))
-                  }
-                  className="mt-2 w-full accent-sky-600"
-                />
-              </label>
-            </div>
-
-            {/* Button */}
-            <div className="grid gap-3 border-b border-violet-100 bg-violet-50 p-4 sm:grid-cols-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-violet-800 sm:col-span-2">
-                Button
-              </p>
-              <label className="block text-sm sm:col-span-2">
-                <span className="font-medium text-slate-700">Text</span>
-                <input
-                  value={slide.cta}
-                  onChange={(e) => updateHeroSlide(safeSlideIndex, 'cta', e.target.value)}
-                  className={inputClass}
-                  placeholder="Browse"
-                />
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Leave empty to hide the button. The banner image still links to the selected
-                  category.
-                </span>
-              </label>
-
-              <label className="block text-sm">
-                <span className="font-medium text-slate-700">Font</span>
-                <select
-                  value={slide.ctaFontFamily || DEFAULT_CTA_FONT}
-                  onChange={(e) =>
-                    updateHeroSlide(safeSlideIndex, 'ctaFontFamily', e.target.value)
-                  }
-                  className={inputClass}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteHeroSlide(safeSlideIndex)}
+                  disabled={deletingSlideIndex === safeSlideIndex || heroSlides.length === 1}
+                  className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {HERO_FONT_OPTIONS.map((font) => (
-                    <option key={font.id} value={font.id}>
-                      {font.label}
-                    </option>
+                  {deletingSlideIndex === safeSlideIndex ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+
+            {/* Step 2 — shared content */}
+            <div className="border-b border-sky-100 bg-sky-50 p-4">
+              <div className="mb-4 flex items-center gap-2">
+                <StepBadge n={2} />
+                <div>
+                  <p className="text-sm font-bold text-sky-950">
+                    Add content (same on all screens)
+                  </p>
+                  <p className="text-[11px] text-sky-800/80">
+                    Photo, wording, and link are shared across Desktop, iPad, and Mobile
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Banner photo</p>
+                  <p className="mb-2 mt-0.5 text-[11px] text-slate-500">
+                    Best size: <strong>2400 × 800 px</strong> (wide). Keep the main subject near the
+                    center.
+                  </p>
+                  <MediaUpload
+                    label="Upload image"
+                    accept="image/*"
+                    uploadType="hero-slide"
+                    value={slide.image}
+                    onChange={(url) => {
+                      updateHeroSlide(safeSlideIndex, 'image', url)
+                      updateHeroSlide(safeSlideIndex, 'imageFocus', { ...DEFAULT_IMAGE_FOCUS })
+                    }}
+                    placeholder="Upload or paste image URL"
+                  />
+                </div>
+
+                <label className="block text-sm">
+                  <span className="font-semibold text-slate-800">Headline text</span>
+                  <input
+                    value={slide.headline}
+                    onChange={(e) => updateHeroSlide(safeSlideIndex, 'headline', e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Nature Footage in True 4K"
+                  />
+                </label>
+
+                <label className="block text-sm">
+                  <span className="font-semibold text-slate-800">Button text</span>
+                  <input
+                    value={slide.cta}
+                    onChange={(e) => updateHeroSlide(safeSlideIndex, 'cta', e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Browse / View All"
+                  />
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    Leave empty to hide the button
+                  </span>
+                </label>
+
+                <label className="block text-sm">
+                  <span className="font-semibold text-slate-800">Where should it open?</span>
+                  <select
+                    value={categorySlugFromLink(slide.link)}
+                    onChange={(e) => updateHeroCategory(safeSlideIndex, e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">No link (optional)</option>
+                    {categories.map((category) => (
+                      <option key={category._id} value={category.slug}>
+                        {category.navLabel}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    Selecting a category makes the banner clickable
+                  </span>
+                </label>
+
+                <div className="space-y-2.5 pt-1">
+                  <p className="text-sm font-semibold text-slate-800">Visibility</p>
+                  <label className="flex items-center gap-2.5 text-sm font-medium text-slate-800">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={slide.isActive !== false}
+                      onChange={(e) =>
+                        updateHeroSlide(safeSlideIndex, 'isActive', e.target.checked)
+                      }
+                    />
+                    Show this slide on the website
+                  </label>
+                  <label className="flex items-center gap-2.5 text-sm font-medium text-slate-800">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={slide.showShadow === true}
+                      onChange={(e) =>
+                        updateHeroSlide(safeSlideIndex, 'showShadow', e.target.checked)
+                      }
+                    />
+                    Dark shadow on image (makes text easier to read)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 — per screen */}
+            <div className="border-b border-violet-100 bg-violet-50 p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <StepBadge n={3} />
+                  <div>
+                    <p className="text-sm font-bold text-violet-950">
+                      Style for each screen · now:{' '}
+                      <span className="text-indigo-700">{editDeviceLabel}</span>
+                    </p>
+                    <p className="text-[11px] text-violet-800/80">
+                      {deviceHint[editDevice]}. Font, size, crop, and text position change here.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex rounded-lg border border-violet-200 bg-white p-0.5">
+                  {HERO_EDIT_DEVICES.map((device) => (
+                    <button
+                      key={device.id}
+                      type="button"
+                      onClick={() => setEditDevice(device.id)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                        editDevice === device.id
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {device.label}
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+              </div>
 
-              <label className="block text-sm">
-                <span className="font-medium text-slate-700">
-                  Size ({Math.round((slide.ctaScale || DEFAULT_CTA_SCALE) * 100)}%)
-                </span>
-                <input
-                  type="range"
-                  min={0.6}
-                  max={1.8}
-                  step={0.05}
-                  value={slide.ctaScale || DEFAULT_CTA_SCALE}
-                  onChange={(e) =>
-                    updateHeroSlide(safeSlideIndex, 'ctaScale', Number(e.target.value))
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-violet-100 bg-white/80 p-3">
+                  <p className="mb-3 text-sm font-semibold text-slate-800">
+                    Headline look · {editDeviceLabel}
+                  </p>
+                  <label className="block text-sm">
+                    <span className="font-medium text-slate-700">Font style</span>
+                    <select
+                      value={deviceStyle.headlineFontFamily}
+                      onChange={(e) =>
+                        updateHeroSlideForDevice(safeSlideIndex, editDevice, {
+                          headlineFontFamily: e.target.value,
+                        })
+                      }
+                      className={inputClass}
+                    >
+                      {HERO_FONT_OPTIONS.map((font) => (
+                        <option key={font.id} value={font.id}>
+                          {font.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-sm">
+                    <span className="font-medium text-slate-700">
+                      Size ({deviceStyle.headlineFontSize}px)
+                    </span>
+                    <input
+                      type="range"
+                      min={20}
+                      max={96}
+                      step={2}
+                      value={deviceStyle.headlineFontSize}
+                      onChange={(e) =>
+                        updateHeroSlideForDevice(safeSlideIndex, editDevice, {
+                          headlineFontSize: Number(e.target.value),
+                        })
+                      }
+                      className="mt-2 w-full accent-sky-600"
+                    />
+                    <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+                      <span>Small</span>
+                      <span>Large</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="rounded-lg border border-violet-100 bg-white/80 p-3">
+                  <p className="mb-3 text-sm font-semibold text-slate-800">
+                    Button look · {editDeviceLabel}
+                  </p>
+                  <label className="block text-sm">
+                    <span className="font-medium text-slate-700">Font style</span>
+                    <select
+                      value={deviceStyle.ctaFontFamily}
+                      onChange={(e) =>
+                        updateHeroSlideForDevice(safeSlideIndex, editDevice, {
+                          ctaFontFamily: e.target.value,
+                        })
+                      }
+                      className={inputClass}
+                    >
+                      {HERO_FONT_OPTIONS.map((font) => (
+                        <option key={font.id} value={font.id}>
+                          {font.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-sm">
+                    <span className="font-medium text-slate-700">
+                      Size ({Math.round(deviceStyle.ctaScale * 100)}%)
+                    </span>
+                    <input
+                      type="range"
+                      min={0.6}
+                      max={1.8}
+                      step={0.05}
+                      value={deviceStyle.ctaScale}
+                      onChange={(e) =>
+                        updateHeroSlideForDevice(safeSlideIndex, editDevice, {
+                          ctaScale: Number(e.target.value),
+                        })
+                      }
+                      className="mt-2 w-full accent-violet-600"
+                    />
+                    <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+                      <span>Small</span>
+                      <span>Large</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-800">
+                  Live preview · {editDeviceLabel}
+                </p>
+                <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-slate-500">
+                  1) Drag the image to crop · 2) Zoom in/out · 3) Drag headline and button to
+                  position. Switch Desktop / iPad / Mobile to check each screen.
+                </p>
+                <HeroSlidePreview
+                  slide={slide}
+                  previewMode={editDevice}
+                  onPreviewModeChange={setEditDevice}
+                  onImageFocusChange={(imageFocus) =>
+                    updateHeroSlide(safeSlideIndex, 'imageFocus', imageFocus)
                   }
-                  className="mt-2 w-full accent-violet-600"
-                />
-              </label>
-            </div>
-
-            {/* Category */}
-            <div className="border-b border-emerald-100 bg-emerald-50 p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-emerald-800">
-                Category
-              </p>
-              <label className="block text-sm">
-                <span className="font-medium text-slate-700">Link to category</span>
-                <select
-                  value={categorySlugFromLink(slide.link)}
-                  onChange={(e) => updateHeroCategory(safeSlideIndex, e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Select category</option>
-                  {categories.map((category) => (
-                    <option key={category._id} value={category.slug}>
-                      {category.navLabel}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-[11px] text-slate-500">
-                  Optional. Makes the banner clickable on the {BRAND.websiteLabel}.
-                </span>
-              </label>
-            </div>
-
-            {/* Display options */}
-            <div className="space-y-3 border-b border-amber-100 bg-amber-50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-                Display options
-              </p>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={slide.isActive !== false}
-                  onChange={(e) => updateHeroSlide(safeSlideIndex, 'isActive', e.target.checked)}
-                />
-                Show this slide on homepage
-              </label>
-
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={slide.showShadow === true}
-                  onChange={(e) =>
-                    updateHeroSlide(safeSlideIndex, 'showShadow', e.target.checked)
+                  onPositionChange={(field, position) =>
+                    updateHeroSlidePosition(safeSlideIndex, field, position)
                   }
                 />
-                Show black shadow on banner image
-              </label>
+              </div>
             </div>
 
-            {/* Banner image */}
-            <div className="border-b border-rose-100 bg-rose-50 p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-rose-800">
-                Banner image
-              </p>
-              <MediaUpload
-                label="Image"
-                accept="image/*"
-                uploadType="hero-slide"
-                value={slide.image}
-                onChange={(url) => {
-                  updateHeroSlide(safeSlideIndex, 'image', url)
-                  updateHeroSlide(safeSlideIndex, 'imageFocus', { ...DEFAULT_IMAGE_FOCUS })
-                }}
-                placeholder="Upload or paste image URL"
-              />
-            </div>
-
-            {/* Live preview */}
-            <div className="bg-slate-100 p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-700">
-                Live preview
-              </p>
-              <HeroSlidePreview
-                slide={slide}
-                onImageFocusChange={(imageFocus) =>
-                  updateHeroSlide(safeSlideIndex, 'imageFocus', imageFocus)
-                }
-                onPositionChange={(field, position) =>
-                  updateHeroSlidePosition(safeSlideIndex, field, position)
-                }
-              />
-            </div>
-
-            <div className="border-t border-slate-200 bg-white p-4">
+            {/* Step 4 — save */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-emerald-50 p-4">
+              <div className="flex items-center gap-2">
+                <StepBadge n={4} />
+                <p className="text-sm text-emerald-950">
+                  Done? Save to update the website.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => handleSaveSlide(safeSlideIndex)}
                 disabled={savingSlideIndex === safeSlideIndex}
                 className={`${primaryBtnClass} disabled:opacity-60`}
               >
-                {savingSlideIndex === safeSlideIndex ? 'Saving...' : `Save slide ${slideNumber}`}
+                {savingSlideIndex === safeSlideIndex
+                  ? 'Saving...'
+                  : `Save slide ${slideNumber}`}
               </button>
             </div>
           </div>
@@ -498,7 +604,7 @@ const HomeContent = () => {
           </div>
 
           <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-teal-800">Messages</p>
+            <p className="text-sm font-semibold text-teal-900">Messages</p>
             {tickerItems.map((item, index) => (
               <div key={index} className="flex gap-3">
                 <input
@@ -525,7 +631,7 @@ const HomeContent = () => {
               onClick={addTickerItem}
               className="text-sm font-semibold text-slate-900 hover:underline"
             >
-              Add ticker message
+              + Add ticker message
             </button>
 
             <button

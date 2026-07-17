@@ -101,6 +101,43 @@ const sanitizeCtaScale = (value) => {
   return Math.min(1.8, Math.max(0.6, Math.round(numeric * 100) / 100))
 }
 
+const sanitizeDeviceStyle = (style) => {
+  if (!style || typeof style !== 'object') return undefined
+
+  const next = {}
+  if (style.headlineFontSize != null) {
+    next.headlineFontSize = sanitizeHeadlineFontSize(style.headlineFontSize)
+  }
+  if (style.headlineFontFamily != null) {
+    next.headlineFontFamily = sanitizeHeroFontId(style.headlineFontFamily)
+  }
+  if (style.ctaScale != null) {
+    next.ctaScale = sanitizeCtaScale(style.ctaScale)
+  }
+  if (style.ctaFontFamily != null) {
+    next.ctaFontFamily = sanitizeHeroFontId(style.ctaFontFamily)
+  }
+  if (style.headlinePosition) {
+    next.headlinePosition = sanitizeOverlayPosition(style.headlinePosition, { x: 5, y: 62 })
+  }
+  if (style.ctaPosition) {
+    next.ctaPosition = sanitizeOverlayPosition(style.ctaPosition, { x: 5, y: 78 })
+  }
+
+  return Object.keys(next).length ? next : undefined
+}
+
+const sanitizeDeviceStyles = (styles) => {
+  if (!styles || typeof styles !== 'object') return {}
+
+  const next = {}
+  const tablet = sanitizeDeviceStyle(styles.tablet)
+  const mobile = sanitizeDeviceStyle(styles.mobile)
+  if (tablet) next.tablet = tablet
+  if (mobile) next.mobile = mobile
+  return next
+}
+
 const sanitizeHeroSlides = (slides = []) =>
   slides
     .map((slide) => ({
@@ -119,6 +156,7 @@ const sanitizeHeroSlides = (slides = []) =>
       headlineFontFamily: sanitizeHeroFontId(slide?.headlineFontFamily),
       ctaScale: sanitizeCtaScale(slide?.ctaScale),
       ctaFontFamily: sanitizeHeroFontId(slide?.ctaFontFamily),
+      deviceStyles: sanitizeDeviceStyles(slide?.deviceStyles),
       isActive: slide?.isActive !== false,
       showShadow: slide?.showShadow === true,
     }))

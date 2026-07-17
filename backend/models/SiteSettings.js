@@ -16,6 +16,34 @@ const overlayPositionSchema = new mongoose.Schema(
   { _id: false },
 )
 
+const deviceStyleSchema = new mongoose.Schema(
+  {
+    headlineFontSize: { type: Number, min: 20, max: 96 },
+    headlineFontFamily: { type: String, trim: true },
+    ctaScale: { type: Number, min: 0.6, max: 1.8 },
+    ctaFontFamily: { type: String, trim: true },
+    headlinePosition: { type: overlayPositionSchema },
+    ctaPosition: {
+      type: new mongoose.Schema(
+        {
+          x: { type: Number, default: 5, min: 0, max: 100 },
+          y: { type: Number, default: 78, min: 0, max: 100 },
+        },
+        { _id: false },
+      ),
+    },
+  },
+  { _id: false },
+)
+
+const deviceStylesSchema = new mongoose.Schema(
+  {
+    tablet: { type: deviceStyleSchema, required: false },
+    mobile: { type: deviceStyleSchema, required: false },
+  },
+  { _id: false },
+)
+
 const imageFocusPointSchema = new mongoose.Schema(
   {
     scale: { type: Number, default: 1, min: 1, max: 3 },
@@ -64,6 +92,10 @@ const heroSlideSchema = new mongoose.Schema(
     headlineFontFamily: { type: String, default: 'system', trim: true },
     ctaScale: { type: Number, default: 1, min: 0.6, max: 1.8 },
     ctaFontFamily: { type: String, default: 'system', trim: true },
+    deviceStyles: {
+      type: deviceStylesSchema,
+      default: () => ({}),
+    },
     isActive: { type: Boolean, default: true },
     showShadow: { type: Boolean, default: false },
   },

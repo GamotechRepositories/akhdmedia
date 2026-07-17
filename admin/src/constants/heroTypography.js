@@ -13,6 +13,12 @@ export const DEFAULT_CTA_FONT = 'system'
 export const DEFAULT_HEADLINE_POSITION = { x: 5, y: 62 }
 export const DEFAULT_CTA_POSITION = { x: 5, y: 78 }
 
+export const HERO_EDIT_DEVICES = [
+  { id: 'desktop', label: 'Desktop' },
+  { id: 'tablet', label: 'iPad' },
+  { id: 'mobile', label: 'Mobile' },
+]
+
 export const HERO_FONT_OPTIONS = [
   {
     id: 'system',
@@ -89,10 +95,105 @@ export const resolveOverlayPosition = (position, fallback) => {
   }
 }
 
+/** Desktop root styles + optional tablet/mobile overrides */
+export const resolveDeviceStyle = (slide, device = 'desktop') => {
+  const desktop = {
+    headlineFontSize: sanitizeHeadlineFontSize(slide?.headlineFontSize),
+    headlineFontFamily: sanitizeHeroFontId(slide?.headlineFontFamily, DEFAULT_HEADLINE_FONT),
+    ctaScale: sanitizeCtaScale(slide?.ctaScale),
+    ctaFontFamily: sanitizeHeroFontId(slide?.ctaFontFamily, DEFAULT_CTA_FONT),
+    headlinePosition: resolveOverlayPosition(slide?.headlinePosition, DEFAULT_HEADLINE_POSITION),
+    ctaPosition: resolveOverlayPosition(slide?.ctaPosition, DEFAULT_CTA_POSITION),
+  }
+
+  if (device === 'desktop') return { ...desktop, hasPositionOverride: true }
+
+  const override = slide?.deviceStyles?.[device]
+  if (!override || typeof override !== 'object') {
+    return { ...desktop, hasPositionOverride: false }
+  }
+
+  return {
+    headlineFontSize:
+      override.headlineFontSize != null
+        ? sanitizeHeadlineFontSize(override.headlineFontSize)
+        : desktop.headlineFontSize,
+    headlineFontFamily:
+      override.headlineFontFamily != null
+        ? sanitizeHeroFontId(override.headlineFontFamily, desktop.headlineFontFamily)
+        : desktop.headlineFontFamily,
+    ctaScale:
+      override.ctaScale != null ? sanitizeCtaScale(override.ctaScale) : desktop.ctaScale,
+    ctaFontFamily:
+      override.ctaFontFamily != null
+        ? sanitizeHeroFontId(override.ctaFontFamily, desktop.ctaFontFamily)
+        : desktop.ctaFontFamily,
+    headlinePosition: override.headlinePosition
+      ? resolveOverlayPosition(override.headlinePosition, desktop.headlinePosition)
+      : desktop.headlinePosition,
+    ctaPosition: override.ctaPosition
+      ? resolveOverlayPosition(override.ctaPosition, desktop.ctaPosition)
+      : desktop.ctaPosition,
+    hasPositionOverride: Boolean(override.headlinePosition || override.ctaPosition),
+  }
+}
+
+/** Apply typography/position patch for a device onto a slide object */
+export const applyDeviceStylePatch = (slide, device, patch = {}) => {
+  if (device === 'desktop') {
+    const next = { ...slide }
+    if (patch.headlineFontSize != null) next.headlineFontSize = sanitizeHeadlineFontSize(patch.headlineFontSize)
+    if (patch.headlineFontFamily != null) {
+      next.headlineFontFamily = sanitizeHeroFontId(patch.headlineFontFamily)
+    }
+    if (patch.ctaScale != null) next.ctaScale = sanitizeCtaScale(patch.ctaScale)
+    if (patch.ctaFontFamily != null) next.ctaFontFamily = sanitizeHeroFontId(patch.ctaFontFamily, DEFAULT_CTA_FONT)
+    if (patch.headlinePosition != null) {
+      next.headlinePosition = resolveOverlayPosition(patch.headlinePosition, DEFAULT_HEADLINE_POSITION)
+    }
+    if (patch.ctaPosition != null) {
+      next.ctaPosition = resolveOverlayPosition(patch.ctaPosition, DEFAULT_CTA_POSITION)
+    }
+    return next
+  }
+
+  const existing = slide?.deviceStyles?.[device] || {}
+  const nextOverride = { ...existing }
+
+  if (patch.headlineFontSize != null) {
+    nextOverride.headlineFontSize = sanitizeHeadlineFontSize(patch.headlineFontSize)
+  }
+  if (patch.headlineFontFamily != null) {
+    nextOverride.headlineFontFamily = sanitizeHeroFontId(patch.headlineFontFamily)
+  }
+  if (patch.ctaScale != null) nextOverride.ctaScale = sanitizeCtaScale(patch.ctaScale)
+  if (patch.ctaFontFamily != null) {
+    nextOverride.ctaFontFamily = sanitizeHeroFontId(patch.ctaFontFamily, DEFAULT_CTA_FONT)
+  }
+  if (patch.headlinePosition != null) {
+    nextOverride.headlinePosition = resolveOverlayPosition(
+      patch.headlinePosition,
+      DEFAULT_HEADLINE_POSITION,
+    )
+  }
+  if (patch.ctaPosition != null) {
+    nextOverride.ctaPosition = resolveOverlayPosition(patch.ctaPosition, DEFAULT_CTA_POSITION)
+  }
+
+  return {
+    ...slide,
+    deviceStyles: {
+      ...(slide?.deviceStyles || {}),
+      [device]: nextOverride,
+    },
+  }
+}
+
 /** Desktop-stored positions → viewport positions for the active breakpoint */
-export const resolveOverlayPositions = (slide, { compact = false } = {}) => {
-  const headline = resolveOverlayPosition(slide?.headlinePosition, DEFAULT_HEADLINE_POSITION)
-  const cta = resolveOverlayPosition(slide?.ctaPosition, DEFAULT_CTA_POSITION)
+export const resolveOverlayPositions = (slide, { compact = false, device = 'desktop' } = {}) => {
+  const style = resolveDeviceStyle(slide, device)
+  const headline = style.headlinePosition
+  const cta = style.ctaPosition
   const hasHeadline = Boolean(slide?.headline?.trim())
   const hasButton = Boolean(slide?.cta?.trim())
 
@@ -100,6 +201,16 @@ export const resolveOverlayPositions = (slide, { compact = false } = {}) => {
     return { headline, cta, stacked: false }
   }
 
+  // Mobile with its own saved positions — use them directly (stacked)
+  if (style.hasPositionOverride) {
+    return {
+      headline,
+      cta,
+      stacked: hasHeadline && hasButton,
+    }
+  }
+
+  // Fallback: derive mobile layout from desktop positions
   const boostedHeadline = {
     x: headline.x,
     y: Math.min(92, headline.y + HERO_OVERLAY_MOBILE_HEADLINE_Y_BOOST),
@@ -122,20 +233,22 @@ export const storageCtaYFromMobileDrag = (headlineY, draggedY) => {
   return Math.min(95, Math.max(headlineY, headlineY + yDelta / HERO_OVERLAY_MOBILE_Y_DELTA_SCALE))
 }
 
-export const resolveHeadlineTypography = (slide, { compact = false } = {}) => {
-  const px = sanitizeHeadlineFontSize(slide?.headlineFontSize)
+export const resolveHeadlineTypography = (slide, { compact = false, device = 'desktop' } = {}) => {
+  const style = resolveDeviceStyle(slide, device)
+  const px = style.headlineFontSize
 
   return {
     fontSize: compact ? toCompactFontSize(px, HERO_HEADLINE_COMPACT_MIN_PX) : toCqw(px),
-    fontFamily: resolveHeroFontFamily(slide?.headlineFontFamily || DEFAULT_HEADLINE_FONT),
+    fontFamily: resolveHeroFontFamily(style.headlineFontFamily),
     fontWeight: 900,
     lineHeight: 1.1,
     letterSpacing: '-0.02em',
   }
 }
 
-export const resolveCtaTypography = (slide, { compact = false } = {}) => {
-  const scale = sanitizeCtaScale(slide?.ctaScale)
+export const resolveCtaTypography = (slide, { compact = false, device = 'desktop' } = {}) => {
+  const style = resolveDeviceStyle(slide, device)
+  const scale = style.ctaScale
   const baseFont = 12
   const basePadY = compact ? 10 : 11
   const basePadX = compact ? 20 : 24
@@ -144,11 +257,9 @@ export const resolveCtaTypography = (slide, { compact = false } = {}) => {
   const padX = Math.round(basePadX * scale)
 
   return {
-    fontSize: compact
-      ? toCompactFontSize(fontPx, HERO_CTA_COMPACT_MIN_PX)
-      : toCqw(fontPx),
+    fontSize: compact ? toCompactFontSize(fontPx, HERO_CTA_COMPACT_MIN_PX) : toCqw(fontPx),
     padding: `${toCqw(padY)} ${toCqw(padX)}`,
-    fontFamily: resolveHeroFontFamily(slide?.ctaFontFamily || DEFAULT_CTA_FONT),
+    fontFamily: resolveHeroFontFamily(style.ctaFontFamily),
     fontWeight: 700,
     letterSpacing: '0.06em',
     lineHeight: 1,

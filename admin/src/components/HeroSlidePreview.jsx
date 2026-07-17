@@ -15,14 +15,9 @@ import {
   resolveImageFocus,
 } from '../constants/heroBanner'
 import {
-  DEFAULT_CTA_POSITION,
-  DEFAULT_HEADLINE_POSITION,
   resolveCtaTypography,
   resolveHeadlineTypography,
-  resolveOverlayPosition,
   resolveOverlayPositions,
-  storageCtaYFromMobileDrag,
-  storageHeadlineYFromMobileDrag,
 } from '../constants/heroTypography'
 
 const PREVIEW_MODES = [
@@ -54,13 +49,21 @@ const PREVIEW_MODES = [
 
 const clampOverlayPercent = (value) => Math.min(95, Math.max(0, Math.round(value)))
 
-const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
+const HeroSlidePreview = ({
+  slide,
+  previewMode: controlledPreviewMode,
+  onPreviewModeChange,
+  onImageFocusChange,
+  onPositionChange,
+}) => {
   const containerRef = useRef(null)
   const panState = useRef(null)
   const overlayDragState = useRef(null)
   const [isPanning, setIsPanning] = useState(false)
   const [draggingField, setDraggingField] = useState(null)
-  const [previewMode, setPreviewMode] = useState('desktop')
+  const [internalPreviewMode, setInternalPreviewMode] = useState('desktop')
+  const previewMode = controlledPreviewMode || internalPreviewMode
+  const setPreviewMode = onPreviewModeChange || setInternalPreviewMode
 
   const hasImage = Boolean(slide.image?.trim())
   const hasHeadline = Boolean(slide.headline?.trim())
@@ -70,9 +73,10 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
   const imageFocus = resolveImageFocus(slide.imageFocus, previewMode)
   const { headline: headlinePosition, cta: ctaPosition, stacked } = resolveOverlayPositions(slide, {
     compact,
+    device: previewMode,
   })
-  const headlineStyle = resolveHeadlineTypography(slide, { compact })
-  const ctaStyle = resolveCtaTypography(slide, { compact })
+  const headlineStyle = resolveHeadlineTypography(slide, { compact, device: previewMode })
+  const ctaStyle = resolveCtaTypography(slide, { compact, device: previewMode })
   const ctaOffsetX = Math.max(0, ctaPosition.x - headlinePosition.x)
 
   const commitFocus = useCallback(
@@ -96,25 +100,12 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
 
       const rect = container.getBoundingClientRect()
       const x = clampOverlayPercent(((clientX - rect.left) / rect.width) * 100)
-      let y = clampOverlayPercent(((clientY - rect.top) / rect.height) * 100)
+      const y = clampOverlayPercent(((clientY - rect.top) / rect.height) * 100)
 
-      if (compact && field === 'headlinePosition') {
-        y = clampOverlayPercent(storageHeadlineYFromMobileDrag(y))
-      } else if (compact && field === 'ctaPosition' && stacked) {
-        const storedCta = resolveOverlayPosition(slide.ctaPosition, DEFAULT_CTA_POSITION)
-        onPositionChange(field, { x, y: storedCta.y })
-        return
-      } else if (compact && field === 'ctaPosition' && hasHeadline) {
-        const headlineStorage = resolveOverlayPosition(
-          slide.headlinePosition,
-          DEFAULT_HEADLINE_POSITION,
-        )
-        y = clampOverlayPercent(storageCtaYFromMobileDrag(headlineStorage.y, y))
-      }
-
+      // Per-device positions are stored as absolute coords for that preview
       onPositionChange(field, { x, y })
     },
-    [onPositionChange, compact, hasHeadline, stacked, slide.headlinePosition, slide.ctaPosition],
+    [onPositionChange],
   )
 
   const handlePanPointerDown = (event) => {
@@ -206,9 +197,9 @@ const HeroSlidePreview = ({ slide, onImageFocusChange, onPositionChange }) => {
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Homepage preview</p>
+          <p className="text-sm font-semibold text-slate-900">See how it looks</p>
           <p className="mt-0.5 text-[11px] text-slate-500">
-            Switch device → drag image to move · +/- zoom · drag headline &amp; button to position
+            Drag image · zoom · drag text to move. Switch Desktop / iPad / Mobile above.
           </p>
         </div>
         <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
