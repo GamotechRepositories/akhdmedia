@@ -14,7 +14,7 @@ const ProductSection = ({
   tightTop = false,
 }) => (
   <section
-    className={`scroll-section ${tightTop ? 'pt-[50px] pb-4 sm:pb-6 lg:pb-8' : 'py-10 sm:py-14 lg:py-16'} ${bgColor}`}
+    className={`scroll-section ${tightTop ? 'pt-4 sm:pt-6 lg:pt-[50px] pb-4 sm:pb-6 lg:pb-8' : 'py-10 sm:py-14 lg:py-16'} ${bgColor}`}
   >
     <div className={PAGE_CONTAINER}>
       <div className="mb-6 flex items-center justify-between gap-3 border-b border-gray-200 pb-4 sm:mb-8">

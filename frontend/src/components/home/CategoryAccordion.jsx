@@ -128,7 +128,7 @@ const CategoryAccordion = () => {
   if (panels.length === 0) return null;
 
   return (
-    <section className="scroll-section bg-white pt-2 pb-0 sm:pt-3">
+    <section className="scroll-section bg-white pt-6 pb-0 sm:pt-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-3 text-center sm:mb-5">
           <h2 className="text-xl font-bold text-gray-600 sm:text-3xl">
