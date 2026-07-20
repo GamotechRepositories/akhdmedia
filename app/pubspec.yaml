@@ -1,7 +1,7 @@
 name: akhdmedia_app
 description: AKHD Media — premium video marketplace mobile app.
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.11.5
