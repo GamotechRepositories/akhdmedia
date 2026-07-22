@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AlertModal from '../components/AlertModal'
 import AuthModalShell from '../components/auth/AuthModalShell'
+import OtpDigitInputs from '../components/auth/OtpDigitInputs'
 import { useAuth } from '../context/AuthContext'
 import { useCloseAuthModal } from '../utils/authModalNavigation'
 import {
@@ -31,6 +32,22 @@ const ForgotPassword = () => {
   const redirectTo = location.state?.from || '/'
   const isBusy = submitting || loading || resending
   const normalizedEmail = email.trim().toLowerCase()
+
+  const goBackToEmail = () => {
+    setStep('email')
+    setOtp('')
+    setPassword('')
+    setConfirmPassword('')
+    setError('')
+  }
+
+  const handleClose = () => {
+    if (step === 'otp' && !isBusy) {
+      goBackToEmail()
+      return
+    }
+    closeModal()
+  }
 
   useEffect(() => {
     if (resendCooldown <= 0) return undefined
@@ -120,8 +137,8 @@ const ForgotPassword = () => {
             ? 'Enter the code from your email and choose a new password.'
             : "Enter your email and we'll send a verification code. Works for Google accounts too."
         }
-        onClose={closeModal}
-        closeLabel="Close forgot password"
+        onClose={handleClose}
+        closeLabel={step === 'otp' ? 'Back to email' : 'Close forgot password'}
       >
         {step === 'email' ? (
           <form
@@ -175,25 +192,12 @@ const ForgotPassword = () => {
             </p>
 
             <div className="mt-4 space-y-4">
-              <div>
-                <label htmlFor="otp" className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Verification code
-                </label>
-                <input
-                  id="otp"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(event) =>
-                    setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))
-                  }
-                  required
-                  className={`${inputClass} tracking-[0.35em] text-center text-lg font-semibold`}
-                  placeholder="000000"
-                />
-              </div>
+              <OtpDigitInputs
+                value={otp}
+                onChange={setOtp}
+                disabled={isBusy}
+                autoFocus
+              />
 
               <div>
                 <label
@@ -261,17 +265,11 @@ const ForgotPassword = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setStep('email')
-                  setOtp('')
-                  setPassword('')
-                  setConfirmPassword('')
-                  setError('')
-                }}
+                onClick={goBackToEmail}
                 disabled={isBusy}
                 className="text-gray-500 hover:text-gray-900 hover:underline"
               >
-                Change email
+                ← Back / change email
               </button>
             </div>
           </form>

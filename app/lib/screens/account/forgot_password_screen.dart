@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_client.dart';
 import '../../widgets/auth/auth_modal_shell.dart';
+import '../../widgets/auth/otp_digit_fields.dart';
 
 enum _ForgotStep { email, otp }
 
@@ -25,9 +25,10 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailCtrl = TextEditingController();
-  final _otpCtrl = TextEditingController();
+  final _otpFieldsKey = GlobalKey<OtpDigitFieldsState>();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
+  String _otpCode = '';
   bool _submitting = false;
   bool _resending = false;
   bool _obscurePassword = true;
@@ -39,7 +40,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    _otpCtrl.addListener(_onFieldsChanged);
     _passwordCtrl.addListener(_onFieldsChanged);
     _confirmPasswordCtrl.addListener(_onFieldsChanged);
   }
@@ -65,12 +65,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
   }
 
+  void _clearOtp() {
+    _otpCode = '';
+    _otpFieldsKey.currentState?.clear();
+  }
+
   @override
   void dispose() {
     _resendTimer?.cancel();
-    _otpCtrl
-      ..removeListener(_onFieldsChanged)
-      ..dispose();
     _passwordCtrl
       ..removeListener(_onFieldsChanged)
       ..dispose();
@@ -89,7 +91,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   String get _emailNormalized => _emailCtrl.text.trim().toLowerCase();
 
-  bool get _otpReady => RegExp(r'^\d{6}$').hasMatch(_otpCtrl.text.trim());
+  bool get _otpReady => RegExp(r'^\d{6}$').hasMatch(_otpCode);
 
   bool get _passwordsMatch =>
       _passwordCtrl.text.isNotEmpty &&
@@ -111,7 +113,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
       setState(() {
         _step = _ForgotStep.otp;
-        _otpCtrl.clear();
+        _clearOtp();
         _passwordCtrl.clear();
         _confirmPasswordCtrl.clear();
       });
@@ -164,7 +166,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       await context.read<AuthProvider>().resetPasswordWithOtp(
             email: _emailNormalized,
-            code: _otpCtrl.text.trim(),
+            code: _otpCode,
             password: _passwordCtrl.text,
           );
       if (!mounted) return;
@@ -219,7 +221,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (isOtpStep && !loading) {
           setState(() {
             _step = _ForgotStep.email;
-            _otpCtrl.clear();
+            _clearOtp();
             _passwordCtrl.clear();
             _confirmPasswordCtrl.clear();
           });
@@ -257,15 +259,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              AuthTextField(
-                label: 'Verification code',
-                controller: _otpCtrl,
-                keyboardType: TextInputType.number,
-                placeholder: '000000',
-                textInputAction: TextInputAction.next,
+              OtpDigitFields(
+                key: _otpFieldsKey,
                 enabled: !loading,
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) {
+                  setState(() => _otpCode = value);
+                },
               ),
               const SizedBox(height: AppSpacing.md),
               AuthTextField(
@@ -342,7 +341,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ? null
                     : () => setState(() {
                           _step = _ForgotStep.email;
-                          _otpCtrl.clear();
+                          _clearOtp();
                           _passwordCtrl.clear();
                           _confirmPasswordCtrl.clear();
                         }),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
+import OtpDigitInputs from '../components/auth/OtpDigitInputs';
 import { useAuth } from '../context/AuthContext';
 import { confirmDeleteAccount, requestDeleteAccount } from '../services/authApi';
 
@@ -370,22 +371,15 @@ const Profile = () => {
                 )}
 
                 <div>
-                  <label htmlFor="delete-code" className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Enter the 6-digit code sent to {user?.email}
-                  </label>
-                  <input
-                    id="delete-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
+                  <p className="mb-3 text-sm text-gray-600">
+                    Enter the 6-digit code we sent to{' '}
+                    <span className="font-semibold text-gray-900">{user?.email}</span>
+                  </p>
+                  <OtpDigitInputs
                     value={deleteCode}
-                    onChange={(event) =>
-                      setDeleteCode(event.target.value.replace(/\D/g, '').slice(0, 6))
-                    }
-                    required
-                    maxLength={6}
-                    className={`${inputClass} tracking-[0.35em]`}
-                    placeholder="000000"
+                    onChange={setDeleteCode}
+                    disabled={deleteSubmitting}
+                    autoFocus
                   />
                 </div>
 

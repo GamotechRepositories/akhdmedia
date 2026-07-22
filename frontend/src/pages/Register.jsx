@@ -10,6 +10,7 @@ import PhoneCountryInput, {
 } from '../components/ui/PhoneCountryInput'
 import { GOOGLE_CLIENT_ID } from '../config/auth'
 import { useAuth } from '../context/AuthContext'
+import { useCloseAuthModal } from '../utils/authModalNavigation'
 
 const inputClass =
   'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10'
@@ -25,6 +26,7 @@ const Register = () => {
   } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const closeModal = useCloseAuthModal()
   const [step, setStep] = useState('details')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -41,6 +43,20 @@ const Register = () => {
 
   const redirectTo = location.state?.from || '/'
   const isBusy = submitting || loading || resending
+
+  const goBackToDetails = () => {
+    setStep('details')
+    setOtp('')
+    setError('')
+  }
+
+  const handleClose = () => {
+    if (step === 'otp' && !isBusy) {
+      goBackToDetails()
+      return
+    }
+    closeModal()
+  }
 
   useEffect(() => {
     if (resendCooldown <= 0) return undefined
@@ -174,7 +190,8 @@ const Register = () => {
     <>
       <AuthModalShell
         title={step === 'otp' ? 'Verify Email' : 'Create Account'}
-        closeLabel="Close registration"
+        closeLabel={step === 'otp' ? 'Back to sign up' : 'Close registration'}
+        onClose={handleClose}
       >
         {step === 'details' ? (
           <form
@@ -393,15 +410,11 @@ const Register = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setStep('details')
-                  setOtp('')
-                  setError('')
-                }}
+                onClick={goBackToDetails}
                 disabled={isBusy}
                 className="text-gray-500 hover:text-gray-900 hover:underline"
               >
-                Change email / details
+                ← Back to sign up / change email
               </button>
             </div>
           </form>
