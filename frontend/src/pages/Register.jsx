@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import AlertModal from '../components/AlertModal'
 import AuthModalShell from '../components/auth/AuthModalShell'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
+import OtpDigitInputs from '../components/auth/OtpDigitInputs'
 import PhoneCountryInput, {
   isPhoneNumberValid,
   normalizePhoneValue,
@@ -359,20 +360,11 @@ const Register = () => {
             </p>
 
             <div className="mt-4">
-              <label htmlFor="otp" className="mb-1 block text-xs font-medium text-gray-700">
-                Verification code
-              </label>
-              <input
-                id="otp"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
+              <OtpDigitInputs
                 value={otp}
-                onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                required
-                className={`${inputClass} tracking-[0.35em] text-center text-lg font-semibold`}
-                placeholder="000000"
+                onChange={setOtp}
+                disabled={isBusy}
+                autoFocus
               />
             </div>
 

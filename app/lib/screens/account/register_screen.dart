@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +14,7 @@ import '../../services/google_sign_in_service.dart';
 import '../../widgets/auth/auth_modal_shell.dart' show showAuthErrorDialog;
 import '../../widgets/auth/auth_screen_layout.dart';
 import '../../widgets/auth/google_sign_in_button.dart';
+import '../../widgets/auth/otp_digit_fields.dart';
 import '../../widgets/auth/phone_country_field.dart';
 
 enum _RegisterStep { details, otp }
@@ -36,7 +36,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
-  final _otpCtrl = TextEditingController();
+  final _otpFieldsKey = GlobalKey<OtpDigitFieldsState>();
+  String _otpCode = '';
   bool _submitting = false;
   bool _resending = false;
   bool _obscurePassword = true;
@@ -53,14 +54,9 @@ class _RegisterScreenState extends State<RegisterScreen>
     WidgetsBinding.instance.addObserver(this);
     _passwordCtrl.addListener(_onPasswordFieldsChanged);
     _confirmPasswordCtrl.addListener(_onPasswordFieldsChanged);
-    _otpCtrl.addListener(_onOtpChanged);
   }
 
   void _onPasswordFieldsChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _onOtpChanged() {
     if (mounted) setState(() {});
   }
 
@@ -91,9 +87,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     _confirmPasswordCtrl
       ..removeListener(_onPasswordFieldsChanged)
       ..dispose();
-    _otpCtrl
-      ..removeListener(_onOtpChanged)
-      ..dispose();
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
@@ -120,7 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _confirmPasswordCtrl.text.isNotEmpty &&
       _passwordCtrl.text == _confirmPasswordCtrl.text;
 
-  bool get _otpReady => RegExp(r'^\d{6}$').hasMatch(_otpCtrl.text.trim());
+  bool get _otpReady => RegExp(r'^\d{6}$').hasMatch(_otpCode);
 
   void _navigateAfterAuth() {
     completeAuthNavigation(
@@ -132,7 +125,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   void _goBackToDetails() {
     setState(() {
       _step = _RegisterStep.details;
-      _otpCtrl.clear();
+      _otpCode = '';
+      _otpFieldsKey.currentState?.clear();
     });
   }
 
@@ -207,9 +201,12 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (!mounted) return;
       setState(() {
         _step = _RegisterStep.otp;
-        _otpCtrl.clear();
+        _otpCode = '';
       });
       _startResendCooldown();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _otpFieldsKey.currentState?.clear();
+      });
     } catch (e) {
       if (!mounted) return;
       await showAuthErrorDialog(
@@ -237,7 +234,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     try {
       await context.read<AuthProvider>().verifyRegisterOtp(
             email: _emailNormalized,
-            code: _otpCtrl.text.trim(),
+            code: _otpCode,
           );
       if (!mounted) return;
       await context.read<CartProvider>().loadCart();
@@ -326,6 +323,8 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     return AuthScreenShell(
       backEnabled: !loading,
+      scrollable: !isOtpStep,
+      centerContent: isOtpStep,
       onBack: () {
         if (isOtpStep) {
           _goBackToDetails();
@@ -340,6 +339,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: isOtpStep ? MainAxisSize.min : MainAxisSize.max,
         children: [
           AuthLogoHeader(
             compact: true,
@@ -514,21 +514,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                     ),
                   ),
                   const SizedBox(height: AuthScreenMetrics.fieldGap),
-                  AuthStyledField(
-                    label: 'Verification code',
-                    controller: _otpCtrl,
-                    hint: '000000',
-                    prefixIcon: Icons.pin_outlined,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) {
-                      if (_otpReady) _verifyOtp();
-                    },
+                  OtpDigitFields(
+                    key: _otpFieldsKey,
                     enabled: !loading,
-                    maxLength: 6,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    onChanged: (value) {
+                      setState(() => _otpCode = value);
+                    },
+                    onCompleted: (_) {
+                      if (_otpReady && !_resending) {
+                        _verifyOtp();
+                      }
+                    },
                   ),
                 ],
               ),
