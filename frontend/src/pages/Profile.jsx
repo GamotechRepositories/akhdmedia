@@ -41,7 +41,6 @@ const Profile = () => {
   const [deleteCode, setDeleteCode] = useState('');
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-  const [deleteInfo, setDeleteInfo] = useState('');
 
   useEffect(() => {
     setName(user?.name || '');
@@ -94,7 +93,6 @@ const Profile = () => {
     setDeleteReason('');
     setDeleteCode('');
     setDeleteError('');
-    setDeleteInfo('');
   };
 
   const closeDeleteAccount = () => {
@@ -103,18 +101,15 @@ const Profile = () => {
     setDeleteReason('');
     setDeleteCode('');
     setDeleteError('');
-    setDeleteInfo('');
   };
 
   const handleRequestDeleteCode = async (event) => {
     event.preventDefault();
     setDeleteError('');
-    setDeleteInfo('');
     setDeleteSubmitting(true);
 
     try {
-      const response = await requestDeleteAccount(deleteReason);
-      setDeleteInfo(response.message || `A confirmation code has been sent to ${user?.email}`);
+      await requestDeleteAccount(deleteReason);
       setDeleteStep('code');
     } catch (requestError) {
       setDeleteError(requestError.message || 'Could not send confirmation code');
@@ -364,12 +359,6 @@ const Profile = () => {
               </form>
             ) : (
               <form onSubmit={handleConfirmDelete} className="mt-5 space-y-4">
-                {deleteInfo && (
-                  <p className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-                    {deleteInfo}
-                  </p>
-                )}
-
                 <div>
                   <p className="mb-3 text-sm text-gray-600">
                     Enter the 6-digit code we sent to{' '}
