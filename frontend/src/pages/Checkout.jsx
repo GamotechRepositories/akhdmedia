@@ -54,7 +54,7 @@ const PAYMENT_GATEWAYS = [
     id: 'razorpay',
     label: 'India',
     badge: 'INR',
-    subtitle: 'UPI, cards & net banking via Razorpay',
+    subtitle: 'UPI, cards, net banking, wallets & EMI via Razorpay',
   },
   {
     id: 'paypal',
@@ -68,6 +68,8 @@ const PAYMENT_OPTIONS = [
   { id: 'upi', label: 'UPI' },
   { id: 'card', label: 'Card' },
   { id: 'netbanking', label: 'Net Banking' },
+  { id: 'wallet', label: 'Wallet' },
+  { id: 'emi', label: 'EMI' },
 ];
 
 const inputClass =
@@ -122,10 +124,43 @@ const IconNetBanking = ({ className = 'h-7 w-7' }) => (
   </svg>
 );
 
+const IconWallet = ({ className = 'h-7 w-7' }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.75}
+      d="M3 8.5A2.5 2.5 0 015.5 6h13A2.5 2.5 0 0121 8.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5v-9z"
+    />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16 12.5h.01" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.75}
+      d="M21 11.5h-3.5a1.5 1.5 0 000 3H21"
+    />
+  </svg>
+);
+
+const IconEmi = ({ className = 'h-7 w-7' }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.75}
+      d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
+    />
+    <rect x="4" y="7" width="16" height="14" rx="2" strokeWidth={1.75} />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 12h8M8 16h5" />
+  </svg>
+);
+
 const PAYMENT_OPTION_ICONS = {
   upi: IconUpi,
   card: IconCard,
   netbanking: IconNetBanking,
+  wallet: IconWallet,
+  emi: IconEmi,
 };
 
 const StepIndicator = ({ step }) => (
@@ -773,7 +808,7 @@ const Checkout = () => {
               </div>
 
               {paymentProvider === 'razorpay' && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {PAYMENT_OPTIONS.map((option) => {
                   const PaymentIcon = PAYMENT_OPTION_ICONS[option.id];
 

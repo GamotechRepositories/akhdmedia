@@ -39,6 +39,22 @@ const METHOD_PRESETS = {
     paylater: false,
     emi: false,
   },
+  wallet: {
+    upi: false,
+    card: false,
+    netbanking: false,
+    wallet: true,
+    paylater: false,
+    emi: false,
+  },
+  emi: {
+    upi: false,
+    card: false,
+    netbanking: false,
+    wallet: false,
+    paylater: false,
+    emi: true,
+  },
 }
 
 export const openRazorpayCheckout = async ({
