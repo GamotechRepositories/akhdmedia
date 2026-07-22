@@ -3,9 +3,16 @@ import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
 import { GOOGLE_CLIENT_ID } from '../config/google.js'
-import { PASSWORD_RESET_EXPIRY_MS } from '../config/email.js'
-import { sendPasswordResetEmail } from './emailService.js'
+import {
+  PASSWORD_RESET_EXPIRY_MS,
+  REGISTRATION_OTP_EXPIRY_MINUTES,
+  REGISTRATION_OTP_EXPIRY_MS,
+  REGISTRATION_OTP_RESEND_COOLDOWN_MS,
+  isEmailConfigured,
+} from '../config/email.js'
+import { sendPasswordResetEmail, sendRegistrationOtpEmail } from './emailService.js'
 import Admin from '../models/Admin.js'
+import PendingRegistration from '../models/PendingRegistration.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
 
@@ -129,6 +136,153 @@ export const registerUser = async ({ name, email, phone, password }) => {
     ...fields,
     password: hashedPassword,
   })
+}
+
+const hashOtp = (code) => crypto.createHash('sha256').update(String(code)).digest('hex')
+
+const createRegistrationOtp = () => String(Math.floor(100000 + Math.random() * 900000))
+
+const assertEmailAvailable = async (email) => {
+  const [existingUser, existingAdmin] = await Promise.all([
+    User.findOne({ email }),
+    Admin.findOne({ email }),
+  ])
+  if (existingUser || existingAdmin) {
+    throw new AppError('An account with this email already exists', 409)
+  }
+}
+
+const sendOtpForPending = async (pending, { name, force = false } = {}) => {
+  if (!isEmailConfigured()) {
+    throw new AppError(
+      'Email verification is not configured. Please contact support or try again later.',
+      503,
+    )
+  }
+
+  const now = Date.now()
+  if (
+    !force &&
+    pending.lastOtpSentAt &&
+    now - new Date(pending.lastOtpSentAt).getTime() < REGISTRATION_OTP_RESEND_COOLDOWN_MS
+  ) {
+    const waitSeconds = Math.ceil(
+      (REGISTRATION_OTP_RESEND_COOLDOWN_MS -
+        (now - new Date(pending.lastOtpSentAt).getTime())) /
+        1000,
+    )
+    throw new AppError(`Please wait ${waitSeconds}s before requesting another code`, 429)
+  }
+
+  const code = createRegistrationOtp()
+  pending.otpHash = hashOtp(code)
+  pending.otpExpires = new Date(now + REGISTRATION_OTP_EXPIRY_MS)
+  pending.lastOtpSentAt = new Date(now)
+  await pending.save()
+
+  const emailResult = await sendRegistrationOtpEmail({
+    email: pending.email,
+    name: name || pending.name,
+    code,
+    expiryMinutes: REGISTRATION_OTP_EXPIRY_MINUTES,
+  })
+
+  if (!emailResult?.sent) {
+    throw new AppError('Could not send verification code. Please try again later.', 503)
+  }
+
+  return {
+    email: pending.email,
+    expiresInMinutes: REGISTRATION_OTP_EXPIRY_MINUTES,
+  }
+}
+
+/** Validate signup details and email a 6-digit OTP. Account is created only after verify. */
+export const sendRegistrationOtp = async ({ name, email, phone, password }) => {
+  const fields = validateUserFields({ name, email, phone })
+  validatePassword(password)
+  await assertEmailAvailable(fields.email)
+
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
+  let pending = await PendingRegistration.findOne({ email: fields.email }).select(
+    '+passwordHash +otpHash',
+  )
+
+  if (pending) {
+    pending.name = fields.name
+    pending.phone = fields.phone
+    pending.passwordHash = passwordHash
+  } else {
+    pending = new PendingRegistration({
+      ...fields,
+      passwordHash,
+      otpHash: 'pending',
+      otpExpires: new Date(Date.now() + REGISTRATION_OTP_EXPIRY_MS),
+    })
+  }
+
+  return sendOtpForPending(pending, { name: fields.name, force: true })
+}
+
+export const resendRegistrationOtp = async (email) => {
+  const trimmedEmail = email?.trim().toLowerCase()
+  if (!trimmedEmail) {
+    throw new AppError('Email is required', 400)
+  }
+
+  await assertEmailAvailable(trimmedEmail)
+
+  const pending = await PendingRegistration.findOne({ email: trimmedEmail }).select(
+    '+passwordHash +otpHash',
+  )
+
+  if (!pending) {
+    throw new AppError('No pending signup found for this email. Please start again.', 404)
+  }
+
+  return sendOtpForPending(pending, { name: pending.name })
+}
+
+export const verifyRegistrationOtp = async ({ email, code }) => {
+  const trimmedEmail = email?.trim().toLowerCase()
+  const trimmedCode = String(code || '').trim()
+
+  if (!trimmedEmail) {
+    throw new AppError('Email is required', 400)
+  }
+
+  if (!/^\d{6}$/.test(trimmedCode)) {
+    throw new AppError('Please enter the 6-digit verification code', 400)
+  }
+
+  await assertEmailAvailable(trimmedEmail)
+
+  const pending = await PendingRegistration.findOne({ email: trimmedEmail }).select(
+    '+passwordHash +otpHash',
+  )
+
+  if (!pending) {
+    throw new AppError('No pending signup found for this email. Please start again.', 404)
+  }
+
+  if (!pending.otpExpires || pending.otpExpires.getTime() < Date.now()) {
+    throw new AppError('This verification code has expired. Please request a new one.', 400)
+  }
+
+  if (pending.otpHash !== hashOtp(trimmedCode)) {
+    throw new AppError('Invalid verification code', 400)
+  }
+
+  const user = await User.create({
+    name: pending.name,
+    email: pending.email,
+    phone: pending.phone,
+    password: pending.passwordHash,
+  })
+
+  await PendingRegistration.deleteOne({ _id: pending._id })
+
+  return user
 }
 
 export const authenticateUser = async (email, password) => {

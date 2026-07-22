@@ -14,9 +14,12 @@ import {
   getUserCookieOptions,
   registerUser,
   requestPasswordReset,
+  resendRegistrationOtp,
   resetPasswordWithToken,
+  sendRegistrationOtp,
   signUserToken,
   updateUserProfile,
+  verifyRegistrationOtp,
 } from '../services/userAuthService.js'
 
 const sendAuthResponse = (res, user, message) => {
@@ -45,6 +48,31 @@ export const getAuthConfig = asyncHandler(async (req, res) => {
 export const register = asyncHandler(async (req, res) => {
   const user = await registerUser(req.body)
   sendAuthResponse(res, user, 'Account created successfully')
+})
+
+export const sendRegisterOtp = asyncHandler(async (req, res) => {
+  const result = await sendRegistrationOtp(req.body)
+
+  res.json({
+    success: true,
+    message: `A verification code has been sent to ${result.email}`,
+    data: result,
+  })
+})
+
+export const resendRegisterOtp = asyncHandler(async (req, res) => {
+  const result = await resendRegistrationOtp(req.body.email)
+
+  res.json({
+    success: true,
+    message: `A new verification code has been sent to ${result.email}`,
+    data: result,
+  })
+})
+
+export const verifyRegisterOtp = asyncHandler(async (req, res) => {
+  const user = await verifyRegistrationOtp(req.body)
+  sendAuthResponse(res, user, 'Email verified. Account created successfully')
 })
 
 export const login = asyncHandler(async (req, res) => {

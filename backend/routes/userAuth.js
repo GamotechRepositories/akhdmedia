@@ -10,8 +10,11 @@ import {
   logout,
   register,
   requestDeleteAccount,
+  resendRegisterOtp,
   resetPassword,
+  sendRegisterOtp,
   updateProfile,
+  verifyRegisterOtp,
 } from '../controllers/userAuthController.js'
 import { requireUser } from '../middleware/requireUser.js'
 
@@ -19,6 +22,9 @@ const router = Router()
 
 router.get('/config', getAuthConfig)
 router.post('/register', register)
+router.post('/register/send-otp', sendRegisterOtp)
+router.post('/register/resend-otp', resendRegisterOtp)
+router.post('/register/verify-otp', verifyRegisterOtp)
 router.post('/login', login)
 router.post('/google', googleAuth)
 router.get('/google/status', googleAuthStatus)

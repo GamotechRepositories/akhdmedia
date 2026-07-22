@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { getMe, login as loginRequest, loginWithGoogle as loginWithGoogleRequest, logout as logoutRequest, register as registerRequest, updateProfile as updateProfileRequest } from '../services/authApi'
+import { getMe, login as loginRequest, loginWithGoogle as loginWithGoogleRequest, logout as logoutRequest, register as registerRequest, resendRegisterOtp as resendRegisterOtpRequest, sendRegisterOtp as sendRegisterOtpRequest, updateProfile as updateProfileRequest, verifyRegisterOtp as verifyRegisterOtpRequest } from '../services/authApi'
 
 const AuthContext = createContext(null)
 
@@ -48,6 +48,20 @@ export const AuthProvider = ({ children }) => {
     return response
   }, [])
 
+  const sendRegisterOtp = useCallback(async (name, email, phone, password) => {
+    return sendRegisterOtpRequest(name, email, phone, password)
+  }, [])
+
+  const resendRegisterOtp = useCallback(async (email) => {
+    return resendRegisterOtpRequest(email)
+  }, [])
+
+  const verifyRegisterOtp = useCallback(async (email, code) => {
+    const response = await verifyRegisterOtpRequest(email, code)
+    setUser(response.data?.user || null)
+    return response
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await logoutRequest()
@@ -70,11 +84,26 @@ export const AuthProvider = ({ children }) => {
       login,
       loginWithGoogle,
       register,
+      sendRegisterOtp,
+      resendRegisterOtp,
+      verifyRegisterOtp,
       logout,
       updateProfile,
       refreshAuth,
     }),
-    [user, loading, login, loginWithGoogle, register, logout, updateProfile, refreshAuth],
+    [
+      user,
+      loading,
+      login,
+      loginWithGoogle,
+      register,
+      sendRegisterOtp,
+      resendRegisterOtp,
+      verifyRegisterOtp,
+      logout,
+      updateProfile,
+      refreshAuth,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
