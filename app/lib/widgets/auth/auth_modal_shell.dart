@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_spacing.dart';
 
@@ -151,7 +152,11 @@ class AuthTextField extends StatelessWidget {
     this.textInputAction,
     this.onSubmitted,
     this.suffix,
+    this.suffixIcon,
     this.minLength,
+    this.maxLength,
+    this.enabled = true,
+    this.inputFormatters,
   });
 
   final String label;
@@ -162,7 +167,11 @@ class AuthTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final Widget? suffix;
+  final Widget? suffixIcon;
   final int? minLength;
+  final int? maxLength;
+  final bool enabled;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -187,17 +196,22 @@ class AuthTextField extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
+          enabled: enabled,
           keyboardType: keyboardType,
           obscureText: obscureText,
           textInputAction: textInputAction,
           onSubmitted: onSubmitted,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength,
           minLines: 1,
           maxLines: 1,
           decoration: InputDecoration(
             hintText: placeholder,
+            counterText: '',
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade300),

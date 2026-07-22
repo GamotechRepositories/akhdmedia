@@ -10,6 +10,7 @@ import {
   logout,
   register,
   requestDeleteAccount,
+  resendForgotPasswordOtp,
   resendRegisterOtp,
   resetPassword,
   sendRegisterOtp,
@@ -29,6 +30,7 @@ router.post('/login', login)
 router.post('/google', googleAuth)
 router.get('/google/status', googleAuthStatus)
 router.post('/forgot-password', forgotPassword)
+router.post('/forgot-password/resend-otp', resendForgotPasswordOtp)
 router.post('/reset-password', resetPassword)
 router.post('/logout', logout)
 router.get('/me', requireUser, getMe)

@@ -114,10 +114,32 @@ class AuthService {
 
   Future<String> requestPasswordReset(String email) async {
     final response = await _api.postJson('/user/auth/forgot-password', data: {
-      'email': email.trim(),
+      'email': email.trim().toLowerCase(),
     });
     return response['message']?.toString() ??
-        'Check your email for a reset link.';
+        'A verification code has been sent to your email.';
+  }
+
+  Future<String> resendPasswordResetOtp(String email) async {
+    final response =
+        await _api.postJson('/user/auth/forgot-password/resend-otp', data: {
+      'email': email.trim().toLowerCase(),
+    });
+    return response['message']?.toString() ??
+        'A new verification code has been sent.';
+  }
+
+  Future<AppUser> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    final response = await _api.postJson('/user/auth/reset-password', data: {
+      'email': email.trim().toLowerCase(),
+      'code': code.trim(),
+      'password': password,
+    });
+    return _parseUser(response);
   }
 
   Future<void> logout() async {

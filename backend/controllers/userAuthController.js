@@ -14,8 +14,9 @@ import {
   getUserCookieOptions,
   registerUser,
   requestPasswordReset,
+  resendPasswordResetOtp,
   resendRegistrationOtp,
-  resetPasswordWithToken,
+  resetPasswordWithOtp,
   sendRegistrationOtp,
   signUserToken,
   updateUserProfile,
@@ -94,17 +95,27 @@ export const googleAuthStatus = asyncHandler(async (req, res) => {
 })
 
 export const forgotPassword = asyncHandler(async (req, res) => {
-  await requestPasswordReset(req.body.email)
+  const result = await requestPasswordReset(req.body.email)
 
   res.json({
     success: true,
-    message:
-      'If an account with that email exists, a password reset link has been sent to your inbox.',
+    message: `A verification code has been sent to ${result.email}`,
+    data: result,
+  })
+})
+
+export const resendForgotPasswordOtp = asyncHandler(async (req, res) => {
+  const result = await resendPasswordResetOtp(req.body.email)
+
+  res.json({
+    success: true,
+    message: `A new verification code has been sent to ${result.email}`,
+    data: result,
   })
 })
 
 export const resetPassword = asyncHandler(async (req, res) => {
-  const user = await resetPasswordWithToken(req.body.token, req.body.password)
+  const user = await resetPasswordWithOtp(req.body)
   sendAuthResponse(res, user, 'Password updated successfully')
 })
 

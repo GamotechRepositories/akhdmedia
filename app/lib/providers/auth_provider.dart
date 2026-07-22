@@ -178,6 +178,30 @@ class AuthProvider extends ChangeNotifier {
     return _authService.requestPasswordReset(email);
   }
 
+  Future<String> resendPasswordResetOtp(String email) async {
+    return _authService.resendPasswordResetOtp(email);
+  }
+
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    error = null;
+    try {
+      user = await _authService.resetPasswordWithOtp(
+        email: email,
+        code: code,
+        password: password,
+      );
+      notifyListeners();
+    } catch (e) {
+      error = ApiClient.unwrapError(e).toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   /// Mirrors web `logout()` → `POST /user/auth/logout`, then clear local user.
   Future<void> logout() async {
     try {

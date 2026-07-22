@@ -15,7 +15,7 @@ export const getProtectedImageProps = () => ({
 });
 
 export const getProtectedVideoProps = () => ({
-  controls: false,
+  controls:false,
   controlsList: 'nodownload noplaybackrate nofullscreen',
   disablePictureInPicture: true,
   disableRemotePlayback: true,

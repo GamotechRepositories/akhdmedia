@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, unique: true, sparse: true, trim: true },
     passwordResetToken: { type: String, select: false, default: '' },
     passwordResetExpires: { type: Date, select: false },
+    passwordResetLastSentAt: { type: Date, select: false },
     accountDeletionCode: { type: String, select: false, default: '' },
     accountDeletionExpires: { type: Date, select: false },
     accountDeletionReason: { type: String, select: false, default: '' },

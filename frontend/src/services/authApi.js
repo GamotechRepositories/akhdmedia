@@ -40,8 +40,13 @@ export const requestPasswordReset = async (email) => {
   return data
 }
 
-export const resetPassword = async (token, password) => {
-  const { data } = await api.post('/user/auth/reset-password', { token, password })
+export const resendPasswordResetOtp = async (email) => {
+  const { data } = await api.post('/user/auth/forgot-password/resend-otp', { email })
+  return data
+}
+
+export const resetPassword = async (email, code, password) => {
+  const { data } = await api.post('/user/auth/reset-password', { email, code, password })
   return data
 }
 

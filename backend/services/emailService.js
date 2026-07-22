@@ -285,24 +285,24 @@ const PASSWORD_RESET_EMAIL_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Reset your password</title>
+  <title>{{email_title}}</title>
 </head>
 <body style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
   <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;padding:30px;">
     <h1 style="text-align:center;color:#111827;">${BRAND_NAME}</h1>
-    <h2>Reset your password</h2>
+    <h2>{{email_heading}}</h2>
     <p>Hi {{customer_name}},</p>
-    <p>We received a request to reset the password for your account. Click the button below to choose a new password.</p>
+    <p>{{email_body}}</p>
     <div style="text-align:center;margin:30px 0;">
       <a
         href="{{reset_url}}"
         style="background:#111827;color:white;text-decoration:none;padding:14px 24px;border-radius:6px;display:inline-block;font-weight:bold;"
       >
-        Reset Password
+        {{cta_label}}
       </a>
     </div>
     <p style="font-size:13px;color:#6b7280;line-height:1.5;">
-      This link expires in <strong>{{expiry_label}}</strong>. If you did not request a password reset, you can safely ignore this email.
+      This link expires in <strong>{{expiry_label}}</strong>. If you did not request this, you can safely ignore this email.
     </p>
     <hr>
     <p style="font-size:12px;color:#666;text-align:center;">
@@ -312,7 +312,12 @@ const PASSWORD_RESET_EMAIL_TEMPLATE = `<!DOCTYPE html>
 </body>
 </html>`
 
-export const sendPasswordResetEmail = async ({ email, name, resetToken }) => {
+export const sendPasswordResetEmail = async ({
+  email,
+  name,
+  resetToken,
+  isSettingPassword = false,
+}) => {
   const resend = getResendClient()
   if (!resend || !isEmailConfigured()) {
     console.warn('[email] Resend not configured — password reset email not sent')
@@ -321,8 +326,21 @@ export const sendPasswordResetEmail = async ({ email, name, resetToken }) => {
 
   const resetUrl = `${getFrontendUrl()}/reset-password?token=${encodeURIComponent(resetToken)}`
   const currentYear = new Date().getFullYear()
+  const emailTitle = isSettingPassword ? 'Set your password' : 'Reset your password'
+  const emailHeading = isSettingPassword ? 'Set a password' : 'Reset your password'
+  const emailBody = isSettingPassword
+    ? 'Your account was created with Google sign-in. Click the button below to set a password so you can also sign in with email.'
+    : 'We received a request to reset the password for your account. Click the button below to choose a new password.'
+  const ctaLabel = isSettingPassword ? 'Set Password' : 'Reset Password'
+  const subject = isSettingPassword
+    ? `Set your ${BRAND_NAME} password`
+    : `Reset your ${BRAND_NAME} password`
 
-  const html = PASSWORD_RESET_EMAIL_TEMPLATE.replace(/{{customer_name}}/g, escapeHtml(name || 'there'))
+  const html = PASSWORD_RESET_EMAIL_TEMPLATE.replace(/{{email_title}}/g, escapeHtml(emailTitle))
+    .replace(/{{email_heading}}/g, escapeHtml(emailHeading))
+    .replace(/{{email_body}}/g, escapeHtml(emailBody))
+    .replace(/{{cta_label}}/g, escapeHtml(ctaLabel))
+    .replace(/{{customer_name}}/g, escapeHtml(name || 'there'))
     .replace(/{{reset_url}}/g, escapeHtml(resetUrl))
     .replace(/{{expiry_label}}/g, escapeHtml(formatPasswordResetExpiryLabel()))
     .replace(/{{current_year}}/g, String(currentYear))
@@ -330,7 +348,7 @@ export const sendPasswordResetEmail = async ({ email, name, resetToken }) => {
   const { error } = await resend.emails.send({
     from: getResendFrom(),
     to: email,
-    subject: `Reset your ${BRAND_NAME} password`,
+    subject,
     html,
   })
 
@@ -465,6 +483,73 @@ export const sendRegistrationOtpEmail = async ({
   }
 
   console.log(`[email] Registration OTP sent to ${email}`)
+  return { sent: true }
+}
+
+export const sendPasswordResetOtpEmail = async ({
+  email,
+  name,
+  code,
+  expiryMinutes = 10,
+  isSettingPassword = false,
+}) => {
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — password reset OTP not sent')
+    return { sent: false, reason: 'resend_not_configured' }
+  }
+
+  const currentYear = new Date().getFullYear()
+  const safeName = escapeHtml(name || 'there')
+  const safeCode = escapeHtml(String(code))
+  const expiryLabel = formatPasswordResetExpiryLabel(expiryMinutes)
+  const heading = isSettingPassword ? 'Set your password' : 'Reset your password'
+  const intro = isSettingPassword
+    ? `Your account was created with Google sign-in. Use the one-time code below to set a password so you can also sign in with email.`
+    : `Use the one-time code below to reset the password for your ${BRAND_NAME} account.`
+
+  const html = wrapBrandEmail({
+    title: heading,
+    currentYear,
+    bodyHtml: `
+      <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">${escapeHtml(heading)}</h1>
+      ${brandParagraph(`Hi ${safeName},`)}
+      ${brandParagraph(intro)}
+      <p style="margin:24px 0;font-size:32px;font-weight:700;letter-spacing:0.35em;text-align:center;color:#111827;">${safeCode}</p>
+      ${brandParagraph(
+        `This code expires in <strong>${escapeHtml(expiryLabel)}</strong>. If you did not request this, you can safely ignore this email.`,
+      )}
+      ${brandParagraph(`Warm regards,<br><strong>${BRAND_NAME} Team</strong>`)}
+    `,
+  })
+
+  const text = [
+    `Hi ${name || 'there'},`,
+    '',
+    intro.replace(/<[^>]+>/g, ''),
+    '',
+    `Your code: ${code}`,
+    `This code expires in ${expiryLabel}.`,
+    '',
+    'If you did not request this, ignore this email.',
+    '',
+    `${BRAND_NAME} Team`,
+  ].join('\n')
+
+  const { error } = await resend.emails.send({
+    from: getResendFrom(),
+    to: email,
+    subject: `${heading} — ${BRAND_NAME}`,
+    html,
+    text,
+  })
+
+  if (error) {
+    console.error('[email] Resend API error (password reset OTP):', error)
+    throw new Error(error.message || 'Resend API error')
+  }
+
+  console.log(`[email] Password reset OTP sent to ${email}`)
   return { sent: true }
 }
 

@@ -4,13 +4,18 @@ import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
 import { GOOGLE_CLIENT_ID } from '../config/google.js'
 import {
+  PASSWORD_RESET_EXPIRY_MINUTES,
   PASSWORD_RESET_EXPIRY_MS,
+  PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS,
   REGISTRATION_OTP_EXPIRY_MINUTES,
   REGISTRATION_OTP_EXPIRY_MS,
   REGISTRATION_OTP_RESEND_COOLDOWN_MS,
   isEmailConfigured,
 } from '../config/email.js'
-import { sendPasswordResetEmail, sendRegistrationOtpEmail } from './emailService.js'
+import {
+  sendPasswordResetOtpEmail,
+  sendRegistrationOtpEmail,
+} from './emailService.js'
 import Admin from '../models/Admin.js'
 import PendingRegistration from '../models/PendingRegistration.js'
 import User from '../models/User.js'
@@ -458,14 +463,57 @@ export const authenticateWithGoogle = async (credential) => {
   return user
 }
 
-const hashResetToken = (token) =>
-  crypto.createHash('sha256').update(token).digest('hex')
-
-const createPasswordResetToken = () => crypto.randomBytes(32).toString('hex')
-
 const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
-export const requestPasswordReset = async (email) => {
+const sendPasswordResetOtpForUser = async (user, { force = false } = {}) => {
+  if (!isEmailConfigured()) {
+    throw new AppError(
+      'Email verification is not configured. Please contact support or try again later.',
+      503,
+    )
+  }
+
+  const now = Date.now()
+  if (
+    !force &&
+    user.passwordResetLastSentAt &&
+    now - new Date(user.passwordResetLastSentAt).getTime() <
+      PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS
+  ) {
+    const waitSeconds = Math.ceil(
+      (PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS -
+        (now - new Date(user.passwordResetLastSentAt).getTime())) /
+        1000,
+    )
+    throw new AppError(`Please wait ${waitSeconds}s before requesting another code`, 429)
+  }
+
+  const code = createRegistrationOtp()
+  user.passwordResetToken = hashOtp(code)
+  user.passwordResetExpires = new Date(now + PASSWORD_RESET_EXPIRY_MS)
+  user.passwordResetLastSentAt = new Date(now)
+  await user.save()
+
+  const emailResult = await sendPasswordResetOtpEmail({
+    email: user.email,
+    name: user.name,
+    code,
+    expiryMinutes: PASSWORD_RESET_EXPIRY_MINUTES,
+    isSettingPassword: !user.password,
+  })
+
+  if (!emailResult?.sent) {
+    throw new AppError('Could not send verification code. Please try again later.', 503)
+  }
+
+  return {
+    email: user.email,
+    expiresInMinutes: PASSWORD_RESET_EXPIRY_MINUTES,
+  }
+}
+
+/** Email a 6-digit OTP so the user can set/reset their password (includes Google-only accounts). */
+export const requestPasswordReset = async (email, { force = true } = {}) => {
   const trimmedEmail = email?.trim().toLowerCase()
 
   if (!trimmedEmail) {
@@ -476,46 +524,59 @@ export const requestPasswordReset = async (email) => {
     throw new AppError('Please enter a valid email address', 400)
   }
 
-  const user = await User.findOne({ email: trimmedEmail }).select('+password +passwordResetToken')
+  const user = await User.findOne({ email: trimmedEmail }).select(
+    '+password +passwordResetToken +passwordResetLastSentAt',
+  )
 
-  if (!user?.password) {
-    return { sent: false }
+  if (!user) {
+    throw new AppError('No account exists with this email address', 404)
   }
 
-  const resetToken = createPasswordResetToken()
-  user.passwordResetToken = hashResetToken(resetToken)
-  user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS)
-  await user.save()
-
-  await sendPasswordResetEmail({
-    email: user.email,
-    name: user.name,
-    resetToken,
-  })
-
-  return { sent: true }
+  return sendPasswordResetOtpForUser(user, { force })
 }
 
-export const resetPasswordWithToken = async (token, password) => {
-  if (!token?.trim()) {
-    throw new AppError('Reset token is required', 400)
+export const resendPasswordResetOtp = async (email) => {
+  return requestPasswordReset(email, { force: false })
+}
+
+export const resetPasswordWithOtp = async ({ email, code, password }) => {
+  const trimmedEmail = email?.trim().toLowerCase()
+  const trimmedCode = String(code || '').trim()
+
+  if (!trimmedEmail) {
+    throw new AppError('Email is required', 400)
+  }
+
+  if (!/^\d{6}$/.test(trimmedCode)) {
+    throw new AppError('Please enter the 6-digit verification code', 400)
   }
 
   validatePassword(password)
 
-  const hashedToken = hashResetToken(token.trim())
-  const user = await User.findOne({
-    passwordResetToken: hashedToken,
-    passwordResetExpires: { $gt: new Date() },
-  }).select('+password +passwordResetToken')
+  const user = await User.findOne({ email: trimmedEmail }).select(
+    '+password +passwordResetToken +passwordResetExpires',
+  )
 
   if (!user) {
-    throw new AppError('This password reset link is invalid or has expired', 400)
+    throw new AppError('No account exists with this email address', 404)
+  }
+
+  if (!user.passwordResetToken || !user.passwordResetExpires) {
+    throw new AppError('No password reset request found. Please start again.', 400)
+  }
+
+  if (user.passwordResetExpires.getTime() < Date.now()) {
+    throw new AppError('This verification code has expired. Please request a new one.', 400)
+  }
+
+  if (user.passwordResetToken !== hashOtp(trimmedCode)) {
+    throw new AppError('Invalid verification code', 400)
   }
 
   user.password = await bcrypt.hash(password, SALT_ROUNDS)
   user.passwordResetToken = ''
   user.passwordResetExpires = undefined
+  user.passwordResetLastSentAt = undefined
   await user.save()
 
   return user

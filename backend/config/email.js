@@ -29,6 +29,8 @@ export const REGISTRATION_OTP_EXPIRY_MS = REGISTRATION_OTP_EXPIRY_MINUTES * 60 *
 
 export const REGISTRATION_OTP_RESEND_COOLDOWN_MS = 60 * 1000
 
+export const PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS = 2 * 60 * 1000
+
 export const formatPasswordResetExpiryLabel = (
   minutes = PASSWORD_RESET_EXPIRY_MINUTES,
 ) => {
