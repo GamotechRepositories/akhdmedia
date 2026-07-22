@@ -55,7 +55,7 @@ const ForgotPassword = () => {
       setOtp('')
       setPassword('')
       setConfirmPassword('')
-      setResendCooldown(120)
+      setResendCooldown(300)
     } catch (submitError) {
       setError(submitError.message || 'Could not send verification code')
     } finally {
@@ -103,7 +103,7 @@ const ForgotPassword = () => {
 
     try {
       await resendPasswordResetOtp(normalizedEmail)
-      setResendCooldown(120)
+      setResendCooldown(300)
     } catch (submitError) {
       setError(submitError.message || 'Could not resend code')
     } finally {

@@ -60,7 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (mounted) setState(() {});
   }
 
-  void _startResendCooldown([int seconds = 60]) {
+  void _startResendCooldown([int seconds = 300]) {
     _resendTimer?.cancel();
     setState(() => _resendCooldown = seconds);
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -543,7 +543,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 _resending
                     ? 'Sending...'
                     : _resendCooldown > 0
-                        ? 'Resend code in ${_resendCooldown}s'
+                        ? 'Resend code in ${_resendCooldown ~/ 60}:${(_resendCooldown % 60).toString().padLeft(2, '0')}'
                         : 'Resend code',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,

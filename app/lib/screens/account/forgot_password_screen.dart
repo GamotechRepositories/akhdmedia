@@ -48,7 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (mounted) setState(() {});
   }
 
-  void _startResendCooldown([int seconds = 120]) {
+  void _startResendCooldown([int seconds = 300]) {
     _resendTimer?.cancel();
     setState(() => _resendCooldown = seconds);
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {

@@ -16,25 +16,25 @@ export const getFrontendUrl = () => {
 }
 
 export const PASSWORD_RESET_EXPIRY_MINUTES = Number(
-  process.env.PASSWORD_RESET_EXPIRY_MINUTES || 10,
+  process.env.PASSWORD_RESET_EXPIRY_MINUTES || 5,
 )
 
 export const PASSWORD_RESET_EXPIRY_MS = PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000
 
 export const REGISTRATION_OTP_EXPIRY_MINUTES = Number(
-  process.env.REGISTRATION_OTP_EXPIRY_MINUTES || 10,
+  process.env.REGISTRATION_OTP_EXPIRY_MINUTES || 5,
 )
 
 export const REGISTRATION_OTP_EXPIRY_MS = REGISTRATION_OTP_EXPIRY_MINUTES * 60 * 1000
 
-export const REGISTRATION_OTP_RESEND_COOLDOWN_MS = 60 * 1000
+export const REGISTRATION_OTP_RESEND_COOLDOWN_MS = 5 * 60 * 1000
 
-export const PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS = 2 * 60 * 1000
+export const PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS = 5 * 60 * 1000
 
 export const formatPasswordResetExpiryLabel = (
   minutes = PASSWORD_RESET_EXPIRY_MINUTES,
 ) => {
-  const value = Number(minutes) || 10
+  const value = Number(minutes) || 5
 
   if (value === 1) return '1 minute'
   if (value < 60) return `${value} minutes`

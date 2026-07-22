@@ -100,7 +100,7 @@ const Register = () => {
       )
       setStep('otp')
       setOtp('')
-      setResendCooldown(60)
+      setResendCooldown(300)
     } catch (submitError) {
       setError(submitError.message || 'Could not send verification code')
     } finally {
@@ -137,7 +137,7 @@ const Register = () => {
 
     try {
       await resendRegisterOtp(email.trim().toLowerCase())
-      setResendCooldown(60)
+      setResendCooldown(300)
     } catch (submitError) {
       setError(submitError.message || 'Could not resend code')
     } finally {
@@ -386,7 +386,9 @@ const Register = () => {
                 {resending
                   ? 'Sending...'
                   : resendCooldown > 0
-                    ? `Resend code in ${resendCooldown}s`
+                    ? `Resend code in ${Math.floor(resendCooldown / 60)}:${String(
+                        resendCooldown % 60,
+                      ).padStart(2, '0')}`
                     : 'Resend code'}
               </button>
               <button
