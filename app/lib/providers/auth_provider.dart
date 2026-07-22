@@ -70,6 +70,53 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<String> sendRegisterOtp({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    error = null;
+    try {
+      return await _authService.sendRegisterOtp(
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+      );
+    } catch (e) {
+      error = ApiClient.unwrapError(e).toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<String> resendRegisterOtp(String email) async {
+    error = null;
+    try {
+      return await _authService.resendRegisterOtp(email);
+    } catch (e) {
+      error = ApiClient.unwrapError(e).toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> verifyRegisterOtp({
+    required String email,
+    required String code,
+  }) async {
+    error = null;
+    try {
+      user = await _authService.verifyRegisterOtp(email: email, code: code);
+      notifyListeners();
+    } catch (e) {
+      error = ApiClient.unwrapError(e).toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<GoogleSignInOutcome> signInWithGoogle() async {
     error = null;
     try {

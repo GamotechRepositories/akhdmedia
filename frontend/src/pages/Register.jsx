@@ -37,7 +37,6 @@ const Register = () => {
   const [resending, setResending] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [error, setError] = useState('')
-  const [info, setInfo] = useState('')
 
   const redirectTo = location.state?.from || '/'
   const isBusy = submitting || loading || resending
@@ -71,7 +70,6 @@ const Register = () => {
   const handleSubmitDetails = async (event) => {
     event.preventDefault()
     setError('')
-    setInfo('')
 
     if (!acceptedTerms) {
       showTermsRequired()
@@ -93,7 +91,7 @@ const Register = () => {
     setSubmitting(true)
 
     try {
-      const response = await sendRegisterOtp(
+      await sendRegisterOtp(
         name,
         email.trim().toLowerCase(),
         normalizePhoneValue(phone),
@@ -102,7 +100,6 @@ const Register = () => {
       setStep('otp')
       setOtp('')
       setResendCooldown(60)
-      setInfo(response.message || `A verification code has been sent to ${email}`)
     } catch (submitError) {
       setError(submitError.message || 'Could not send verification code')
     } finally {
@@ -113,7 +110,6 @@ const Register = () => {
   const handleVerifyOtp = async (event) => {
     event.preventDefault()
     setError('')
-    setInfo('')
 
     if (!/^\d{6}$/.test(otp.trim())) {
       setError('Please enter the 6-digit verification code')
@@ -136,13 +132,11 @@ const Register = () => {
     if (resendCooldown > 0 || resending) return
 
     setError('')
-    setInfo('')
     setResending(true)
 
     try {
-      const response = await resendRegisterOtp(email.trim().toLowerCase())
+      await resendRegisterOtp(email.trim().toLowerCase())
       setResendCooldown(60)
-      setInfo(response.message || 'A new verification code has been sent')
     } catch (submitError) {
       setError(submitError.message || 'Could not resend code')
     } finally {
@@ -408,7 +402,6 @@ const Register = () => {
                 onClick={() => {
                   setStep('details')
                   setOtp('')
-                  setInfo('')
                   setError('')
                 }}
                 disabled={isBusy}
@@ -432,13 +425,6 @@ const Register = () => {
         }
         message={error}
         onClose={() => setError('')}
-      />
-
-      <AlertModal
-        open={Boolean(info) && !error}
-        title="Check your email"
-        message={info}
-        onClose={() => setInfo('')}
       />
     </>
   )

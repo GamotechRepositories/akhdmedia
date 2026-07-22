@@ -34,6 +34,41 @@ class AuthService {
     return _parseUser(response);
   }
 
+  Future<String> sendRegisterOtp({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    final response = await _api.postJson('/user/auth/register/send-otp', data: {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'password': password,
+    });
+    return response['message']?.toString() ??
+        'A verification code has been sent to your email.';
+  }
+
+  Future<String> resendRegisterOtp(String email) async {
+    final response = await _api.postJson('/user/auth/register/resend-otp', data: {
+      'email': email.trim(),
+    });
+    return response['message']?.toString() ??
+        'A new verification code has been sent.';
+  }
+
+  Future<AppUser> verifyRegisterOtp({
+    required String email,
+    required String code,
+  }) async {
+    final response = await _api.postJson('/user/auth/register/verify-otp', data: {
+      'email': email.trim(),
+      'code': code.trim(),
+    });
+    return _parseUser(response);
+  }
+
   Future<AppUser> login({
     required String email,
     required String password,
