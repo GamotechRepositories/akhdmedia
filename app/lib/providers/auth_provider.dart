@@ -182,10 +182,7 @@ class AuthProvider extends ChangeNotifier {
     return _authService.resendPasswordResetOtp(email);
   }
 
-<<<<<<< Updated upstream
-=======
   /// Mirrors web reset: verify OTP, set password, then signed-in session.
->>>>>>> Stashed changes
   Future<void> resetPasswordWithOtp({
     required String email,
     required String code,

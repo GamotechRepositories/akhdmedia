@@ -4,24 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-<<<<<<< Updated upstream
-import '../../core/theme/app_spacing.dart';
-=======
->>>>>>> Stashed changes
 import '../../core/utils/auth_navigation.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_client.dart';
-<<<<<<< Updated upstream
-import '../../widgets/auth/auth_modal_shell.dart';
-import '../../widgets/auth/otp_digit_fields.dart';
-
-enum _ForgotStep { email, otp }
-=======
 import '../../widgets/auth/auth_modal_shell.dart' show showAuthErrorDialog;
 import '../../widgets/auth/auth_screen_layout.dart';
 import '../../widgets/auth/otp_digit_fields.dart';
->>>>>>> Stashed changes
 
 enum _ForgotStep { email, otp }
 
@@ -81,8 +70,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _otpCode = '';
     _otpFieldsKey.currentState?.clear();
   }
-<<<<<<< Updated upstream
-=======
 
   void _goBackToEmail() {
     setState(() {
@@ -92,7 +79,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _confirmPasswordCtrl.clear();
     });
   }
->>>>>>> Stashed changes
 
   @override
   void dispose() {
@@ -130,12 +116,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendOtp() async {
-<<<<<<< Updated upstream
-    setState(() => _submitting = true);
-
-    try {
-      await context.read<AuthProvider>().requestPasswordReset(_emailNormalized);
-=======
     final email = _emailNormalized;
     if (email.isEmpty) {
       await showAuthErrorDialog(
@@ -150,7 +130,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       await context.read<AuthProvider>().requestPasswordReset(email);
->>>>>>> Stashed changes
       if (!mounted) return;
       setState(() {
         _step = _ForgotStep.otp;
@@ -247,8 +226,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-<<<<<<< Updated upstream
-=======
   String get _resendLabel {
     if (_resending) return 'Sending...';
     if (_resendCooldown > 0) {
@@ -259,28 +236,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return 'Resend code';
   }
 
->>>>>>> Stashed changes
   @override
   Widget build(BuildContext context) {
     final loading = _submitting || _resending;
     final isOtpStep = _step == _ForgotStep.otp;
 
-<<<<<<< Updated upstream
-    return AuthModalShell(
-      title: isOtpStep ? 'Verify & Set Password' : 'Forgot Password',
-      subtitle: isOtpStep
-          ? 'Enter the code from your email and choose a new password.'
-          : "Enter your email and we'll send a verification code. Works for Google accounts too.",
-      closeLabel: 'Close forgot password',
-      onClose: () {
-        if (isOtpStep && !loading) {
-          setState(() {
-            _step = _ForgotStep.email;
-            _clearOtp();
-            _passwordCtrl.clear();
-            _confirmPasswordCtrl.clear();
-          });
-=======
     return AuthScreenShell(
       scrollable: isOtpStep,
       centerContent: !isOtpStep,
@@ -288,136 +248,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       onBack: () {
         if (isOtpStep) {
           _goBackToEmail();
->>>>>>> Stashed changes
           return;
         }
         context.go(_loginPath);
       },
-<<<<<<< Updated upstream
-      child: AuthFormCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (!isOtpStep) ...[
-              AuthTextField(
-                label: 'Email',
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                placeholder: 'you@example.com',
-                textInputAction: TextInputAction.done,
-                enabled: !loading,
-                onSubmitted: (_) => _sendOtp(),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              AuthPrimaryButton(
-                label: _submitting ? 'Sending...' : 'Send verification code',
-                loading: _submitting,
-                onPressed: loading ? null : _sendOtp,
-              ),
-            ] else ...[
-              Text(
-                'Enter the 6-digit code we sent to $_emailNormalized',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              OtpDigitFields(
-                key: _otpFieldsKey,
-                enabled: !loading,
-                onChanged: (value) {
-                  setState(() => _otpCode = value);
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AuthTextField(
-                label: 'New Password',
-                controller: _passwordCtrl,
-                placeholder: 'At least 6 characters',
-                obscureText: _obscurePassword,
-                textInputAction: TextInputAction.next,
-                enabled: !loading,
-                suffixIcon: IconButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () =>
-                      setState(() => _obscurePassword = !_obscurePassword),
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AuthTextField(
-                label: 'Confirm Password',
-                controller: _confirmPasswordCtrl,
-                placeholder: 'Re-enter your password',
-                obscureText: _obscureConfirmPassword,
-                textInputAction: TextInputAction.done,
-                enabled: !loading,
-                onSubmitted: (_) {
-                  if (_otpReady && _passwordsMatch) _verifyAndReset();
-                },
-                suffixIcon: IconButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () => setState(
-                    () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                  ),
-                  icon: Icon(
-                    _obscureConfirmPassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              AuthPrimaryButton(
-                label: _submitting ? 'Updating...' : 'Verify & update password',
-                loading: _submitting,
-                onPressed: !loading && _otpReady && _passwordsMatch
-                    ? _verifyAndReset
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextButton(
-                onPressed:
-                    loading || _resendCooldown > 0 ? null : _resendOtp,
-                child: Text(
-                  _resending
-                      ? 'Sending...'
-                      : _resendCooldown > 0
-                          ? 'Resend code in ${_resendCooldown ~/ 60}:${(_resendCooldown % 60).toString().padLeft(2, '0')}'
-                          : 'Resend code',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: loading || _resendCooldown > 0
-                        ? Colors.grey
-                        : const Color(0xFF111827),
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: loading
-                    ? null
-                    : () => setState(() {
-                          _step = _ForgotStep.email;
-                          _clearOtp();
-                          _passwordCtrl.clear();
-                          _confirmPasswordCtrl.clear();
-                        }),
-                child: Text(
-                  'Change email',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-=======
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -455,7 +289,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               onTap: () => context.go(_loginPath),
             ),
           ] else ...[
->>>>>>> Stashed changes
             Text.rich(
               TextSpan(
                 style: TextStyle(
@@ -464,29 +297,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   color: Colors.grey.shade700,
                 ),
                 children: [
-<<<<<<< Updated upstream
-                  const TextSpan(text: 'Remember your password? '),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.baseline,
-                    baseline: TextBaseline.alphabetic,
-                    child: GestureDetector(
-                      onTap: loading ? null : () => context.go(_loginPath),
-                      child: const Text(
-                        'Sign in',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-=======
                   const TextSpan(text: 'Enter the 6-digit code we sent to '),
                   TextSpan(
                     text: _emailNormalized,
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       color: AuthScreenColors.textDark,
->>>>>>> Stashed changes
                     ),
                   ),
                 ],
