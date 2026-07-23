@@ -6,7 +6,12 @@ import OrderAmountSummary from '../components/OrderAmountSummary'
 import { getOrderLineAmountBreakdown } from '../utils/orderAmounts'
 import PageLoader from '../components/ui/PageLoader'
 import FormStep from '../components/FormStep'
-import { compactFormClass, inputClass, secondaryBtnClass, actionDeleteClass } from '../components/ui/adminUi'
+import { compactFormClass, inputClass } from '../components/ui/adminUi'
+
+const detailActionBtnClass =
+  'inline-flex w-full items-center justify-center rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold transition sm:px-5'
+const deleteTransactionBtnClass = `${detailActionBtnClass} border-red-200 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50`
+const backToTransactionsBtnClass = `${detailActionBtnClass} border-slate-300 text-slate-700 hover:bg-slate-50`
 
 const PURCHASE_REASON_LABELS = {
   personal: 'Personal collection',
@@ -125,7 +130,7 @@ const TransactionDetail = () => {
           message={failureMessage}
           onClose={() => setErrorDismissed(true)}
         />
-        <Link to="/transactions" state={backState} className={secondaryBtnClass}>
+        <Link to="/transactions" state={backState} className={`${backToTransactionsBtnClass} sm:w-auto`}>
           Back to Transactions
         </Link>
       </div>
@@ -138,16 +143,16 @@ const TransactionDetail = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-end gap-3">
+      <div className="grid w-full gap-3 sm:ml-auto sm:w-auto sm:grid-cols-2">
         <button
           type="button"
           onClick={handleDelete}
           disabled={deleting}
-          className={actionDeleteClass}
+          className={deleteTransactionBtnClass}
         >
           {deleting ? 'Deleting...' : 'Delete Transaction'}
         </button>
-        <Link to="/transactions" state={backState} className={secondaryBtnClass}>
+        <Link to="/transactions" state={backState} className={backToTransactionsBtnClass}>
           Back to Transactions
         </Link>
       </div>

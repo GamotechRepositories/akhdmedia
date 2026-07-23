@@ -1,17 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
 
-export const usePagination = (items, itemsPerPage = 102) => {
-  const [page, setPage] = useState(1);
+export const usePagination = (items, itemsPerPage = 102, options = {}) => {
+  const { page: controlledPage, onPageChange } = options;
+  const isControlled =
+    typeof controlledPage === 'number' && typeof onPageChange === 'function';
+  const [uncontrolledPage, setUncontrolledPage] = useState(1);
+  const page = isControlled ? controlledPage : uncontrolledPage;
+
+  const setPage = (nextPage) => {
+    if (isControlled) onPageChange(nextPage);
+    else setUncontrolledPage(nextPage);
+  };
 
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
 
   useEffect(() => {
-    setPage(1);
-  }, [items.length, itemsPerPage]);
+    if (!isControlled) setUncontrolledPage(1);
+  }, [items.length, itemsPerPage, isControlled]);
 
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    if (page <= totalPages) return;
+    if (isControlled) onPageChange(totalPages);
+    else setUncontrolledPage(totalPages);
+  }, [page, totalPages, isControlled, onPageChange]);
 
   const paginatedItems = useMemo(() => {
     const start = (page - 1) * itemsPerPage;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/catalog/FilterSidebar';
@@ -12,6 +12,12 @@ import {
 } from '../constants/layout';
 import { productHasActor } from '../utils/productActors';
 import {
+  applyCatalogFiltersToSearchParams,
+  clearCatalogFilterParams,
+  parseCatalogFiltersFromSearchParams,
+  parseCatalogPageFromSearchParams,
+} from '../utils/catalogFilterParams';
+import {
   useCatalogFilters,
   extractCatalogFacets,
   filterByCategory,
@@ -20,7 +26,7 @@ import { usePagination } from '../hooks/usePagination';
 
 const CategoryPage = () => {
   const { category, subCategory } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('search')?.trim() || '';
   const actorId = searchParams.get('actor')?.trim() || '';
   const {
@@ -35,7 +41,49 @@ const CategoryPage = () => {
     ? getSubCategoryLabel(category, subCategory)
     : null;
 
-  const [filters, setFilters] = useState(DEFAULT_CATALOG_FILTERS);
+  const filters = useMemo(
+    () => parseCatalogFiltersFromSearchParams(searchParams),
+    [searchParams],
+  );
+  const pageFromUrl = useMemo(
+    () => parseCatalogPageFromSearchParams(searchParams),
+    [searchParams],
+  );
+
+  const updateFilters = useCallback(
+    (nextFilters, { resetPage = true } = {}) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          applyCatalogFiltersToSearchParams(params, nextFilters);
+          if (resetPage) params.delete('page');
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const clearFilters = useCallback(() => {
+    updateFilters(DEFAULT_CATALOG_FILTERS);
+  }, [updateFilters]);
+
+  const handlePageChange = useCallback(
+    (nextPage) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (nextPage > 1) params.set('page', String(nextPage));
+          else params.delete('page');
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const [showFilters, setShowFilters] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +169,10 @@ const CategoryPage = () => {
 
   const itemsPerPage = 102;
   const { paginatedItems, range, page, totalPages, pageNumbers, goToPage } =
-    usePagination(filteredProducts, itemsPerPage);
+    usePagination(filteredProducts, itemsPerPage, {
+      page: pageFromUrl,
+      onPageChange: handlePageChange,
+    });
 
   useEffect(() => {
     setIsLoading(true);
@@ -129,9 +180,21 @@ const CategoryPage = () => {
     return () => window.clearTimeout(timer);
   }, [category, subCategory, filters, catalogLoading, searchQuery, actorId]);
 
+  const listingScope = `${category || ''}|${subCategory || ''}|${actorId || ''}`;
+  const prevListingScopeRef = useRef(listingScope);
+
   useEffect(() => {
-    setFilters(DEFAULT_CATALOG_FILTERS);
-  }, [category, subCategory, actorId]);
+    if (prevListingScopeRef.current === listingScope) return;
+    prevListingScopeRef.current = listingScope;
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        clearCatalogFilterParams(params);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [listingScope, setSearchParams]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -213,12 +276,8 @@ const CategoryPage = () => {
           <div
             className={`
               ${showMobileFilters ? 'block' : 'hidden'}
-              lg:block
+              ${showFilters ? 'lg:block' : 'lg:hidden'}
               w-full lg:w-1/4 lg:flex-shrink-0
-              lg:transition-transform lg:duration-500 lg:ease-[cubic-bezier(0.25,0.1,0.25,1)]
-              ${showFilters
-                ? 'lg:translate-x-0 lg:pointer-events-auto'
-                : 'lg:-translate-x-full lg:pointer-events-none lg:absolute lg:left-0 lg:overflow-hidden'}
               ${showMobileFilters
                 ? 'fixed inset-0 z-50 overflow-y-auto bg-white p-4 pb-28 lg:relative lg:z-auto lg:bg-transparent lg:p-0 lg:overflow-visible'
                 : ''}
@@ -241,14 +300,14 @@ const CategoryPage = () => {
               resolutions={resolutions}
               fpsOptions={fps}
               onFilterChange={(next) => {
-                setFilters(next);
+                updateFilters(next);
                 if (window.innerWidth < 1024) setShowMobileFilters(false);
               }}
-              onClearFilters={() => setFilters(DEFAULT_CATALOG_FILTERS)}
+              onClearFilters={clearFilters}
             />
           </div>
 
-          <div className={`flex-1 transition-all duration-500 ${showFilters ? '' : 'lg:-translate-y-2'}`}>
+          <div className="min-w-0 flex-1 transition-all duration-300">
             {isLoading ? (
               <div className={gridClass}>
                 {Array.from({ length: 8 }, (_, i) => (
@@ -288,7 +347,7 @@ const CategoryPage = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setFilters(DEFAULT_CATALOG_FILTERS)}
+                    onClick={clearFilters}
                     className="font-medium text-gray-900 underline underline-offset-4"
                   >
                     Clear filters

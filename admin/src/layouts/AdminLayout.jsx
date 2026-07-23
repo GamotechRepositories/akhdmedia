@@ -121,8 +121,8 @@ const AdminLayout = () => {
         <div className="border-b border-white/10 px-6 py-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="text-white">
-                <IconLogo />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                <IconLogo className="h-8 w-8" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400">

@@ -10,7 +10,7 @@ export const CATALOG_PRODUCT_GRID =
   'grid grid-cols-2 gap-3.5 sm:gap-5 md:gap-6 lg:grid-cols-3';
 
 export const CATALOG_PRODUCT_GRID_EXPANDED =
-  'grid grid-cols-2 gap-3.5 sm:gap-5 md:gap-6 lg:grid-cols-3';
+  'grid grid-cols-2 gap-3.5 sm:gap-5 md:gap-6 lg:grid-cols-4';
 
 export const PAGE_CONTAINER = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
