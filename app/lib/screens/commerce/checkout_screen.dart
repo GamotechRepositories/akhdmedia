@@ -29,6 +29,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _razorpay = RazorpayCheckout();
   final _paypal = PayPalCheckout();
 
+  static const _reasonsRequiringDetail = {'digital', 'outlet', 'other'};
+
+  static const _reasonDetailConfig = {
+    'digital': (
+      label: 'Company details *',
+      hint: 'Please fill your Digital Media Details',
+      validation: 'Please fill your Digital Media Details',
+    ),
+    'outlet': (
+      label: 'Company details *',
+      hint: 'Please fill your media agency company details.',
+      validation: 'Please fill your media agency company details.',
+    ),
+    'other': (
+      label: 'Please specify *',
+      hint: 'Where will you use this video?',
+      validation: 'Please describe how you will use the video',
+    ),
+  };
+
   int _step = 0;
   bool _loadingProfile = true;
   bool _processing = false;
@@ -177,8 +197,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (_emailCtrl.text.trim().isEmpty) return 'Please enter your email';
     if (_phoneCtrl.text.trim().isEmpty) return 'Please enter your phone number';
     if (_selectedReason == null) return 'Please select where you will use the video';
-    if (_selectedReason == 'other' && _otherReasonCtrl.text.trim().isEmpty) {
-      return 'Please describe how you will use the video';
+    final detailConfig = _reasonDetailConfig[_selectedReason];
+    if (detailConfig != null && _otherReasonCtrl.text.trim().isEmpty) {
+      return detailConfig.validation;
     }
     if (!_acceptedTerms) return 'Please accept the terms and conditions';
     if (!_acceptedLicensePolicy) {
@@ -451,15 +472,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: _UsageOptionTile(
                   label: reason.$2,
                   selected: _selectedReason == reason.$1,
-                  onTap: () => setState(() => _selectedReason = reason.$1),
+                  onTap: () {
+                    setState(() {
+                      if (_selectedReason != reason.$1) {
+                        _otherReasonCtrl.clear();
+                      }
+                      _selectedReason = reason.$1;
+                    });
+                  },
                 ),
               ),
             ),
-            if (_selectedReason == 'other') ...[
+            if (_reasonsRequiringDetail.contains(_selectedReason)) ...[
               const SizedBox(height: 4),
+              _FieldLabel(
+                text: _reasonDetailConfig[_selectedReason]!.label,
+              ),
+              const SizedBox(height: 7),
               _FramedInputField(
                 controller: _otherReasonCtrl,
-                hintText: 'Describe your use',
+                hintText: _reasonDetailConfig[_selectedReason]!.hint,
                 maxLines: 2,
               ),
             ],

@@ -70,4 +70,18 @@ class CartProvider extends ChangeNotifier {
     cart = await _cartService.clearCart();
     notifyListeners();
   }
+
+  /// Clears server cart (while still authenticated) and resets local state.
+  Future<void> clearOnLogout() async {
+    try {
+      await _cartService.clearCart();
+    } catch (_) {
+      // Logout should still proceed even if cart clear fails.
+    } finally {
+      cart = const CartState();
+      error = null;
+      loading = false;
+      notifyListeners();
+    }
+  }
 }

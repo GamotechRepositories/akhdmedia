@@ -35,6 +35,9 @@ class ProfileHubScreen extends StatelessWidget {
       ),
     );
     if (confirmed == true && context.mounted) {
+      final cart = context.read<CartProvider>();
+      await cart.clearOnLogout();
+      if (!context.mounted) return;
       await context.read<AuthProvider>().logout();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

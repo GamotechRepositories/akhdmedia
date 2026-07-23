@@ -22,6 +22,8 @@ import {
   updateUserProfile,
   verifyRegistrationOtp,
 } from '../services/userAuthService.js'
+import { clearCartItems } from '../services/cartService.js'
+import { CART_SESSION_COOKIE } from '../middleware/cartSession.js'
 
 const sendAuthResponse = (res, user, message) => {
   const token = signUserToken(user)
@@ -120,6 +122,15 @@ export const resetPassword = asyncHandler(async (req, res) => {
 })
 
 export const logout = asyncHandler(async (req, res) => {
+  const sessionId = req.cookies?.[CART_SESSION_COOKIE]
+  if (sessionId) {
+    try {
+      await clearCartItems(sessionId)
+    } catch (error) {
+      console.warn('[auth] Failed to clear cart on logout:', error?.message || error)
+    }
+  }
+
   res.clearCookie(getUserCookieName(), getUserCookieOptions())
 
   res.json({

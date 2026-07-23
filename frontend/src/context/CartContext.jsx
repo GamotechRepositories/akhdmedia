@@ -102,6 +102,17 @@ export const CartProvider = ({ children }) => {
     applyCartResponse(response);
   }, [applyCartResponse]);
 
+  const clearOnLogout = useCallback(async () => {
+    try {
+      await cartAPI.clearCart();
+    } catch {
+      // Logout should still proceed even if cart clear fails.
+    } finally {
+      setCart([]);
+      setCartMeta(emptyCart);
+    }
+  }, []);
+
   const applyPromoCode = useCallback(async (code) => {
     const response = await cartAPI.applyPromoCode(code);
     applyCartResponse(response);
@@ -156,6 +167,7 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        clearOnLogout,
         applyPromoCode,
         removePromoCode,
         getCartTotal,

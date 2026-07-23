@@ -129,6 +129,10 @@ class AuthService {
         'A new verification code has been sent.';
   }
 
+<<<<<<< Updated upstream
+=======
+  /// Mirrors web `resetPassword(email, code, password)` → `POST /user/auth/reset-password`.
+>>>>>>> Stashed changes
   Future<AppUser> resetPasswordWithOtp({
     required String email,
     required String code,

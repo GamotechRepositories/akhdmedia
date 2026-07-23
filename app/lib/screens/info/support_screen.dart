@@ -429,16 +429,20 @@ class _SupportHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Row(
       children: [
-        Text(
-          'Support',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+        IconButton(
+          onPressed: () {
+            if (context.canPop()) context.pop();
+          },
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
         ),
-        SizedBox(height: 2),
-        Text(
-          "We're here to help you",
-          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        const Text(
+          'Support',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
         ),
       ],
     );
@@ -510,7 +514,7 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
     );
   }
 }

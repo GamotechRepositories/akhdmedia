@@ -4,16 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+<<<<<<< Updated upstream
 import '../../core/theme/app_spacing.dart';
+=======
+>>>>>>> Stashed changes
 import '../../core/utils/auth_navigation.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_client.dart';
+<<<<<<< Updated upstream
 import '../../widgets/auth/auth_modal_shell.dart';
 import '../../widgets/auth/otp_digit_fields.dart';
 
 enum _ForgotStep { email, otp }
+=======
+import '../../widgets/auth/auth_modal_shell.dart' show showAuthErrorDialog;
+import '../../widgets/auth/auth_screen_layout.dart';
+import '../../widgets/auth/otp_digit_fields.dart';
+>>>>>>> Stashed changes
 
+enum _ForgotStep { email, otp }
+
+/// Mirrors frontend `ForgotPassword.jsx` — email OTP then set new password.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key, this.redirectTo});
 
@@ -69,6 +81,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _otpCode = '';
     _otpFieldsKey.currentState?.clear();
   }
+<<<<<<< Updated upstream
+=======
+
+  void _goBackToEmail() {
+    setState(() {
+      _step = _ForgotStep.email;
+      _clearOtp();
+      _passwordCtrl.clear();
+      _confirmPasswordCtrl.clear();
+    });
+  }
+>>>>>>> Stashed changes
 
   @override
   void dispose() {
@@ -106,10 +130,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendOtp() async {
+<<<<<<< Updated upstream
     setState(() => _submitting = true);
 
     try {
       await context.read<AuthProvider>().requestPasswordReset(_emailNormalized);
+=======
+    final email = _emailNormalized;
+    if (email.isEmpty) {
+      await showAuthErrorDialog(
+        context,
+        title: 'Could not send verification code',
+        message: 'Email is required',
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+
+    try {
+      await context.read<AuthProvider>().requestPasswordReset(email);
+>>>>>>> Stashed changes
       if (!mounted) return;
       setState(() {
         _step = _ForgotStep.otp;
@@ -206,11 +247,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+<<<<<<< Updated upstream
+=======
+  String get _resendLabel {
+    if (_resending) return 'Sending...';
+    if (_resendCooldown > 0) {
+      final minutes = _resendCooldown ~/ 60;
+      final seconds = (_resendCooldown % 60).toString().padLeft(2, '0');
+      return 'Resend code in $minutes:$seconds';
+    }
+    return 'Resend code';
+  }
+
+>>>>>>> Stashed changes
   @override
   Widget build(BuildContext context) {
     final loading = _submitting || _resending;
     final isOtpStep = _step == _ForgotStep.otp;
 
+<<<<<<< Updated upstream
     return AuthModalShell(
       title: isOtpStep ? 'Verify & Set Password' : 'Forgot Password',
       subtitle: isOtpStep
@@ -225,10 +280,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             _passwordCtrl.clear();
             _confirmPasswordCtrl.clear();
           });
+=======
+    return AuthScreenShell(
+      scrollable: isOtpStep,
+      centerContent: !isOtpStep,
+      backEnabled: !loading,
+      onBack: () {
+        if (isOtpStep) {
+          _goBackToEmail();
+>>>>>>> Stashed changes
           return;
         }
         context.go(_loginPath);
       },
+<<<<<<< Updated upstream
       child: AuthFormCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -352,11 +417,54 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
+=======
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AuthLogoHeader(
+            compact: true,
+            title: isOtpStep ? 'Verify & Set Password' : 'Forgot Password',
+            subtitle: isOtpStep
+                ? 'Enter the code from your email and choose a new password.'
+                : "Enter your email and we'll send a verification code. Works for Google accounts too.",
+          ),
+          const SizedBox(height: AuthScreenMetrics.sectionGap),
+          if (!isOtpStep) ...[
+            AuthStyledField(
+              label: 'Email',
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              hint: 'you@example.com',
+              prefixIcon: Icons.mail_outline_rounded,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _sendOtp(),
+              enabled: !loading,
+            ),
+            const SizedBox(height: AuthScreenMetrics.sectionGap),
+            AuthActionButton(
+              label: 'Send verification code',
+              loading: _submitting,
+              onPressed: loading ? null : _sendOtp,
+            ),
+            const SizedBox(height: AuthScreenMetrics.sectionGap),
+            AuthFooterLink(
+              prompt: 'Remember your password? ',
+              actionLabel: 'Sign in',
+              enabled: !loading,
+              onTap: () => context.go(_loginPath),
+            ),
+          ] else ...[
+>>>>>>> Stashed changes
             Text.rich(
-              textAlign: TextAlign.center,
               TextSpan(
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: Colors.grey.shade700,
+                ),
                 children: [
+<<<<<<< Updated upstream
                   const TextSpan(text: 'Remember your password? '),
                   WidgetSpan(
                     alignment: PlaceholderAlignment.baseline,
@@ -371,13 +479,99 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           color: Color(0xFF111827),
                         ),
                       ),
+=======
+                  const TextSpan(text: 'Enter the 6-digit code we sent to '),
+                  TextSpan(
+                    text: _emailNormalized,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AuthScreenColors.textDark,
+>>>>>>> Stashed changes
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: AuthScreenMetrics.fieldGap),
+            OtpDigitFields(
+              key: _otpFieldsKey,
+              enabled: !loading,
+              onChanged: (value) => setState(() => _otpCode = value),
+            ),
+            const SizedBox(height: AuthScreenMetrics.fieldGap),
+            AuthStyledField(
+              label: 'New Password',
+              controller: _passwordCtrl,
+              hint: 'At least 6 characters',
+              prefixIcon: Icons.lock_outline_rounded,
+              obscureText: _obscurePassword,
+              textInputAction: TextInputAction.next,
+              enabled: !loading,
+              suffixIcon: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AuthScreenColors.textMuted,
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: AuthScreenMetrics.fieldGap),
+            AuthStyledField(
+              label: 'Confirm Password',
+              controller: _confirmPasswordCtrl,
+              hint: 'Re-enter your password',
+              prefixIcon: Icons.lock_outline_rounded,
+              obscureText: _obscureConfirmPassword,
+              textInputAction: TextInputAction.done,
+              enabled: !loading,
+              onSubmitted: (_) {
+                if (_otpReady && _passwordsMatch) _verifyAndReset();
+              },
+              suffixIcon: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () =>
+                    setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AuthScreenColors.textMuted,
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: AuthScreenMetrics.sectionGap),
+            AuthActionButton(
+              label: 'Verify & update password',
+              loading: _submitting,
+              onPressed: !loading && _otpReady && _passwordsMatch ? _verifyAndReset : null,
+            ),
+            const SizedBox(height: AuthScreenMetrics.fieldGap),
+            TextButton(
+              onPressed: loading || _resendCooldown > 0 ? null : _resendOtp,
+              child: Text(
+                _resendLabel,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: loading || _resendCooldown > 0
+                      ? Colors.grey
+                      : AuthScreenColors.textDark,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: loading ? null : _goBackToEmail,
+              child: Text(
+                '← Back / change email',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

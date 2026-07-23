@@ -176,7 +176,7 @@ class _MetaBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(5),
@@ -185,8 +185,8 @@ class _MetaBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: Colors.white),
-            const SizedBox(width: 3),
+            Icon(icon, size: 11, color: Colors.white),
+            const SizedBox(width: 2),
           ],
           Text(
             label,
@@ -194,9 +194,9 @@ class _MetaBadge extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
+              letterSpacing: 0.15,
               height: 1.1,
             ),
           ),

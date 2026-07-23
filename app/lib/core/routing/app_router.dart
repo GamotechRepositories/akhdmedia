@@ -113,6 +113,10 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/reset-password',
+      redirect: (context, state) => '/forgot-password',
+    ),
+    GoRoute(
       path: '/register',
       builder: (context, state) {
         return RegisterScreen(redirectTo: state.uri.queryParameters['redirect']);

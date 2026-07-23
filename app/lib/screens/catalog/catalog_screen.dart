@@ -7,7 +7,6 @@ import '../../providers/catalog_provider.dart';
 import '../../widgets/cards/tight_product_card.dart';
 import '../../widgets/common/error_view.dart';
 import '../../widgets/common/loading_view.dart';
-import '../shell/main_shell.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({
@@ -33,7 +32,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
   late String? _actor = widget.initialActor;
   late final TextEditingController _searchController =
       TextEditingController(text: widget.initialSearch ?? '');
+  final FocusNode _searchFocus = FocusNode();
   final ScrollController _scrollController = ScrollController();
+  late bool _searchOpen = (widget.initialSearch ?? '').trim().isNotEmpty;
 
   @override
   void initState() {
@@ -52,6 +53,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
     if (oldWidget.initialSearch != widget.initialSearch &&
         _searchController.text != nextSearch) {
       _searchController.text = nextSearch;
+      if (nextSearch.trim().isNotEmpty) {
+        _searchOpen = true;
+      }
     }
 
     if (oldWidget.initialCategory != widget.initialCategory ||
@@ -70,6 +74,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -82,10 +87,43 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
+  void _toggleSearch() {
+    setState(() {
+      if (_searchOpen) {
+        _searchController.clear();
+        _searchOpen = false;
+        _searchFocus.unfocus();
+      } else {
+        _searchOpen = true;
+      }
+    });
+    if (_searchOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchFocus.requestFocus();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const StoreAppBar(title: 'Videos'),
+      appBar: AppBar(
+        title: const Text('Videos'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _searchOpen ? Icons.close_rounded : Icons.search_rounded,
+              size: 22,
+            ),
+            tooltip: _searchOpen ? 'Close search' : 'Search',
+            onPressed: _toggleSearch,
+          ),
+          IconButton(
+            icon: const Icon(Icons.support_agent_outlined, size: 22),
+            onPressed: () => context.push('/support'),
+          ),
+        ],
+      ),
       body: Consumer<CatalogProvider>(
         builder: (context, catalog, _) {
           if (catalog.loading && catalog.products.isEmpty) {
@@ -143,115 +181,112 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ],
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                ),
-                child: SizedBox(
-                  height: 42,
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search name, clip ID, category...',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500,
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: Colors.grey.shade600,
-                      ),
-                      prefixIconConstraints: const BoxConstraints(
-                        minHeight: 36,
-                        minWidth: 36,
-                      ),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 16),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade200),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF111827),
-                          width: 1.2,
+              if (_searchOpen)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                  ),
+                  child: SizedBox(
+                    height: 42,
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocus,
+                      decoration: InputDecoration(
+                        hintText: 'Search name, clip ID, category...',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade500,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          size: 18,
+                          color: Colors.grey.shade600,
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minHeight: 36,
+                          minWidth: 36,
+                        ),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF111827),
+                            width: 1.2,
+                          ),
                         ),
                       ),
+                      onChanged: (_) => setState(() {}),
                     ),
-                    onChanged: (_) => setState(() {}),
                   ),
                 ),
-              ),
               if (_actor == null)
-                SizedBox(
-                  height: 30,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    children: [
-                      _FilterChip(
-                        label: 'All',
-                        selected: _category == null,
-                        onTap: () {
-                          setState(() {
-                            _category = null;
-                            _subCategory = null;
-                          });
-                          _scrollToTop();
-                        },
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: _searchOpen ? 0 : AppSpacing.sm,
+                    bottom: AppSpacing.sm,
+                  ),
+                  child: SizedBox(
+                    height: 30,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
                       ),
-                      ...catalog.categories.map((category) {
-                        return _FilterChip(
-                          label: category.navLabel,
-                          selected: _category == category.slug,
+                      children: [
+                        _FilterChip(
+                          label: 'All',
+                          selected: _category == null,
                           onTap: () {
                             setState(() {
-                              _category = category.slug;
+                              _category = null;
                               _subCategory = null;
                             });
                             _scrollToTop();
                           },
-                        );
-                      }),
-                    ],
+                        ),
+                        ...catalog.categories.map((category) {
+                          return _FilterChip(
+                            label: category.navLabel,
+                            selected: _category == category.slug,
+                            onTap: () {
+                              setState(() {
+                                _category = category.slug;
+                                _subCategory = null;
+                              });
+                              _scrollToTop();
+                            },
+                          );
+                        }),
+                      ],
+                    ),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                ),
-                child: Text(
-                  'Showing ${filtered.length} clips',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ),
               Expanded(
                 child: filtered.isEmpty
                     ? const Center(child: Text('No clips match your filters.'))
@@ -263,7 +298,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           AppSpacing.lg,
                           AppSpacing.lg,
                         ),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: AppSpacing.sm,
                           mainAxisSpacing: AppSpacing.xs,

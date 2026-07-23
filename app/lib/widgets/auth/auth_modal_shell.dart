@@ -13,6 +13,7 @@ class AuthModalShell extends StatelessWidget {
     this.subtitle,
     this.onClose,
     this.closeLabel = 'Close',
+    this.centerContent = false,
   });
 
   final String title;
@@ -20,10 +21,73 @@ class AuthModalShell extends StatelessWidget {
   final Widget child;
   final VoidCallback? onClose;
   final String closeLabel;
+  final bool centerContent;
 
   @override
   Widget build(BuildContext context) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 52),
+              child: Column(
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Semantics(
+                label: closeLabel,
+                button: true,
+                child: IconButton(
+                  onPressed: onClose ?? () => Navigator.of(context).maybePop(),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF374151),
+                    fixedSize: const Size(44, 44),
+                    shape: const CircleBorder(),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  icon: const Icon(Icons.close, size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        child,
+      ],
+    );
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -41,70 +105,25 @@ class AuthModalShell extends StatelessWidget {
             child: Container(color: Colors.black.withValues(alpha: 0.2)),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.lg,
-              ),
-              child: Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 52),
-                        child: Column(
-                          children: [
-                            Text(
-                              title,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                subtitle!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Semantics(
-                          label: closeLabel,
-                          button: true,
-                          child: IconButton(
-                            onPressed: onClose ?? () => Navigator.of(context).maybePop(),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF374151),
-                              fixedSize: const Size(44, 44),
-                              shape: const CircleBorder(),
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            icon: const Icon(Icons.close, size: 20),
-                          ),
-                        ),
-                      ),
-                    ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.lg,
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  child,
-                ],
-              ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - (AppSpacing.lg * 2),
+                    ),
+                    child: centerContent
+                        ? Center(child: content)
+                        : content,
+                  ),
+                );
+              },
             ),
           ),
         ],

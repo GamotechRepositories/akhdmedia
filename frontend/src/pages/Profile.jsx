@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import AlertModal from '../components/AlertModal';
 import OtpDigitInputs from '../components/auth/OtpDigitInputs';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { confirmDeleteAccount, requestDeleteAccount } from '../services/authApi';
 
 const inputClass =
@@ -28,6 +29,7 @@ const EditIcon = () => (
 
 const Profile = () => {
   const { user, logout, updateProfile } = useAuth();
+  const { clearOnLogout } = useCart();
   const navigate = useNavigate();
   const [editingField, setEditingField] = useState(null);
   const [name, setName] = useState('');
@@ -49,6 +51,7 @@ const Profile = () => {
 
   const handleLogout = async () => {
     navigate('/', { replace: true });
+    await clearOnLogout();
     await logout();
   };
 
@@ -127,6 +130,7 @@ const Profile = () => {
       await confirmDeleteAccount(deleteCode.trim());
       setDeleteStep(null);
       navigate('/', { replace: true });
+      await clearOnLogout();
       await logout();
     } catch (confirmError) {
       setDeleteError(confirmError.message || 'Could not delete account');
