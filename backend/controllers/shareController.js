@@ -38,7 +38,7 @@ export const getProductSharePage = asyncHandler(async (req, res) => {
         title: product.name,
         description: product.name,
         pageUrl,
-        imageUrl,
+        imageUrl,                                                                                                                                                                                   
         redirectUrl: pageUrl,
       }),
     )

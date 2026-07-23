@@ -28,15 +28,15 @@ const supportLoader = createPaginatedLoader()
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
-  { id: 'open', label: 'Open' },
-  { id: 'in_progress', label: 'In progress' },
+  { id: 'open', label: 'Submitted' },
+  { id: 'in_progress', label: 'In review' },
   { id: 'resolved', label: 'Resolved' },
   { id: 'closed', label: 'Closed' },
 ]
 
 const STATUS_LABELS = {
-  open: 'Open',
-  in_progress: 'In progress',
+  open: 'Submitted',
+  in_progress: 'In review',
   resolved: 'Resolved',
   closed: 'Closed',
 }

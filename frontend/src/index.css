@@ -40,6 +40,30 @@ body {
   display: none;
 }
 
+.scrollbar-modern {
+  scrollbar-width: thin;
+  scrollbar-color: #c4c9d2 transparent;
+}
+
+.scrollbar-modern::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb {
+  background: #c4c9d2;
+  border-radius: 999px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb:hover {
+  background: #9aa3b2;
+}
+
 .phone-country-input {
   display: flex;
   align-items: stretch;

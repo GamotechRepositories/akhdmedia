@@ -5,8 +5,8 @@ import { POLICY_LINKS } from '../constants/policyLinks';
 import { supportAPI, checkoutAPI } from '../services/commerceApi';
 
 const STATUS_LABELS = {
-  open: 'Open',
-  in_progress: 'In progress',
+  open: 'Submitted',
+  in_progress: 'In review',
   resolved: 'Resolved',
   closed: 'Closed',
 };
@@ -53,7 +53,58 @@ const emptyForm = {
 };
 
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
+  'w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
+
+const ChevronIcon = () => (
+  <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+const SupportHero = ({ title, subtitle, chips = [] }) => (
+  <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-5 py-8 sm:px-8 sm:py-10">
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.12]"
+      style={{
+        backgroundImage:
+          'radial-gradient(circle at 20% 20%, #fff 0.6px, transparent 0.7px), radial-gradient(circle at 80% 60%, #fff 0.6px, transparent 0.7px)',
+        backgroundSize: '28px 28px',
+      }}
+      aria-hidden
+    />
+    <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/5 blur-2xl" aria-hidden />
+    <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-white/5 blur-2xl" aria-hidden />
+
+    <div className="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:text-left">
+      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white text-gray-900 shadow-lg ring-4 ring-white/20 sm:h-24 sm:w-24">
+        <svg className="h-9 w-9 sm:h-10 sm:w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
+          />
+        </svg>
+      </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="text-xl font-bold text-white sm:text-2xl">{title}</h1>
+        <p className="mt-1 text-sm text-gray-300">{subtitle}</p>
+        {chips.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            {chips.map((chip) => (
+              <span
+                key={chip}
+                className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-gray-200 ring-1 ring-white/15"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
 
 const Support = () => {
   const [searchParams] = useSearchParams();
@@ -137,336 +188,431 @@ const Support = () => {
 
   if (submittedTicket) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
-        <div className="rounded-2xl border border-green-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-            <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-[calc(100vh-4rem)] bg-[#f4f5f7] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <SupportHero
+              title="Request submitted"
+              subtitle="A confirmation email is on its way. Our team will review your issue soon."
+              chips={[`Ticket #${submittedTicket}`]}
+            />
+            <div className="flex flex-col items-center px-5 py-10 text-center sm:px-8">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-100">
+                <svg className="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="max-w-md text-sm leading-relaxed text-gray-600">
+                Track progress anytime from My Tickets. We’ll reply by email when there’s an update.
+              </p>
+              <div className="mt-8 flex w-full max-w-sm flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSubmittedTicket('')}
+                  className="w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                >
+                  View My Tickets
+                </button>
+                <Link
+                  to="/"
+                  className="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
+                >
+                  Back to Home
+                </Link>
+              </div>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Request Submitted</h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-600">
-            Your request has been received. A confirmation email has been sent to your inbox.
-            Our team will review your issue and respond as quickly as possible.
-          </p>
-          <p className="mt-4 font-mono text-sm font-semibold text-gray-900">Ticket #{submittedTicket}</p>
-          <p className="mt-2 text-sm text-gray-500">Track status anytime in the My Tickets section below.</p>
-          <button
-            type="button"
-            onClick={() => setSubmittedTicket('')}
-            className="mt-6 inline-flex rounded-xl bg-gray-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
-          >
-            View My Tickets
-          </button>
-          <Link
-            to="/"
-            className="mt-3 inline-flex rounded-xl border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:border-gray-900"
-          >
-            Back to Home
-          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-      <div className="mb-8 text-center">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">Help Center</p>
-        <h1 className="mt-2 text-3xl font-bold text-gray-900">Contact Support</h1>
-        <p className="mt-3 text-sm leading-relaxed text-gray-600">
-          Need help with your license, download email, or payment? Send us a message and our team will get back to you.
-        </p>
-      </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-[#f4f5f7] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <SupportHero
+            title="Contact Support"
+            subtitle="Help with licenses, downloads, payments, and more."
+            chips={['License help', 'Download issues', 'Payments']}
+          />
 
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-gray-700">
-                Full name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="name"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                className={inputClass}
-                placeholder="Your name"
-              />
-            </div>
+          <div className="grid gap-0 lg:grid-cols-[1.4fr_1fr]">
+            <section className="border-b border-gray-100 p-5 sm:p-8 lg:border-b-0 lg:border-r">
+              <div className="mb-5">
+                <h2 className="text-base font-semibold text-gray-900">Send a request</h2>
+                <p className="mt-0.5 text-sm text-gray-500">Tell us what’s wrong and we’ll get back to you</p>
+              </div>
 
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className={inputClass}
-                placeholder="you@email.com"
-              />
-            </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
+                        Full name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        value={form.name}
+                        onChange={handleChange}
+                        required
+                        className={inputClass}
+                        placeholder="Your name"
+                      />
+                    </div>
 
-            <div>
-              <label htmlFor="phone" className="mb-1.5 block text-sm font-medium text-gray-700">
-                Phone
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                className={inputClass}
-                placeholder="+91 ..."
-              />
-            </div>
+                    <div>
+                      <label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={form.email}
+                        onChange={handleChange}
+                        required
+                        className={inputClass}
+                        placeholder="you@email.com"
+                      />
+                    </div>
 
-            <div>
-              <label htmlFor="orderNumber" className="mb-1.5 block text-sm font-medium text-gray-700">
-                Order number
-              </label>
-              <input
-                id="orderNumber"
-                name="orderNumber"
-                value={form.orderNumber}
-                onChange={handleChange}
-                className={inputClass}
-                placeholder="Last 8 digits or full order no."
-              />
-            </div>
+                    <div>
+                      <label htmlFor="phone" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
+                        Phone
+                      </label>
+                      <input
+                        id="phone"
+                        name="phone"
+                        value={form.phone}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="+91 ..."
+                      />
+                    </div>
 
-            <div>
-              <label htmlFor="subject" className="mb-1.5 block text-sm font-medium text-gray-700">
-                Issue type <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="subject"
-                name="subject"
-                value={form.subject}
-                onChange={handleChange}
-                required
-                className={inputClass}
-              >
-                {SUBJECT_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                    <div>
+                      <label htmlFor="orderNumber" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
+                        Order number
+                      </label>
+                      <input
+                        id="orderNumber"
+                        name="orderNumber"
+                        value={form.orderNumber}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="Last 8 digits or full order no."
+                      />
+                    </div>
 
-            <div className="sm:col-span-2">
-              <label htmlFor="message" className="mb-1.5 block text-sm font-medium text-gray-700">
-                Message <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                value={form.message}
-                onChange={handleChange}
-                required
-                minLength={10}
-                rows={6}
-                className={inputClass}
-                placeholder="Describe your issue. Include clip ID or license number if relevant."
-              />
-            </div>
-          </div>
+                    <div>
+                      <label htmlFor="subject" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
+                        Issue type <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="subject"
+                        name="subject"
+                        value={form.subject}
+                        onChange={handleChange}
+                        required
+                        className={inputClass}
+                      >
+                        {SUBJECT_OPTIONS.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-6 w-full rounded-xl bg-gray-900 py-3.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-60"
-          >
-            {submitting ? 'Submitting...' : 'Submit Support Request'}
-          </button>
-      </form>
-
-      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">My Tickets</h2>
-            <p className="mt-1 text-sm text-gray-600">Track your support requests and team replies.</p>
-          </div>
-          <button
-            type="button"
-            onClick={loadTickets}
-            disabled={loadingTickets}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-900 disabled:opacity-60"
-          >
-            {loadingTickets ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-
-        {loadingTickets && tickets.length === 0 ? (
-          <p className="mt-5 text-sm text-gray-500">Loading tickets…</p>
-        ) : ticketsError && tickets.length === 0 ? (
-          <div className="mt-5 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-            {ticketsError}
-          </div>
-        ) : tickets.length === 0 ? (
-          <p className="mt-5 text-sm text-gray-500">No tickets yet. Submit a request above to get started.</p>
-        ) : (
-          <div className="mt-5 space-y-3">
-            {tickets.map((ticket) => (
-              <button
-                key={ticket.id}
-                type="button"
-                onClick={() => setSelectedTicket(ticket)}
-                className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-gray-900"
-              >
-                <div className="min-w-0">
-                  <p className="font-mono text-sm font-semibold text-gray-900">#{ticket.ticketNumber}</p>
-                  <p className="mt-1 text-sm text-gray-700">
-                    {SUBJECT_LABELS[ticket.subject] || ticket.subject}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Updated {formatTicketDate(ticket.lastReplyAt || ticket.updatedAt || ticket.createdAt)}
-                  </p>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="message" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
+                        Message <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        value={form.message}
+                        onChange={handleChange}
+                        required
+                        minLength={10}
+                        rows={5}
+                        className={`${inputClass} resize-none`}
+                        placeholder="Describe your issue. Include clip ID or license number if relevant."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
-                    statusStyles[ticket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
-                  }`}
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-xl bg-gray-900 py-3.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-60"
                 >
-                  {STATUS_LABELS[ticket.status] || ticket.status}
-                </span>
-              </button>
-            ))}
+                  {submitting ? 'Submitting...' : 'Submit Support Request'}
+                </button>
+              </form>
+            </section>
+
+            <aside className="flex flex-col gap-6 p-5 sm:p-8">
+              <div>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900">My Tickets</h2>
+                    <p className="mt-0.5 text-sm text-gray-500">Track requests and replies</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadTickets}
+                    disabled={loadingTickets}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-900 disabled:opacity-60"
+                  >
+                    {loadingTickets ? 'Refreshing…' : 'Refresh'}
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  {loadingTickets && tickets.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+                      Loading tickets…
+                    </div>
+                  ) : ticketsError && tickets.length === 0 ? (
+                    <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {ticketsError}
+                    </div>
+                  ) : tickets.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+                      No tickets yet. Submit a request to get started.
+                    </div>
+                  ) : (
+                    tickets.map((ticket) => (
+                      <button
+                        key={ticket.id}
+                        type="button"
+                        onClick={() => setSelectedTicket(ticket)}
+                        className="group flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-left transition hover:border-gray-300 hover:bg-gray-50"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white">
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M7 8h10M7 12h6m-6 4h10M5 5h14a2 2 0 012 2v12l-4-2H5a2 2 0 01-2-2V7a2 2 0 012-2z"
+                            />
+                          </svg>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-mono text-sm font-semibold text-gray-900">
+                            #{ticket.ticketNumber}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-gray-500">
+                            {SUBJECT_LABELS[ticket.subject] || ticket.subject}
+                          </span>
+                          <span className="mt-1 block text-[11px] text-gray-400">
+                            Updated {formatTicketDate(ticket.lastReplyAt || ticket.updatedAt || ticket.createdAt)}
+                          </span>
+                        </span>
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+                            statusStyles[ticket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
+                          }`}
+                        >
+                          {STATUS_LABELS[ticket.status] || ticket.status}
+                        </span>
+                        <ChevronIcon />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-auto">
+                <h3 className="text-base font-semibold text-gray-900">Policies & Legal</h3>
+                <p className="mt-0.5 text-sm text-gray-500">Quick links before you purchase or write in</p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  {POLICY_LINKS.map((policy) => (
+                    <Link
+                      key={policy.to}
+                      to={policy.to}
+                      className="group flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-300 hover:bg-gray-50"
+                    >
+                      <span className="truncate">{policy.label}</span>
+                      <ChevronIcon />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </aside>
           </div>
-        )}
+        </div>
       </div>
 
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-mono text-lg font-bold text-gray-900">#{selectedTicket.ticketNumber}</p>
-                <p className="mt-1 text-sm text-gray-600">
-                  {SUBJECT_LABELS[selectedTicket.subject] || selectedTicket.subject}
-                </p>
-              </div>
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
-                  statusStyles[selectedTicket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
-                }`}
-              >
-                {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
-              </span>
-            </div>
-
-            <div className="mt-5 space-y-3 border-t border-gray-100 pt-5">
-              <div className="flex gap-3">
-                <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Submitted</p>
-                  <p className="text-xs text-gray-500">{formatTicketDate(selectedTicket.createdAt)}</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div
-                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                    ['in_progress', 'resolved', 'closed'].includes(selectedTicket.status)
-                      ? 'bg-blue-500'
-                      : 'bg-gray-300'
-                  }`}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">In review</p>
-                  <p className="text-xs text-gray-500">
-                    {['in_progress', 'resolved', 'closed'].includes(selectedTicket.status)
-                      ? formatTicketDate(selectedTicket.updatedAt)
-                      : 'Waiting for our team'}
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+          onClick={() => setSelectedTicket(null)}
+        >
+          <div
+            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ticket-detail-title"
+          >
+            <div className="shrink-0 border-b border-gray-100 px-5 pb-4 pt-5 sm:px-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p
+                    id="ticket-detail-title"
+                    className="truncate font-mono text-base font-bold tracking-tight text-gray-900 sm:text-lg"
+                  >
+                    #{selectedTicket.ticketNumber}
+                  </p>
+                  <p className="mt-1 text-sm leading-snug text-gray-500">
+                    {SUBJECT_LABELS[selectedTicket.subject] || selectedTicket.subject}
                   </p>
                 </div>
-              </div>
-              <div className="flex gap-3">
-                <div
-                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                    selectedTicket.replies?.length ? 'bg-blue-500' : 'bg-gray-300'
-                  }`}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Team replied</p>
-                  <p className="text-xs text-gray-500">
-                    {selectedTicket.replies?.length
-                      ? formatTicketDate(selectedTicket.lastReplyAt)
-                      : 'No reply yet'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div
-                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                    ['resolved', 'closed'].includes(selectedTicket.status) ? 'bg-emerald-500' : 'bg-gray-300'
-                  }`}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {selectedTicket.status === 'closed' ? 'Closed' : 'Resolved'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {['resolved', 'closed'].includes(selectedTicket.status)
-                      ? formatTicketDate(selectedTicket.updatedAt)
-                      : 'Pending resolution'}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTicket(null)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
+                  aria-label="Close ticket details"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
 
-            <div className="mt-5">
-              <p className="text-sm font-semibold text-gray-900">Your message</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-                {selectedTicket.message}
-              </p>
-            </div>
+            <div className="scrollbar-modern flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Progress</p>
+                <ol className="relative mt-4 space-y-0">
+                  {[
+                    {
+                      key: 'submitted',
+                      label: 'Submitted',
+                      active: true,
+                      done: true,
+                      color: 'bg-emerald-500',
+                      detail: formatTicketDate(selectedTicket.createdAt),
+                    },
+                    {
+                      key: 'review',
+                      label: 'In review',
+                      active: ['in_progress', 'resolved', 'closed'].includes(selectedTicket.status),
+                      done: ['in_progress', 'resolved', 'closed'].includes(selectedTicket.status),
+                      color: 'bg-blue-500',
+                      detail: ['in_progress', 'resolved', 'closed'].includes(selectedTicket.status)
+                        ? formatTicketDate(selectedTicket.updatedAt)
+                        : 'Waiting for our team',
+                    },
+                    {
+                      key: 'replied',
+                      label: 'Team replied',
+                      active: Boolean(selectedTicket.replies?.length),
+                      done: Boolean(selectedTicket.replies?.length),
+                      color: 'bg-blue-500',
+                      detail: selectedTicket.replies?.length
+                        ? formatTicketDate(selectedTicket.lastReplyAt)
+                        : 'No reply yet',
+                    },
+                    {
+                      key: 'final',
+                      label: selectedTicket.status === 'closed' ? 'Closed' : 'Resolved',
+                      active: ['resolved', 'closed'].includes(selectedTicket.status),
+                      done: ['resolved', 'closed'].includes(selectedTicket.status),
+                      color: 'bg-emerald-500',
+                      detail: ['resolved', 'closed'].includes(selectedTicket.status)
+                        ? formatTicketDate(selectedTicket.updatedAt)
+                        : 'Pending resolution',
+                    },
+                  ].map((step, index, steps) => (
+                    <li key={step.key} className="relative flex gap-3 pb-5 last:pb-0">
+                      {index < steps.length - 1 && (
+                        <span
+                          className={`absolute left-[7px] top-4 h-[calc(100%-8px)] w-0.5 ${
+                            step.done && steps[index + 1].done ? 'bg-gray-300' : 'bg-gray-200'
+                          }`}
+                          aria-hidden
+                        />
+                      )}
+                      <span
+                        className={`relative z-10 mt-1 flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full ring-4 ring-gray-50/80 ${
+                          step.active ? step.color : 'bg-gray-300'
+                        }`}
+                      >
+                        {step.done && (
+                          <svg className="h-2 w-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <div className="min-w-0 pt-0.5">
+                        <p className={`text-sm font-semibold ${step.active ? 'text-gray-900' : 'text-gray-400'}`}>
+                          {step.label}
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-500">{step.detail}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
 
-            {selectedTicket.replies?.length > 0 && (
-              <div className="mt-5 space-y-3">
-                <p className="text-sm font-semibold text-gray-900">Team replies</p>
-                {selectedTicket.replies.map((reply, index) => (
-                  <div key={`${reply.sentAt}-${index}`} className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
-                    <p className="whitespace-pre-wrap leading-relaxed">{reply.message}</p>
-                    {reply.sentAt && (
-                      <p className="mt-2 text-xs text-blue-700/70">{formatTicketDate(reply.sentAt)}</p>
-                    )}
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Your message</p>
+                <div className="mt-2 rounded-2xl border border-gray-200 bg-white p-4">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+                    {selectedTicket.message}
+                  </p>
+                </div>
+              </div>
+
+              {selectedTicket.replies?.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Team replies</p>
+                  <div className="mt-2 space-y-3">
+                    {selectedTicket.replies.map((reply, index) => (
+                      <div
+                        key={`${reply.sentAt}-${index}`}
+                        className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-sky-50/60 p-4"
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                            ST
+                          </span>
+                          <div>
+                            <p className="text-xs font-semibold text-blue-900">Support Team</p>
+                            {reply.sentAt && (
+                              <p className="text-[11px] text-blue-700/70">{formatTicketDate(reply.sentAt)}</p>
+                            )}
+                          </div>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-950/90">
+                          {reply.message}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedTicket(null)}
-              className="mt-6 w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
-            >
-              Close
-            </button>
+            <div className="shrink-0 border-t border-gray-100 bg-white px-5 py-4 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setSelectedTicket(null)}
+                className="w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="text-lg font-bold text-gray-900">Policies & Legal</h2>
-        <p className="mt-2 text-sm text-gray-600">Review our policies before purchasing or requesting support.</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {POLICY_LINKS.map((policy) => (
-            <Link
-              key={policy.to}
-              to={policy.to}
-              className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-900"
-            >
-              {policy.label}
-            </Link>
-          ))}
-        </div>
-      </div>
 
       <AlertModal
         open={Boolean(error)}

@@ -5,7 +5,7 @@ import AdminAlertModal from '../components/AdminAlertModal'
 import SupportConfirmationEmailPreview from '../components/SupportConfirmationEmailPreview'
 import SupportReplyEmailEditor from '../components/SupportReplyEmailEditor'
 import SupportReplyEmailPreview from '../components/SupportReplyEmailPreview'
-import { cardClass, inputClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
+import { cardClass, primaryBtnClass, secondaryBtnClass } from '../components/ui/adminUi'
 import PageLoader from '../components/ui/PageLoader'
 import {
   buildSupportReplyEmailDraft,
@@ -21,17 +21,47 @@ const SUBJECT_LABELS = {
 }
 
 const STATUS_OPTIONS = [
-  { id: 'open', label: 'Open' },
-  { id: 'in_progress', label: 'In progress' },
+  { id: 'open', label: 'Submitted' },
+  { id: 'in_progress', label: 'In review' },
   { id: 'resolved', label: 'Resolved' },
   { id: 'closed', label: 'Closed' },
 ]
+
+const STATUS_LABELS = {
+  open: 'Submitted',
+  in_progress: 'In review',
+  resolved: 'Resolved',
+  closed: 'Closed',
+}
 
 const statusStyles = {
   open: 'bg-amber-50 text-amber-700',
   in_progress: 'bg-blue-50 text-blue-700',
   resolved: 'bg-emerald-50 text-emerald-700',
   closed: 'bg-slate-100 text-slate-600',
+}
+
+const formatTimelineDate = (value) => {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const hasTeamReply = (request) =>
+  Array.isArray(request?.replies) && request.replies.some((entry) => entry.kind === 'admin_reply')
+
+const getLastTeamReplyAt = (request) => {
+  const replies = Array.isArray(request?.replies)
+    ? request.replies.filter((entry) => entry.kind === 'admin_reply')
+    : []
+  if (!replies.length) return null
+  return replies.reduce((latest, entry) => {
+    if (!latest) return entry.sentAt
+    return new Date(entry.sentAt) > new Date(latest) ? entry.sentAt : latest
+  }, null)
 }
 
 const formatDate = (value) => {
@@ -160,23 +190,10 @@ const SupportDetail = () => {
     navigate(`/orders/${matchedOrder.id}`)
   }
 
-  const handleSave = async () => {
-    setSaving(true)
-    setNotice('')
-    try {
-      const response = await updateSupportRequest(id, { status })
-      const nextRequest = response.data.data?.request
-      setRequest(nextRequest)
-      setStatus(nextRequest?.status || status)
-      setNotice('Support request updated.')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const handleQuickStatus = async (nextStatus) => {
+    if (!request || nextStatus === request.status || saving) return
+
+    const previousStatus = request.status
     setStatus(nextStatus)
     setSaving(true)
     setNotice('')
@@ -185,14 +202,9 @@ const SupportDetail = () => {
       const nextRequest = response.data.data?.request
       setRequest(nextRequest)
       setStatus(nextRequest?.status || nextStatus)
-      setNotice(
-        nextStatus === 'resolved'
-          ? 'Ticket marked as resolved.'
-          : nextStatus === 'in_progress'
-            ? 'Ticket marked as in progress.'
-            : 'Support request updated.',
-      )
+      setNotice(`Status updated to ${STATUS_LABELS[nextRequest?.status || nextStatus] || nextStatus}.`)
     } catch (err) {
+      setStatus(previousStatus)
       setError(err.message)
     } finally {
       setSaving(false)
@@ -283,13 +295,13 @@ const SupportDetail = () => {
       <div className={`${cardClass} p-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer status</p>
             <span
-              className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+              className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                 statusStyles[request.status] || 'bg-slate-100 text-slate-600'
               }`}
             >
-              {request.status.replace('_', ' ')}
+              {STATUS_LABELS[request.status] || request.status}
             </span>
           </div>
           <p className="text-sm text-slate-500">Submitted {formatDate(request.createdAt)}</p>
@@ -345,59 +357,118 @@ const SupportDetail = () => {
       </div>
 
       <div className={`${cardClass} p-5`}>
-        <h2 className="text-sm font-semibold text-slate-900">Admin actions</h2>
-        <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickStatus('in_progress')}
-              disabled={saving || status === 'in_progress'}
-              className={secondaryBtnClass}
-            >
-              Mark in progress
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickStatus('resolved')}
-              disabled={saving || status === 'resolved'}
-              className={primaryBtnClass}
-            >
-              Mark resolved
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickStatus('closed')}
-              disabled={saving || status === 'closed'}
-              className={secondaryBtnClass}
-            >
-              Close ticket
-            </button>
+        <h2 className="text-sm font-semibold text-slate-900">Customer progress</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Same steps the customer sees on their ticket. “Team replied” updates when you send a reply below.
+        </p>
+        <div className="mt-4 space-y-3">
+          <div className="flex gap-3">
+            <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Submitted</p>
+              <p className="text-xs text-slate-500">{formatTimelineDate(request.createdAt)}</p>
+            </div>
           </div>
-
-          <div>
-            <label htmlFor="status" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Status
-            </label>
-            <select
-              id="status"
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className={inputClass}
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+          <div className="flex gap-3">
+            <div
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                ['in_progress', 'resolved', 'closed'].includes(request.status) ? 'bg-blue-500' : 'bg-slate-300'
+              }`}
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">In review</p>
+              <p className="text-xs text-slate-500">
+                {['in_progress', 'resolved', 'closed'].includes(request.status)
+                  ? formatTimelineDate(request.updatedAt)
+                  : 'Waiting for our team'}
+              </p>
+            </div>
           </div>
-
-          {notice && <p className="text-sm text-emerald-700">{notice}</p>}
-
-          <button type="button" onClick={handleSave} disabled={saving} className={primaryBtnClass}>
-            {saving ? 'Saving...' : 'Save changes'}
-          </button>
+          <div className="flex gap-3">
+            <div
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                hasTeamReply(request) ? 'bg-blue-500' : 'bg-slate-300'
+              }`}
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Team replied</p>
+              <p className="text-xs text-slate-500">
+                {hasTeamReply(request)
+                  ? formatTimelineDate(getLastTeamReplyAt(request) || request.lastReplyAt)
+                  : 'No reply yet'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                ['resolved', 'closed'].includes(request.status) ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                {request.status === 'closed' ? 'Closed' : 'Resolved'}
+              </p>
+              <p className="text-xs text-slate-500">
+                {['resolved', 'closed'].includes(request.status)
+                  ? formatTimelineDate(request.updatedAt)
+                  : 'Pending resolution'}
+              </p>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className={`${cardClass} p-5`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Update status</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Choose the status customers see on their ticket timeline.
+            </p>
+          </div>
+          <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+              statusStyles[request.status] || 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {STATUS_LABELS[request.status] || request.status}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {STATUS_OPTIONS.map((option) => {
+            const isCurrent = request.status === option.id
+            const isPending = status === option.id && status !== request.status
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => handleQuickStatus(option.id)}
+                disabled={saving || isCurrent}
+                className={`rounded-xl border px-3 py-3 text-left transition disabled:cursor-not-allowed ${
+                  isCurrent
+                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                    : isPending
+                      ? 'border-slate-400 bg-slate-100 text-slate-900'
+                      : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className="block text-sm font-semibold">{option.label}</span>
+                <span className={`mt-0.5 block text-[11px] ${isCurrent ? 'text-slate-300' : 'text-slate-500'}`}>
+                  {isCurrent ? 'Current status' : saving && isPending ? 'Saving…' : 'Set status'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {notice && (
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {notice}
+          </p>
+        )}
       </div>
 
       <div className={`${cardClass} p-5`}>

@@ -228,7 +228,18 @@ const LICENSE_POLICY_BLOCKS = [
   },
   { type: 'divider' },
   { type: 'h1', text: '7. Commercial Licensing' },
-  { type: 'paragraph', text: 'Any use of the Content for:' },
+  {
+    type: 'paragraph',
+    text: 'AKHD MEDIA & CO does not grant Commercial Licenses.',
+  },
+  {
+    type: 'paragraph',
+    text: 'The Content available on this website is licensed for Editorial Use only.',
+  },
+  {
+    type: 'paragraph',
+    text: 'Commercial use of any Content is strictly prohibited, including but not limited to:',
+  },
   {
     type: 'bullets',
     items: [
@@ -240,15 +251,12 @@ const LICENSE_POLICY_BLOCKS = [
       'Merchandise',
       'Corporate Communications',
       'Commercial Productions',
+      'Any other commercial or promotional activity',
     ],
   },
   {
     type: 'paragraph',
-    text: 'requires prior written authorization from AKHD MEDIA & CO and may be subject to additional licensing fees, talent clearances, publicity rights, and legal approvals.',
-  },
-  {
-    type: 'paragraph',
-    text: 'For commercial licensing inquiries, please contact AKHD MEDIA & CO directly.',
+    text: 'AKHD MEDIA & CO does not offer or issue Commercial Licenses. Any unauthorized commercial use of the Content is strictly prohibited and may result in legal action by AKHD MEDIA & CO. Where applicable, such unauthorized use may also expose the infringing party to claims or legal action by the relevant celebrity, public figure, rights holder, or their authorized legal representatives for violations of publicity, personality, image, trademark, copyright, or other applicable rights.',
   },
   { type: 'divider' },
   { type: 'h1', text: '8. Limitation of Liability' },
