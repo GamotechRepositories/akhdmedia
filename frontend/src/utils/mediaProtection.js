@@ -2,7 +2,7 @@ export const PROTECTED_MEDIA_CLASS = 'protected-media';
 
 export const preventMediaContextMenu = (event) => {
   event.preventDefault();
-};
+};      
 
 export const preventMediaDrag = (event) => {
   event.preventDefault();

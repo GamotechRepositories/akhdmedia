@@ -20,3 +20,4 @@ const checkoutProfileSchema = new mongoose.Schema(
 )
 
 export default mongoose.model('CheckoutProfile', checkoutProfileSchema)
+           

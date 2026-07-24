@@ -53,7 +53,7 @@ const emptyForm = {
 };
 
 const inputClass =
-  'w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
+  'w-full min-w-0 max-w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
 
 const ChevronIcon = () => (
   <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +62,7 @@ const ChevronIcon = () => (
 );
 
 const SupportHero = ({ title, subtitle, chips = [] }) => (
-  <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-5 py-8 sm:px-8 sm:py-10">
+  <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-4 py-7 sm:px-8 sm:py-10">
     <div
       className="pointer-events-none absolute inset-0 opacity-[0.12]"
       style={{
@@ -75,9 +75,9 @@ const SupportHero = ({ title, subtitle, chips = [] }) => (
     <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/5 blur-2xl" aria-hidden />
     <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-white/5 blur-2xl" aria-hidden />
 
-    <div className="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:text-left">
-      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white text-gray-900 shadow-lg ring-4 ring-white/20 sm:h-24 sm:w-24">
-        <svg className="h-9 w-9 sm:h-10 sm:w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white text-gray-900 shadow-lg ring-4 ring-white/20 sm:h-24 sm:w-24">
+        <svg className="h-7 w-7 sm:h-10 sm:w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -87,14 +87,14 @@ const SupportHero = ({ title, subtitle, chips = [] }) => (
         </svg>
       </div>
       <div className="min-w-0 flex-1">
-        <h1 className="text-xl font-bold text-white sm:text-2xl">{title}</h1>
-        <p className="mt-1 text-sm text-gray-300">{subtitle}</p>
+        <h1 className="text-lg font-bold text-white sm:text-2xl">{title}</h1>
+        <p className="mt-1 text-sm leading-relaxed text-gray-300">{subtitle}</p>
         {chips.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             {chips.map((chip) => (
               <span
                 key={chip}
-                className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-gray-200 ring-1 ring-white/15"
+                className="inline-flex max-w-full items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-gray-200 ring-1 ring-white/15 sm:px-3 sm:text-xs"
               >
                 {chip}
               </span>
@@ -188,15 +188,15 @@ const Support = () => {
 
   if (submittedTicket) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#f4f5f7] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
-        <div className="mx-auto w-full max-w-5xl">
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="min-h-[calc(100vh-4rem)] w-full min-w-0 overflow-x-hidden bg-[#f4f5f7] px-3 py-5 sm:px-6 sm:py-10 lg:px-8">
+        <div className="mx-auto w-full min-w-0 max-w-5xl">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:rounded-2xl">
             <SupportHero
               title="Request submitted"
               subtitle="A confirmation email is on its way. Our team will review your issue soon."
               chips={[`Ticket #${submittedTicket}`]}
             />
-            <div className="flex flex-col items-center px-5 py-10 text-center sm:px-8">
+            <div className="flex flex-col items-center px-4 py-8 text-center sm:px-8 sm:py-10">
               <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-100">
                 <svg className="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -228,26 +228,26 @@ const Support = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#f4f5f7] px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div className="min-h-[calc(100vh-4rem)] w-full min-w-0 overflow-x-hidden bg-[#f4f5f7] px-3 py-5 sm:px-6 sm:py-10 lg:px-8">
+      <div className="mx-auto w-full min-w-0 max-w-5xl">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm sm:rounded-2xl">
           <SupportHero
             title="Contact Support"
             subtitle="Help with licenses, downloads, payments, and more."
             chips={['License help', 'Download issues', 'Payments']}
           />
 
-          <div className="grid gap-0 lg:grid-cols-[1.4fr_1fr]">
-            <section className="border-b border-gray-100 p-5 sm:p-8 lg:border-b-0 lg:border-r">
+          <div className="grid min-w-0 gap-0 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <section className="min-w-0 border-b border-gray-100 p-4 sm:p-6 lg:border-b-0 lg:border-r lg:p-8">
               <div className="mb-5">
                 <h2 className="text-base font-semibold text-gray-900">Send a request</h2>
                 <p className="mt-0.5 text-sm text-gray-500">Tell us what’s wrong and we’ll get back to you</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-5">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
+                <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3.5 sm:p-5">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="min-w-0 md:col-span-2">
                       <label htmlFor="name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
                         Full name <span className="text-red-500">*</span>
                       </label>
@@ -259,10 +259,11 @@ const Support = () => {
                         required
                         className={inputClass}
                         placeholder="Your name"
+                        autoComplete="name"
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
                         Email <span className="text-red-500">*</span>
                       </label>
@@ -275,10 +276,11 @@ const Support = () => {
                         required
                         className={inputClass}
                         placeholder="you@email.com"
+                        autoComplete="email"
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="phone" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
                         Phone
                       </label>
@@ -289,10 +291,11 @@ const Support = () => {
                         onChange={handleChange}
                         className={inputClass}
                         placeholder="+91 ..."
+                        autoComplete="tel"
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="orderNumber" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
                         Order number
                       </label>
@@ -306,7 +309,7 @@ const Support = () => {
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="subject" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
                         Issue type <span className="text-red-500">*</span>
                       </label>
@@ -326,7 +329,7 @@ const Support = () => {
                       </select>
                     </div>
 
-                    <div className="sm:col-span-2">
+                    <div className="min-w-0 md:col-span-2">
                       <label htmlFor="message" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-800">
                         Message <span className="text-red-500">*</span>
                       </label>
@@ -338,7 +341,7 @@ const Support = () => {
                         required
                         minLength={10}
                         rows={5}
-                        className={`${inputClass} resize-none`}
+                        className={`${inputClass} resize-y min-h-[7.5rem]`}
                         placeholder="Describe your issue. Include clip ID or license number if relevant."
                       />
                     </div>
@@ -355,10 +358,10 @@ const Support = () => {
               </form>
             </section>
 
-            <aside className="flex flex-col gap-6 p-5 sm:p-8">
-              <div>
+            <aside className="flex min-w-0 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <h2 className="text-base font-semibold text-gray-900">My Tickets</h2>
                     <p className="mt-0.5 text-sm text-gray-500">Track requests and replies</p>
                   </div>
@@ -366,7 +369,7 @@ const Support = () => {
                     type="button"
                     onClick={loadTickets}
                     disabled={loadingTickets}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-900 disabled:opacity-60"
+                    className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-gray-900 disabled:opacity-60"
                   >
                     {loadingTickets ? 'Refreshing…' : 'Refresh'}
                   </button>
@@ -391,10 +394,10 @@ const Support = () => {
                         key={ticket.id}
                         type="button"
                         onClick={() => setSelectedTicket(ticket)}
-                        className="group flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-left transition hover:border-gray-300 hover:bg-gray-50"
+                        className="group flex w-full min-w-0 items-start gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 text-left transition hover:border-gray-300 hover:bg-gray-50 sm:items-center sm:px-4 sm:py-3.5"
                       >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white">
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white sm:mt-0 sm:h-10 sm:w-10">
+                          <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
@@ -404,8 +407,17 @@ const Support = () => {
                           </svg>
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-mono text-sm font-semibold text-gray-900">
-                            #{ticket.ticketNumber}
+                          <span className="flex min-w-0 flex-wrap items-center gap-2">
+                            <span className="min-w-0 truncate font-mono text-sm font-semibold text-gray-900">
+                              #{ticket.ticketNumber}
+                            </span>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
+                                statusStyles[ticket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
+                              }`}
+                            >
+                              {STATUS_LABELS[ticket.status] || ticket.status}
+                            </span>
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-gray-500">
                             {SUBJECT_LABELS[ticket.subject] || ticket.subject}
@@ -414,32 +426,29 @@ const Support = () => {
                             Updated {formatTicketDate(ticket.lastReplyAt || ticket.updatedAt || ticket.createdAt)}
                           </span>
                         </span>
-                        <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
-                            statusStyles[ticket.status] || 'bg-slate-100 text-slate-600 ring-slate-200'
-                          }`}
-                        >
-                          {STATUS_LABELS[ticket.status] || ticket.status}
+                        <span className="mt-1 shrink-0 sm:mt-0">
+                          <ChevronIcon />
                         </span>
-                        <ChevronIcon />
                       </button>
                     ))
                   )}
                 </div>
               </div>
 
-              <div className="mt-auto">
+              <div className="mt-auto min-w-0">
                 <h3 className="text-base font-semibold text-gray-900">Policies & Legal</h3>
                 <p className="mt-0.5 text-sm text-gray-500">Quick links before you purchase or write in</p>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
                   {POLICY_LINKS.map((policy) => (
                     <Link
                       key={policy.to}
                       to={policy.to}
-                      className="group flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-300 hover:bg-gray-50"
+                      className="group flex min-w-0 items-start justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm font-semibold text-gray-900 transition hover:border-gray-300 hover:bg-gray-50"
                     >
-                      <span className="truncate">{policy.label}</span>
-                      <ChevronIcon />
+                      <span className="min-w-0 flex-1 break-words leading-snug">{policy.label}</span>
+                      <span className="mt-0.5 shrink-0">
+                        <ChevronIcon />
+                      </span>
                     </Link>
                   ))}
                 </div>
@@ -455,18 +464,18 @@ const Support = () => {
           onClick={() => setSelectedTicket(null)}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            className="flex max-h-[min(92vh,100dvh)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[min(90vh,100dvh)] sm:rounded-3xl"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="ticket-detail-title"
           >
-            <div className="shrink-0 border-b border-gray-100 px-5 pb-4 pt-5 sm:px-6">
+            <div className="shrink-0 border-b border-gray-100 px-4 pb-4 pt-5 sm:px-6">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p
                     id="ticket-detail-title"
-                    className="truncate font-mono text-base font-bold tracking-tight text-gray-900 sm:text-lg"
+                    className="break-all font-mono text-base font-bold tracking-tight text-gray-900 sm:truncate sm:text-lg"
                   >
                     #{selectedTicket.ticketNumber}
                   </p>
@@ -487,7 +496,7 @@ const Support = () => {
               </div>
             </div>
 
-            <div className="scrollbar-modern flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+            <div className="scrollbar-modern min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
               <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">Progress</p>
                 <ol className="relative mt-4 space-y-0">
@@ -601,7 +610,7 @@ const Support = () => {
               )}
             </div>
 
-            <div className="shrink-0 border-t border-gray-100 bg-white px-5 py-4 sm:px-6">
+            <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-4">
               <button
                 type="button"
                 onClick={() => setSelectedTicket(null)}
