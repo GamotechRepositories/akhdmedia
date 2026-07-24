@@ -1,3 +1,4 @@
+import Fuse from 'fuse.js';
 import { IMAGE_SIZE_TIERS } from '../constants/imageSizes';
 import {
   getProductBadgeLabel,
@@ -132,6 +133,40 @@ const TOKEN_ALIASES = {
 
 const normalizeSearchToken = (token) => TOKEN_ALIASES[token] || token;
 
+const PRODUCT_SEARCH_FUSE_OPTIONS = {
+  keys: [
+    { name: 'name', weight: 0.35 },
+    { name: 'actorName', weight: 0.3 },
+    { name: 'actorSearchKeywords', weight: 0.15 },
+    { name: 'searchText', weight: 0.12 },
+    { name: 'clipId', weight: 0.04 },
+    { name: 'brand', weight: 0.02 },
+    { name: 'category', weight: 0.02 },
+  ],
+  // Allow small typos (e.g. "maduri" → "madhuri") without matching unrelated noise.
+  threshold: 0.42,
+  distance: 120,
+  ignoreLocation: true,
+  minMatchCharLength: 2,
+  shouldSort: true,
+};
+
+export const createProductSearchDocuments = (products = [], subCategoriesMap = {}) =>
+  products.map((product) => ({
+    product,
+    name: product.name || '',
+    actorName: product.actorName || '',
+    actorSearchKeywords: product.actorSearchKeywords || [],
+    clipId: product.clipId || '',
+    brand: product.brand || '',
+    category: product.category || '',
+    searchText: buildProductSearchText(product, subCategoriesMap),
+  }));
+
+export const createProductSearchIndex = (products = [], subCategoriesMap = {}) =>
+  new Fuse(createProductSearchDocuments(products, subCategoriesMap), PRODUCT_SEARCH_FUSE_OPTIONS);
+
+/** Exact substring match (legacy). Prefer filterProductsBySearch for typo tolerance. */
 export const matchesProductSearch = (product, query, subCategoriesMap = {}) => {
   const normalized = normalize(query);
   if (!normalized) return true;
@@ -140,4 +175,49 @@ export const matchesProductSearch = (product, query, subCategoriesMap = {}) => {
   const tokens = normalized.split(/\s+/).filter(Boolean).map(normalizeSearchToken);
 
   return tokens.every((token) => haystack.includes(token));
+};
+
+/**
+ * Typo-tolerant product search (Fuse.js), same approach as actor search.
+ * Multi-word queries keep AND semantics: every token must match.
+ */
+export const filterProductsBySearch = (
+  products = [],
+  query,
+  subCategoriesMap = {},
+  searchIndex = null,
+) => {
+  const normalized = normalize(query);
+  if (!normalized) return products;
+
+  const tokens = normalized.split(/\s+/).filter(Boolean).map(normalizeSearchToken);
+  if (!tokens.length) return products;
+
+  const fuse = searchIndex || createProductSearchIndex(products, subCategoriesMap);
+  const getProduct = (result) => result.item.product;
+  const getId = (product) => product?.id ?? product?._id;
+
+  if (tokens.length === 1) {
+    return fuse.search(tokens[0]).map(getProduct);
+  }
+
+  let matchedIds = null;
+  for (const token of tokens) {
+    const ids = new Set(fuse.search(token).map((result) => getId(getProduct(result))));
+    matchedIds = matchedIds
+      ? new Set([...matchedIds].filter((id) => ids.has(id)))
+      : ids;
+
+    if (!matchedIds.size) return [];
+  }
+
+  // Keep relevance order from the first token, then intersect.
+  const ordered = fuse.search(tokens[0]).map(getProduct);
+  const seen = new Set();
+  return ordered.filter((product) => {
+    const id = getId(product);
+    if (!matchedIds.has(id) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 };

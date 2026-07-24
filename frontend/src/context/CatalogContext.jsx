@@ -8,7 +8,10 @@ import {
 } from 'react';
 import { fetchCatalog } from '../services/catalogApi';
 import { getSubCategoryLabel as resolveSubCategoryLabel } from '../utils/catalogHelpers';
-import { matchesProductSearch } from '../utils/productSearch';
+import {
+  createProductSearchIndex,
+  filterProductsBySearch,
+} from '../utils/productSearch';
 import { getProductActorIds, productsShareActor } from '../utils/productActors';
 
 const CatalogContext = createContext(null);
@@ -78,15 +81,21 @@ export const CatalogProvider = ({ children }) => {
     [catalog.products],
   );
 
+  const productSearchIndex = useMemo(
+    () => createProductSearchIndex(catalog.products, catalog.subCategoriesMap),
+    [catalog.products, catalog.subCategoriesMap],
+  );
+
   const filterProducts = useCallback(
     ({ search, category } = {}) => {
-      let results = [...catalog.products];
-
-      if (search) {
-        results = results.filter((product) =>
-          matchesProductSearch(product, search, catalog.subCategoriesMap),
-        );
-      }
+      let results = search
+        ? filterProductsBySearch(
+            catalog.products,
+            search,
+            catalog.subCategoriesMap,
+            productSearchIndex,
+          )
+        : [...catalog.products];
 
       if (category) {
         const normalizedCategory = normalize(category);
@@ -99,7 +108,7 @@ export const CatalogProvider = ({ children }) => {
 
       return results;
     },
-    [catalog.products, catalog.subCategoriesMap],
+    [catalog.products, catalog.subCategoriesMap, productSearchIndex],
   );
 
   const getSubCategoryLabel = useCallback(
