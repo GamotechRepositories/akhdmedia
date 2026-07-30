@@ -94,31 +94,63 @@ class _YoutubeShortPreviewState extends State<YoutubeShortPreview> {
   }
 
   Future<void> _startPreview() async {
-    final embedSrc = buildYoutubeEmbedSrc(widget.url, autoplay: true);
+    final embedSrc = buildYoutubeEmbedSrc(
+      widget.url,
+      autoplay: true,
+      origin: kYoutubeEmbedOrigin,
+    );
     if (embedSrc.isEmpty || _limitTriggered) return;
 
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..loadHtmlString('''
+    final html = '''
 <!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="referrer" content="origin">
     <style>
-      html, body { margin: 0; padding: 0; background: #000; height: 100%; }
-      iframe { border: 0; width: 100%; height: 100%; }
+      html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
+      .frame { position: relative; width: 100%; height: 100%; }
+      iframe { border: 0; width: 100%; height: 100%; display: block; }
+      /* Channel/title stay visible; taps on chrome cannot open YouTube. */
+      .click-shield {
+        position: absolute;
+        z-index: 2;
+        background: transparent;
+      }
+      .click-shield-top { top: 0; left: 0; right: 0; height: 64px; }
+      .click-shield-logo { right: 0; bottom: 0; width: 120px; height: 48px; }
     </style>
   </head>
   <body>
-    <iframe
-      src="$embedSrc"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-      allowfullscreen
-    ></iframe>
+    <div class="frame">
+      <iframe
+        src="$embedSrc"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+        allowfullscreen
+        referrerpolicy="origin"
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+      ></iframe>
+      <div class="click-shield click-shield-top" aria-hidden="true"></div>
+      <div class="click-shield click-shield-logo" aria-hidden="true"></div>
+    </div>
   </body>
 </html>
-''');
+''';
+
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.black)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (request) {
+            if (isAllowedYoutubeEmbedNavigation(request.url)) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
+        ),
+      )
+      ..loadHtmlString(html, baseUrl: kYoutubeEmbedOrigin);
 
     setState(() {
       _controller = controller;

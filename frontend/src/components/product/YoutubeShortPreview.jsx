@@ -7,6 +7,11 @@ const PREVIEW_AUTH_LIMIT_SECONDS = 10
 const IFRAME_ALLOW =
   'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen'
 
+const blockOutboundClick = (event) => {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
 const YoutubeShortPreview = ({
   url,
   poster,
@@ -87,14 +92,33 @@ const YoutubeShortPreview = ({
   return (
     <div className={`relative flex h-full w-full items-center justify-center bg-black ${className}`}>
       {isActive ? (
-        <iframe
-          title="YouTube Short preview"
-          src={iframeSrc}
-          className="h-full w-full border-0"
-          allow={IFRAME_ALLOW}
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+        <div className="relative h-full w-full overflow-hidden">
+          <iframe
+            title="YouTube Short preview"
+            src={iframeSrc}
+            className="h-full w-full border-0"
+            allow={IFRAME_ALLOW}
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            // No allow-popups / allow-top-navigation → blocks opening youtube.com.
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+          />
+          {/* Channel/title remain visible; clicks cannot leave to YouTube. */}
+          <div
+            className="absolute inset-x-0 top-0 z-10 h-14 sm:h-16"
+            aria-hidden="true"
+            onClick={blockOutboundClick}
+            onMouseDown={blockOutboundClick}
+            onTouchStart={blockOutboundClick}
+          />
+          <div
+            className="absolute bottom-0 right-0 z-10 h-12 w-28 sm:h-14 sm:w-32"
+            aria-hidden="true"
+            onClick={blockOutboundClick}
+            onMouseDown={blockOutboundClick}
+            onTouchStart={blockOutboundClick}
+          />
+        </div>
       ) : (
         <>
           {poster ? (
