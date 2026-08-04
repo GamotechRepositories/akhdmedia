@@ -17,7 +17,7 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for the full screen map and phases.
 | Phase | Scope | Status |
 |-------|--------|--------|
 | 1 | Home, catalog, product detail, tight cards | ✅ Started |
-| 2 | Cart, checkout, Razorpay | Planned |
+| 2 | Cart, website checkout handoff | Done |
 | 3 | Login, register, profile, orders | Planned |
 | 4 | Support, policies, polish | Planned |
 

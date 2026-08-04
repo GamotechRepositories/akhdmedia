@@ -264,8 +264,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      setState(() => _error = 'Could not open website checkout. Please try again.');
+    if (!launched) {
+      if (mounted) {
+        setState(() => _error = 'Could not open website checkout. Please try again.');
+      }
+      return;
+    }
+
+    // Website checkout uses a different browser session. Empty the iOS cart
+    // after a successful handoff so items don't remain after purchase.
+    try {
+      await cartProvider.clearCart();
+    } catch (_) {
+      // Best-effort; cart will refresh again when the app resumes.
+    }
+
+    if (mounted) {
+      context.go('/cart');
     }
   }
 

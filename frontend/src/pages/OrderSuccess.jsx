@@ -211,6 +211,13 @@ const OrderSuccess = () => {
           if (response.data.order.orderNumber) {
             previewOrderNumberRef.current = response.data.order.orderNumber;
           }
+          if (response.data.order.paymentStatus === 'paid') {
+            try {
+              await clearCart();
+            } catch (error) {
+              console.error('Failed to clear cart after paid order:', error);
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to load order:', error);

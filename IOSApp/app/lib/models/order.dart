@@ -13,11 +13,7 @@ class Order {
     required this.status,
     this.subtotalAmount = 0,
     this.gstAmount = 0,
-    this.paymentProvider = 'razorpay',
-    this.razorpayOrderId = '',
-    this.razorpayPaymentId = '',
-    this.paypalOrderId = '',
-    this.paypalCaptureId = '',
+    this.paymentProvider = '',
     this.licenseEmailResendCount = 0,
     this.maxLicenseEmailResends = 2,
     this.licenseEmailResendsRemaining = 1,
@@ -38,10 +34,6 @@ class Order {
   final num subtotalAmount;
   final num gstAmount;
   final String status;
-  final String razorpayOrderId;
-  final String razorpayPaymentId;
-  final String paypalOrderId;
-  final String paypalCaptureId;
   final int licenseEmailResendCount;
   final int maxLicenseEmailResends;
   final int licenseEmailResendsRemaining;
@@ -78,16 +70,12 @@ class Order {
           ? BillingAddress.fromJson(billing)
           : const BillingAddress(),
       paymentMethod: json['paymentMethod']?.toString() ?? '',
-      paymentProvider: json['paymentProvider']?.toString() ?? 'razorpay',
+      paymentProvider: json['paymentProvider']?.toString() ?? '',
       paymentStatus: json['paymentStatus']?.toString() ?? '',
       totalAmount: json['totalAmount'] is num ? json['totalAmount'] as num : 0,
       subtotalAmount: json['subtotalAmount'] is num ? json['subtotalAmount'] as num : 0,
       gstAmount: json['gstAmount'] is num ? json['gstAmount'] as num : 0,
       status: json['status']?.toString() ?? '',
-      razorpayOrderId: json['razorpayOrderId']?.toString() ?? '',
-      razorpayPaymentId: json['razorpayPaymentId']?.toString() ?? '',
-      paypalOrderId: json['paypalOrderId']?.toString() ?? '',
-      paypalCaptureId: json['paypalCaptureId']?.toString() ?? '',
       licenseEmailResendCount: json['licenseEmailResendCount'] is int
           ? json['licenseEmailResendCount'] as int
           : 0,
@@ -105,67 +93,4 @@ class Order {
       createdAt: createdAtRaw != null ? DateTime.tryParse(createdAtRaw) : null,
     );
   }
-}
-
-class RazorpayCheckoutData {
-  const RazorpayCheckoutData({
-    required this.keyId,
-    required this.orderId,
-    required this.amount,
-    required this.currency,
-  });
-
-  final String keyId;
-  final String orderId;
-  final int amount;
-  final String currency;
-
-  factory RazorpayCheckoutData.fromJson(Map<String, dynamic> json) {
-    return RazorpayCheckoutData(
-      keyId: json['keyId']?.toString() ?? '',
-      orderId: json['orderId']?.toString() ?? '',
-      amount: json['amount'] is int
-          ? json['amount'] as int
-          : int.tryParse(json['amount']?.toString() ?? '') ?? 0,
-      currency: json['currency']?.toString() ?? 'INR',
-    );
-  }
-}
-
-class PayPalCheckoutData {
-  const PayPalCheckoutData({
-    required this.orderId,
-    required this.approvalUrl,
-    this.currency = 'USD',
-    this.amount = 0,
-    this.inrAmount = 0,
-  });
-
-  final String orderId;
-  final String approvalUrl;
-  final String currency;
-  final num amount;
-  final num inrAmount;
-
-  factory PayPalCheckoutData.fromJson(Map<String, dynamic> json) {
-    return PayPalCheckoutData(
-      orderId: json['orderId']?.toString() ?? '',
-      approvalUrl: json['approvalUrl']?.toString() ?? '',
-      currency: json['currency']?.toString() ?? 'USD',
-      amount: json['amount'] is num ? json['amount'] as num : 0,
-      inrAmount: json['inrAmount'] is num ? json['inrAmount'] as num : 0,
-    );
-  }
-}
-
-class CreateOrderResult {
-  const CreateOrderResult({
-    required this.order,
-    this.razorpay,
-    this.paypal,
-  });
-
-  final Order order;
-  final RazorpayCheckoutData? razorpay;
-  final PayPalCheckoutData? paypal;
 }

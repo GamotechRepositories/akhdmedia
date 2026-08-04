@@ -44,12 +44,6 @@ PODS:
   - PromisesObjC (2.4.1)
   - PromisesSwift (2.4.1):
     - PromisesObjC (= 2.4.1)
-  - razorpay-core-pod (1.0.7)
-  - razorpay-pod (1.5.5):
-    - razorpay-core-pod (= 1.0.7)
-  - razorpay_flutter (1.1.10):
-    - Flutter
-    - razorpay-pod
   - RecaptchaInterop (101.0.0)
   - screen_protector (1.5.1):
     - Flutter
@@ -73,7 +67,6 @@ DEPENDENCIES:
   - Flutter (from `Flutter`)
   - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/darwin`)
   - printing (from `.symlinks/plugins/printing/ios`)
-  - razorpay_flutter (from `.symlinks/plugins/razorpay_flutter/ios`)
   - screen_protector (from `.symlinks/plugins/screen_protector/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
@@ -91,8 +84,6 @@ SPEC REPOS:
     - GTMSessionFetcher
     - PromisesObjC
     - PromisesSwift
-    - razorpay-core-pod
-    - razorpay-pod
     - RecaptchaInterop
     - ScreenProtectorKit
 
@@ -103,8 +94,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/google_sign_in_ios/darwin"
   printing:
     :path: ".symlinks/plugins/printing/ios"
-  razorpay_flutter:
-    :path: ".symlinks/plugins/razorpay_flutter/ios"
   screen_protector:
     :path: ".symlinks/plugins/screen_protector/ios"
   share_plus:
@@ -130,9 +119,6 @@ SPEC CHECKSUMS:
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   PromisesSwift: 217dea0fd5d2ad65222a109c48698add13cc1c5b
-  razorpay-core-pod: c7f3ac3d214c1a7fac4e9a59c1de7eac02130573
-  razorpay-pod: 62c4e6efcf77674e93a6a82dac0f3e24f69c7515
-  razorpay_flutter: 0e98e4fcaae27ad50e011d85f66d85e0a008754a
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   screen_protector: 18c6aca2dc5d2a832f6787a5318f97f03e9d3150
   ScreenProtectorKit: 6ceb3e0808341a9bc15d175bff40dfdd4b32da71
@@ -142,6 +128,6 @@ SPEC CHECKSUMS:
   video_player_avfoundation: 3453f792138786248960ca029747fcd9f318ef52
   webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
 
-PODFILE CHECKSUM: f8c2dcdfb50bb67645580d28a6bf814fca30bdec
+PODFILE CHECKSUM: 44fcae4098c46f17e9e2db289276ff87e608e3f7
 
 COCOAPODS: 1.17.0

@@ -29,7 +29,7 @@ API base: `https://api.akhdmedia.com/api`
 ## Phase 2 — Commerce
 
 - Session cookie handling (`fv_session`) for cart
-- Cart CRUD, checkout form, Razorpay mobile integration
+- Cart CRUD, checkout form, website purchase handoff (no in-app payment gateways)
 - Order success screen
 
 ## Phase 3 — Account

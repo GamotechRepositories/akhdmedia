@@ -52,6 +52,7 @@ class _AkhdMediaAppState extends State<AkhdMediaApp> with WidgetsBindingObserver
     if (state == AppLifecycleState.resumed) {
       enableAppScreenProtection();
       _refreshAuthSession();
+      _refreshCart();
     }
   }
 
@@ -62,6 +63,14 @@ class _AkhdMediaAppState extends State<AkhdMediaApp> with WidgetsBindingObserver
       await widget.authProvider.bootstrap();
     } finally {
       _refreshingAuth = false;
+    }
+  }
+
+  Future<void> _refreshCart() async {
+    try {
+      await widget.cartProvider.loadCart();
+    } catch (_) {
+      // Ignore refresh failures while returning from the website.
     }
   }
 
