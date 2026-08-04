@@ -42,6 +42,13 @@ const STATUS_FILTERS = [
   { id: 'inactive', label: 'Inactive' },
 ]
 
+const SALES_FILTERS = [
+  { id: 'all', label: 'All sales' },
+  { id: 'top', label: 'Top selling' },
+  { id: 'low', label: 'Low selling' },
+  { id: 'revenue', label: 'Highest Rs' },
+]
+
 const formatCurrency = (amount = 0) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -57,7 +64,7 @@ const getProductThumbnailUrl = (product) => {
 }
 
 const buildProductsCacheKey = (page, filters) =>
-  `${filters.search}|${filters.mediaType}|${filters.categorySlug}|${filters.status}::${page}`
+  `${filters.search}|${filters.mediaType}|${filters.categorySlug}|${filters.status}|${filters.sales}::${page}`
 
 const productsPageCache = new Map()
 const productsInFlight = new Map()
@@ -87,6 +94,7 @@ const Products = () => {
   const [typeFilter, setTypeFilter] = useState(restore?.typeFilter || 'all')
   const [categoryFilter, setCategoryFilter] = useState(restore?.categoryFilter || 'all')
   const [statusFilter, setStatusFilter] = useState(restore?.statusFilter || 'all')
+  const [salesFilter, setSalesFilter] = useState(restore?.salesFilter || 'all')
   const [highlightedId, setHighlightedId] = useState('')
   const [currentPage, setCurrentPage] = useState(restore?.page || 1)
 
@@ -124,6 +132,7 @@ const Products = () => {
         mediaType: typeFilter,
         categorySlug: categoryFilter,
         status: statusFilter,
+        sales: salesFilter,
       })
 
       if (!force) {
@@ -162,6 +171,7 @@ const Products = () => {
           mediaType: typeFilter,
           categorySlug: categoryFilter,
           status: statusFilter,
+          sales: salesFilter,
         })
 
         const payload = response.data?.data || {}
@@ -208,6 +218,7 @@ const Products = () => {
       typeFilter,
       categoryFilter,
       statusFilter,
+      salesFilter,
     ],
   )
 
@@ -234,6 +245,7 @@ const Products = () => {
     if (nextRestore.typeFilter) setTypeFilter(nextRestore.typeFilter)
     if (nextRestore.categoryFilter) setCategoryFilter(nextRestore.categoryFilter)
     if (nextRestore.statusFilter) setStatusFilter(nextRestore.statusFilter)
+    if (nextRestore.salesFilter) setSalesFilter(nextRestore.salesFilter)
     if (nextRestore.page) setCurrentPage(nextRestore.page)
 
     const frame = requestAnimationFrame(() => {
@@ -258,7 +270,8 @@ const Products = () => {
     searchQuery.trim() ||
     typeFilter !== 'all' ||
     categoryFilter !== 'all' ||
-    statusFilter !== 'all'
+    statusFilter !== 'all' ||
+    salesFilter !== 'all'
 
   const clearFilters = () => {
     clearProductsRequestCache()
@@ -267,6 +280,7 @@ const Products = () => {
     setTypeFilter('all')
     setCategoryFilter('all')
     setStatusFilter('all')
+    setSalesFilter('all')
     setCurrentPage(1)
   }
 
@@ -323,7 +337,7 @@ const Products = () => {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Type
@@ -387,6 +401,27 @@ const Products = () => {
               ))}
             </select>
           </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Sales
+            </span>
+            <select
+              value={salesFilter}
+              onChange={(e) => {
+                clearProductsRequestCache()
+                setSalesFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className={inputClass}
+            >
+              {SALES_FILTERS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {!loading && (
@@ -406,16 +441,18 @@ const Products = () => {
             <th className={thClass}>Type</th>
             <th className={thHideMd}>Category</th>
             <th className={thClass}>Price</th>
+            <th className={thClass}>Sold</th>
+            <th className={thClass}>Total Rs</th>
             <th className={thClass}>Status</th>
             <th className={thRightClass}>Actions</th>
           </tr>
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <TableLoader label="Loading products..." colSpan={7} className={tableEmptyClass} />
+            <TableLoader label="Loading products..." colSpan={9} className={tableEmptyClass} />
           ) : products.length === 0 ? (
             <tr>
-              <td colSpan={7} className={tableEmptyClass}>
+              <td colSpan={9} className={tableEmptyClass}>
                 {hasActiveFilters
                   ? 'No products match your search or filters.'
                   : 'No products found.'}
@@ -460,6 +497,12 @@ const Products = () => {
                 </td>
                 <td className={`${tdHideMd} text-slate-600`}>{product.category}</td>
                 <td className={tdClass}>{formatCurrency(product.price)}</td>
+                <td className={`${tdClass} font-semibold text-slate-900`}>
+                  {Number(product.soldCount) || 0}
+                </td>
+                <td className={`${tdClass} font-semibold text-emerald-700`}>
+                  {formatCurrency(product.totalRevenue)}
+                </td>
                 <td className={tdClass}>
                   <StatusBadge active={product.isActive} />
                 </td>
@@ -474,6 +517,7 @@ const Products = () => {
                             typeFilter,
                             categoryFilter,
                             statusFilter,
+                            salesFilter,
                             page: currentPage,
                             scrollTop: tableContainerRef.current?.scrollTop ?? 0,
                             productId: product.id,

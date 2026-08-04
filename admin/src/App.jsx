@@ -14,6 +14,8 @@ import OrderDetail from './pages/OrderDetail'
 import Transactions from './pages/Transactions'
 import TransactionDetail from './pages/TransactionDetail'
 import Revenue from './pages/Revenue'
+import RevenueMonthDetail from './pages/RevenueMonthDetail'
+import RevenueDayDetail from './pages/RevenueDayDetail'
 import Users from './pages/Users'
 import DeletedAccounts from './pages/DeletedAccounts'
 import UserMail from './pages/UserMail'
@@ -56,6 +58,8 @@ const App = () => (
           <Route path="transactions" element={<Transactions />} />
           <Route path="transactions/:id" element={<TransactionDetail />} />
           <Route path="revenue" element={<Revenue />} />
+          <Route path="revenue/:monthKey/:dayKey" element={<RevenueDayDetail />} />
+          <Route path="revenue/:monthKey" element={<RevenueMonthDetail />} />
           <Route path="users" element={<Users />} />
           <Route path="deleted-accounts" element={<DeletedAccounts />} />
           <Route path="user-mail" element={<UserMail />} />

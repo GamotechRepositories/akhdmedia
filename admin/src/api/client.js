@@ -140,6 +140,7 @@ export const fetchAdminProducts = ({
   mediaType = 'all',
   categorySlug = 'all',
   status = 'all',
+  sales = 'all',
   showInLatest = false,
 } = {}) =>
   api.get('/products', {
@@ -151,6 +152,7 @@ export const fetchAdminProducts = ({
       ...(mediaType !== 'all' ? { mediaType } : {}),
       ...(categorySlug !== 'all' ? { categorySlug } : {}),
       ...(status !== 'all' ? { status } : {}),
+      ...(sales !== 'all' ? { sales } : {}),
       ...(showInLatest ? { showInLatest: 'true' } : {}),
     },
   })
@@ -414,12 +416,13 @@ export const replySupportRequest = (id, payload) => api.post(`/admin/support/${i
 
 export const fetchUsers = () => api.get('/admin/users')
 
-export const fetchAdminUsers = ({ page = 1, limit = 50, search = '' } = {}) =>
+export const fetchAdminUsers = ({ page = 1, limit = 50, search = '', orders = 'all' } = {}) =>
   api.get('/admin/users', {
     params: {
       page,
       limit,
       ...(search.trim() ? { search: search.trim() } : {}),
+      ...(orders !== 'all' ? { orders } : {}),
     },
   })
 

@@ -14,6 +14,12 @@ import { getResendFrom } from '../config/email.js'
 import { prepareEmailAttachmentsForSend } from '../utils/userEmailAttachments.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
 import { buildPaginationMeta, buildTokenSearchFilter, parsePageLimit } from '../utils/pagination.js'
+import {
+  attachUserOrderStats,
+  getUserOrderStatsMaps,
+  resolveUserOrderStats,
+  sortUsersByOrderStats,
+} from '../utils/userOrderStats.js'
 
 const USER_SEARCH_FIELDS = ['name', 'email', 'phone']
 
@@ -41,12 +47,14 @@ const buildUserListFilter = (query = {}) => {
   return filter
 }
 
-const formatUser = (user) => ({
+const formatUser = (user, stats = null) => ({
   id: user._id.toString(),
   name: user.name,
   email: user.email,
   phone: user.phone,
   role: user.role || 'user',
+  orderCount: stats?.orderCount ?? user.orderCount ?? 0,
+  totalSpent: stats?.totalSpent ?? user.totalSpent ?? 0,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 })
@@ -55,12 +63,48 @@ const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value 
 
 export const listUsers = asyncHandler(async (req, res) => {
   const pagination = parsePageLimit(req.query)
+  const ordersSort =
+    req.query.orders === 'most' || req.query.orders === 'spend' ? req.query.orders : 'all'
 
   if (pagination) {
     const { page, limit, skip } = pagination
     const filter = buildUserListFilter(req.query)
 
-    const [users, total, latestUser, grandTotal] = await Promise.all([
+    if (ordersSort !== 'all') {
+      const sortKey = ordersSort === 'most' ? 'orders' : 'spend'
+      const [allUsers, total, latestUser, grandTotal, statsMaps] = await Promise.all([
+        User.find(filter)
+          .select('name email phone role createdAt updatedAt')
+          .sort({ createdAt: -1 })
+          .lean(),
+        User.countDocuments(filter),
+        User.findOne({ role: { $ne: 'admin' } })
+          .sort({ createdAt: -1 })
+          .select('createdAt')
+          .lean(),
+        User.countDocuments({ role: { $ne: 'admin' } }),
+        getUserOrderStatsMaps(),
+      ])
+
+      const usersWithStats = attachUserOrderStats(allUsers, statsMaps.userIdMap, statsMaps.emailMap)
+      const sortedUsers = sortUsersByOrderStats(usersWithStats, sortKey)
+      const pageUsers = sortedUsers.slice(skip, skip + limit)
+
+      res.json({
+        success: true,
+        data: {
+          users: pageUsers.map((user) => formatUser(user)),
+          pagination: buildPaginationMeta(page, limit, total),
+          meta: {
+            grandTotal,
+            latestSignup: latestUser?.createdAt || null,
+          },
+        },
+      })
+      return
+    }
+
+    const [users, total, latestUser, grandTotal, statsMaps] = await Promise.all([
       User.find(filter)
         .select('name email phone role createdAt updatedAt')
         .sort({ createdAt: -1 })
@@ -73,12 +117,15 @@ export const listUsers = asyncHandler(async (req, res) => {
         .select('createdAt')
         .lean(),
       User.countDocuments({ role: { $ne: 'admin' } }),
+      getUserOrderStatsMaps(),
     ])
 
     res.json({
       success: true,
       data: {
-        users: users.map(formatUser),
+        users: users.map((user) =>
+          formatUser(user, resolveUserOrderStats(user, statsMaps.userIdMap, statsMaps.emailMap)),
+        ),
         pagination: buildPaginationMeta(page, limit, total),
         meta: {
           grandTotal,
@@ -89,15 +136,20 @@ export const listUsers = asyncHandler(async (req, res) => {
     return
   }
 
-  const users = await User.find({ role: { $ne: 'admin' } })
-    .select('name email phone role createdAt updatedAt')
-    .sort({ createdAt: -1 })
-    .lean()
+  const [users, statsMaps] = await Promise.all([
+    User.find({ role: { $ne: 'admin' } })
+      .select('name email phone role createdAt updatedAt')
+      .sort({ createdAt: -1 })
+      .lean(),
+    getUserOrderStatsMaps(),
+  ])
 
   res.json({
     success: true,
     data: {
-      users: users.map(formatUser),
+      users: users.map((user) =>
+        formatUser(user, resolveUserOrderStats(user, statsMaps.userIdMap, statsMaps.emailMap)),
+      ),
     },
   })
 })

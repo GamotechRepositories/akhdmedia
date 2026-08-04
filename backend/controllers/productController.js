@@ -15,6 +15,7 @@ import { enrichAdminProduct } from '../utils/enrichAdminProduct.js'
 import { attachMasterVideoSignedUrl } from '../utils/attachMasterVideoSignedUrl.js'
 import { applyActorSelection } from '../utils/applyActorToProduct.js'
 import { cleanupReplacedProductDemoMedia } from '../services/storageService.js'
+import { getProductSalesStatsMap, getProductSalesStats } from '../utils/productSales.js'
 const getCategoryMap = async () => {
   const categories = await Category.find()
   return buildCategoryMap(categories)
@@ -79,8 +80,16 @@ const ensureClipIds = async (products = []) => {
   }
 }
 
-const formatProductList = (products, categoryMap, includeDelivery) =>
-  products.map((product) => formatProduct(product, categoryMap, { includeDelivery }))
+const formatProductList = (products, categoryMap, includeDelivery, salesMap = null) =>
+  products.map((product) => {
+    const formatted = formatProduct(product, categoryMap, { includeDelivery })
+    if (salesMap) {
+      const stats = getProductSalesStats(salesMap, product._id.toString())
+      formatted.soldCount = stats.soldCount
+      formatted.totalRevenue = stats.totalRevenue
+    }
+    return formatted
+  })
 
 export const reserveClipId = asyncHandler(async (req, res) => {
   const clipId = await generateClipId()
@@ -93,11 +102,67 @@ export const getProducts = asyncHandler(async (req, res) => {
   const limit = Number.parseInt(req.query.limit, 10)
   const usePagination =
     isAdmin && Number.isFinite(page) && page > 0 && Number.isFinite(limit) && limit > 0
+  const salesSort = ['top', 'low', 'revenue'].includes(req.query.sales)
+    ? req.query.sales
+    : 'all'
 
   if (usePagination) {
     const safeLimit = Math.min(Math.max(limit, 1), 100)
     const filter = buildAdminListFilter(req.query)
     const skip = (page - 1) * safeLimit
+
+    if (salesSort !== 'all') {
+      const [allProducts, total, categoryMap, salesMap] = await Promise.all([
+        Product.find(filter).sort({ createdAt: -1 }),
+        Product.countDocuments(filter),
+        getCategoryMap(),
+        getProductSalesStatsMap(),
+      ])
+
+      await ensureClipIds(allProducts)
+
+      const sorted = [...allProducts].sort((a, b) => {
+        const aStats = getProductSalesStats(salesMap, a._id.toString())
+        const bStats = getProductSalesStats(salesMap, b._id.toString())
+
+        if (salesSort === 'revenue') {
+          if (aStats.totalRevenue !== bStats.totalRevenue) {
+            return bStats.totalRevenue - aStats.totalRevenue
+          }
+          if (aStats.soldCount !== bStats.soldCount) {
+            return bStats.soldCount - aStats.soldCount
+          }
+        } else {
+          const aSold = aStats.soldCount
+          const bSold = bStats.soldCount
+          if (aSold !== bSold) {
+            return salesSort === 'top' ? bSold - aSold : aSold - bSold
+          }
+          if (aStats.totalRevenue !== bStats.totalRevenue) {
+            return salesSort === 'top'
+              ? bStats.totalRevenue - aStats.totalRevenue
+              : aStats.totalRevenue - bStats.totalRevenue
+          }
+        }
+
+        return new Date(b.createdAt) - new Date(a.createdAt)
+      })
+
+      const pageProducts = sorted.slice(skip, skip + safeLimit)
+
+      res.json({
+        data: {
+          products: formatProductList(pageProducts, categoryMap, true, salesMap),
+          pagination: {
+            page,
+            limit: safeLimit,
+            total,
+            totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+          },
+        },
+      })
+      return
+    }
 
     const [products, total, categoryMap] = await Promise.all([
       Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit),
@@ -107,9 +172,13 @@ export const getProducts = asyncHandler(async (req, res) => {
 
     await ensureClipIds(products)
 
+    const salesMap = await getProductSalesStatsMap(
+      products.map((product) => product._id.toString()),
+    )
+
     res.json({
       data: {
-        products: formatProductList(products, categoryMap, true),
+        products: formatProductList(products, categoryMap, true, salesMap),
         pagination: {
           page,
           limit: safeLimit,
@@ -136,8 +205,9 @@ export const getProducts = asyncHandler(async (req, res) => {
   await ensureClipIds(products)
 
   const categoryMap = await getCategoryMap()
+  const salesMap = isAdmin ? await getProductSalesStatsMap() : null
 
-  res.json(formatProductList(products, categoryMap, isAdmin))
+  res.json(formatProductList(products, categoryMap, isAdmin, salesMap))
 })
 
 export const getProductById = asyncHandler(async (req, res) => {

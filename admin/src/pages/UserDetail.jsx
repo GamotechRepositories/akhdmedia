@@ -73,6 +73,7 @@ const UserDetail = () => {
       userId: fromList?.userId || id,
       page: fromList?.page || 1,
       search: fromList?.search || '',
+      ordersFilter: fromList?.ordersFilter || 'all',
     },
   }
 

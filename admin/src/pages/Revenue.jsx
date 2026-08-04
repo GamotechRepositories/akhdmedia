@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchTransactions } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import AdminPagination from '../components/ui/AdminPagination'
@@ -22,18 +23,12 @@ import {
   thHideMd,
   thHideSm,
 } from '../components/ui/adminUi'
+import { buildMonthlyRows, formatCurrency } from '../utils/revenueHelpers'
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const PAGE_SIZE = 50
 
-const formatCurrency = (amount = 0) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(Number(amount) || 0)
-
 const Revenue = () => {
+  const navigate = useNavigate()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -69,54 +64,10 @@ const Revenue = () => {
     return Array.from(years).sort((a, b) => Number(b) - Number(a))
   }, [transactions])
 
-  const monthlyRows = useMemo(() => {
-    const buckets = new Map()
-
-    for (const txn of transactions) {
-      if (!txn.createdAt) continue
-      const date = new Date(txn.createdAt)
-      if (Number.isNaN(date.getTime())) continue
-
-      const year = String(date.getFullYear())
-      if (selectedYear !== 'all' && year !== selectedYear) continue
-
-      const month = date.getMonth()
-      const key = `${year}-${String(month + 1).padStart(2, '0')}`
-
-      if (!buckets.has(key)) {
-        buckets.set(key, {
-          key,
-          year,
-          month,
-          label: `${MONTH_LABELS[month]} ${year}`,
-          totalRevenue: 0,
-          totalTransactions: 0,
-          paidTransactions: 0,
-          failedTransactions: 0,
-          pendingTransactions: 0,
-        })
-      }
-
-      const bucket = buckets.get(key)
-      bucket.totalTransactions += 1
-
-      if (txn.transactionStatus === 'successful') {
-        bucket.paidTransactions += 1
-        bucket.totalRevenue += Number(txn.amount) || 0
-      } else if (txn.transactionStatus === 'failed') {
-        bucket.failedTransactions += 1
-      } else {
-        bucket.pendingTransactions += 1
-      }
-    }
-
-    return Array.from(buckets.values())
-      .sort((a, b) => b.key.localeCompare(a.key))
-      .map((row) => ({
-        ...row,
-        avgOrderValue: row.paidTransactions ? row.totalRevenue / row.paidTransactions : 0,
-      }))
-  }, [transactions, selectedYear])
+  const monthlyRows = useMemo(
+    () => buildMonthlyRows(transactions, selectedYear),
+    [transactions, selectedYear],
+  )
 
   const totals = useMemo(() => {
     return monthlyRows.reduce(
@@ -142,9 +93,7 @@ const Revenue = () => {
   }, [selectedYear])
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
+    if (currentPage > totalPages) setCurrentPage(totalPages)
   }, [currentPage, totalPages])
 
   return (
@@ -153,7 +102,9 @@ const Revenue = () => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Revenue tracking</p>
-            <p className="mt-1 text-sm text-slate-600">Monthly revenue record from successful payments.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Monthly revenue record from successful payments. Click a month to open the full day-wise report.
+            </p>
           </div>
           <label className="block w-full sm:w-52">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Year</span>
@@ -215,7 +166,19 @@ const Revenue = () => {
             </tr>
           ) : (
             paginatedRows.map((row) => (
-              <tr key={row.key} className={tableRowClass}>
+              <tr
+                key={row.key}
+                role="link"
+                tabIndex={0}
+                onClick={() => navigate(`/revenue/${row.key}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    navigate(`/revenue/${row.key}`)
+                  }
+                }}
+                className={`${tableRowClass} cursor-pointer`}
+              >
                 <td className={tdPrimaryClass}>{row.label}</td>
                 <td className={`${tdClass} font-semibold text-emerald-700`}>
                   {formatCurrency(row.totalRevenue)}

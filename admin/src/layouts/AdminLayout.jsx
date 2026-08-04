@@ -65,6 +65,8 @@ const pageTitles = {
 const getPageTitle = (pathname, titles) => {
   if (titles[pathname]) return titles[pathname]
   if (pathname.startsWith('/transactions/')) return 'Transaction Details'
+  if (pathname.startsWith('/revenue/') && pathname.split('/').length >= 4) return 'Day Revenue Report'
+  if (pathname.startsWith('/revenue/')) return 'Month Revenue Report'
   if (pathname.startsWith('/user-mail/')) return 'User Mail History'
   if (pathname.startsWith('/users/')) return 'User Profile'
   if (pathname.startsWith('/support/')) return 'Support Request'

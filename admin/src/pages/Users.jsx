@@ -9,6 +9,7 @@ import {
   actionGroupClass,
   cardClass,
   exportBtnClass,
+  inputClass,
   secondaryBtnClass,
   statGridClass,
   tableBodyClass,
@@ -31,6 +32,19 @@ import { buildPageCacheKey, createPaginatedLoader } from '../utils/paginatedPage
 
 const PAGE_SIZE = 50
 const usersLoader = createPaginatedLoader()
+
+const ORDERS_FILTERS = [
+  { id: 'all', label: 'All users' },
+  { id: 'most', label: 'Most orders' },
+  { id: 'spend', label: 'Highest spend' },
+]
+
+const formatCurrency = (amount = 0) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Number(amount) || 0)
 
 const formatDate = (value) => {
   if (!value) return '—'
@@ -60,6 +74,7 @@ const Users = () => {
   const [error, setError] = useState('')
   const [search, setSearch] = useState(restore?.search || '')
   const [debouncedSearch, setDebouncedSearch] = useState(restore?.search || '')
+  const [ordersFilter, setOrdersFilter] = useState(restore?.ordersFilter || 'all')
   const [currentPage, setCurrentPage] = useState(restore?.page || 1)
   const [highlightedId, setHighlightedId] = useState('')
   const [deletingUserId, setDeletingUserId] = useState('')
@@ -79,9 +94,17 @@ const Users = () => {
     usersLoader.clear()
   }, [debouncedSearch])
 
+  useEffect(() => {
+    setCurrentPage(1)
+    usersLoader.clear()
+  }, [ordersFilter])
+
   const loadUsers = useCallback(
     async ({ force = false } = {}) => {
-      const cacheKey = buildPageCacheKey('users', currentPage, { search: debouncedSearch })
+      const cacheKey = buildPageCacheKey('users', currentPage, {
+        search: debouncedSearch,
+        orders: ordersFilter,
+      })
 
       setLoading(true)
       setError('')
@@ -95,6 +118,7 @@ const Users = () => {
               page: currentPage,
               limit: PAGE_SIZE,
               search: debouncedSearch,
+              orders: ordersFilter,
             })
             const payload = response.data?.data || {}
             return {
@@ -121,7 +145,7 @@ const Users = () => {
         setLoading(false)
       }
     },
-    [currentPage, debouncedSearch],
+    [currentPage, debouncedSearch, ordersFilter],
   )
 
   useEffect(() => {
@@ -139,6 +163,7 @@ const Users = () => {
       setSearch(nextRestore.search)
       setDebouncedSearch(nextRestore.search)
     }
+    if (nextRestore.ordersFilter) setOrdersFilter(nextRestore.ordersFilter)
     if (nextRestore.page) setCurrentPage(nextRestore.page)
 
     navigate('/users', { replace: true, state: {} })
@@ -163,6 +188,7 @@ const Users = () => {
       state: {
         fromList: {
           search,
+          ordersFilter,
           page: currentPage,
           userId: user.id,
         },
@@ -241,8 +267,24 @@ const Users = () => {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by name, email, phone"
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              className={inputClass}
             />
+          </label>
+          <label className="block w-full sm:w-52">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Orders
+            </span>
+            <select
+              value={ordersFilter}
+              onChange={(event) => setOrdersFilter(event.target.value)}
+              className={inputClass}
+            >
+              {ORDERS_FILTERS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </label>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
             <Link to="/user-mail" className={secondaryBtnClass}>
@@ -286,18 +328,20 @@ const Users = () => {
             <th className={thClass}>Name</th>
             <th className={thClass}>Email</th>
             <th className={thHideSm}>Phone</th>
+            <th className={thClass}>Orders</th>
+            <th className={thClass}>Total spent</th>
             <th className={thHideMd}>Joined</th>
             <th className={thRightClass}>Actions</th>
           </tr>
         </thead>
         <tbody className={tableBodyClass}>
           {loading && (
-            <TableLoader label="Loading users..." colSpan={5} className={tableEmptyClass} />
+            <TableLoader label="Loading users..." colSpan={7} className={tableEmptyClass} />
           )}
 
           {!loading && !error && users.length === 0 && (
             <tr>
-              <td colSpan={5} className={tableEmptyClass}>
+              <td colSpan={7} className={tableEmptyClass}>
                 No users found.
               </td>
             </tr>
@@ -320,6 +364,12 @@ const Users = () => {
                   <p className="mt-0.5 text-xs text-slate-500 sm:hidden">{user.phone || '—'}</p>
                 </td>
                 <td className={tdHideSm}>{user.phone || '—'}</td>
+                <td className={`${tdClass} font-semibold text-slate-900`}>
+                  {Number(user.orderCount) || 0}
+                </td>
+                <td className={`${tdClass} font-semibold text-emerald-700`}>
+                  {formatCurrency(user.totalSpent)}
+                </td>
                 <td className={`${tdHideMd} text-slate-600`}>{formatDate(user.createdAt)}</td>
                 <td className={tdRightClass}>
                   <div className={actionGroupClass}>
