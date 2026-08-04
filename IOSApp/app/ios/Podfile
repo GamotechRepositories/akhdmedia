@@ -43,4 +43,20 @@ post_install do |installer|
       config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
     end
   end
+
+  # ScreenPreventerKit.xcframework ships without dSYMs (App Store Connect UUID warning).
+  # Place slice dSYMs where Xcode expects them inside the XCFramework.
+  require 'fileutils'
+  xcframework = File.join(installer.sandbox.root, 'ScreenProtectorKit/Frameworks/ScreenPreventerKit.xcframework')
+  if File.directory?(xcframework)
+    Dir.glob(File.join(xcframework, '*/ScreenPreventerKit.framework/ScreenPreventerKit')).each do |binary|
+      slice_dir = File.expand_path('../..', binary)
+      dsym_path = File.join(slice_dir, 'dSYMs', 'ScreenPreventerKit.framework.dSYM')
+      next if File.directory?(dsym_path)
+
+      FileUtils.mkdir_p(File.dirname(dsym_path))
+      system('dsymutil', binary, '-o', dsym_path) or
+        warn "warning: dsymutil failed for #{binary}"
+    end
+  end
 end

@@ -205,6 +205,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				E879D31B46D44818F9BCFDF7 /* [CP] Embed Pods Frameworks */,
 				D91EF79A1FB7A33C5A898361 /* [CP] Copy Pods Resources */,
+				A7F3E91C2B8D4E6F9A1C0D2E /* Generate ScreenPreventerKit dSYM */,
 			);
 			buildRules = (
 			);
@@ -366,6 +367,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A7F3E91C2B8D4E6F9A1C0D2E /* Generate ScreenPreventerKit dSYM */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/ScreenProtectorKit/Frameworks/ScreenPreventerKit.xcframework/ios-arm64/ScreenPreventerKit.framework/ScreenPreventerKit",
+			);
+			name = "Generate ScreenPreventerKit dSYM";
+			outputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/ScreenPreventerKit.framework.dSYM",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${SRCROOT}/scripts/generate_screen_preventer_dsym.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		E879D31B46D44818F9BCFDF7 /* [CP] Embed Pods Frameworks */ = {
