@@ -80,7 +80,54 @@ class _AkhdMediaAppState extends State<AkhdMediaApp> with WidgetsBindingObserver
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         routerConfig: appRouter,
+        builder: (context, child) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              child ?? const SizedBox.shrink(),
+              const _SessionRestoreOverlay(),
+            ],
+          );
+        },
       ),
+    );
+  }
+}
+
+class _SessionRestoreOverlay extends StatelessWidget {
+  const _SessionRestoreOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<AuthProvider, bool>(
+      selector: (_, auth) => auth.loading,
+      builder: (context, loading, _) {
+        if (!loading) return const SizedBox.shrink();
+        return ColoredBox(
+          color: const Color(0xFFF8FAFC),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Restoring session...',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF475569),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
