@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Sign-In</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f3f4f6;
+        color: #111827;
+      }
+      .card {
+        width: 100%;
+        max-width: 360px;
+        background: #fff;
+        border-radius: 16px;
+        padding: 28px 24px;
+        box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 20px;
+      }
+      p {
+        margin: 0 0 20px;
+        font-size: 14px;
+        color: #6b7280;
+        line-height: 1.45;
+      }
+      #button {
+        display: flex;
+        justify-content: center;
+        min-height: 44px;
+      }
+      .link-btn {
+        margin-top: 14px;
+        border: 0;
+        background: transparent;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 8px;
+      }
+      .error {
+        margin-top: 16px;
+        font-size: 13px;
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Choose Google account</h1>
+      <p>Tap below to pick which Google account you want to use.</p>
+      <div id="button"></div>
+      <button id="switchAccount" class="link-btn" type="button">
+        Use a different Google account
+      </button>
+      <div id="error" class="error" hidden></div>
+    </div>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      const CLIENT_ID = '__GOOGLE_CLIENT_ID__';
+
+      function showError(message) {
+        const node = document.getElementById('error');
+        node.textContent = message;
+        node.hidden = false;
+      }
+
+      function sendCredential(credential) {
+        if (window.GoogleAuthChannel && window.GoogleAuthChannel.postMessage) {
+          GoogleAuthChannel.postMessage(credential);
+        }
+      }
+
+      function handleCredential(response) {
+        if (response && response.credential) {
+          sendCredential(response.credential);
+          return;
+        }
+        showError('Google sign-in failed. Please try again.');
+      }
+
+      function renderGoogleButton() {
+        const container = document.getElementById('button');
+        container.innerHTML = '';
+
+        google.accounts.id.renderButton(container, {
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          width: 280,
+          type: 'standard',
+        });
+      }
+
+      function initGoogle() {
+        if (!window.google || !google.accounts || !google.accounts.id) {
+          showError('Could not load Google Sign-In. Check your connection.');
+          return;
+        }
+
+        google.accounts.id.disableAutoSelect();
+        google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          callback: handleCredential,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          context: 'signin',
+          itp_support: true,
+        });
+
+        renderGoogleButton();
+
+        document.getElementById('switchAccount').addEventListener('click', function () {
+          google.accounts.id.disableAutoSelect();
+          if (window.ReloadAuthChannel && window.ReloadAuthChannel.postMessage) {
+            ReloadAuthChannel.postMessage('reload');
+            return;
+          }
+          renderGoogleButton();
+        });
+      }
+
+      window.addEventListener('load', function () {
+        if (window.google && google.accounts && google.accounts.id) {
+          initGoogle();
+        } else {
+          const script = document.querySelector('script[src*="gsi/client"]');
+          if (script) {
+            script.addEventListener('load', initGoogle);
+            script.addEventListener('error', function () {
+              showError('Could not load Google Sign-In.');
+            });
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
