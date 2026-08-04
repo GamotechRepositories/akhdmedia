@@ -228,26 +228,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    final firstProductId = items.first.product?.id.isNotEmpty == true
-        ? items.first.product!.id
-        : items.first.productId;
-    if (firstProductId.trim().isEmpty) {
+    final itemPayload = items
+        .map((item) {
+          final productId = item.product?.id.isNotEmpty == true
+              ? item.product!.id
+              : item.productId;
+          final imageSize = item.imageSize.trim();
+          return '$productId:${item.quantity}:$imageSize';
+        })
+        .where((entry) => !entry.startsWith(':'))
+        .join(',');
+
+    if (itemPayload.isEmpty) {
       if (mounted) {
         setState(() => _error = 'Product information is missing');
       }
       return;
     }
 
-    final itemPayload = items
-        .map(
-          (item) =>
-              '${item.product?.id.isNotEmpty == true ? item.product!.id : item.productId}:${item.quantity}:${item.imageSize.isEmpty ? 'standard' : item.imageSize}',
-        )
-        .join(',');
     final purchaseReason = _selectedReason ?? '';
     final uri = Uri.https(
       'www.akhdmedia.com',
-      '/product/$firstProductId',
+      '/from-app',
       {
         'source': 'ios_app',
         'fromCheckout': '1',
@@ -594,7 +596,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
       const SizedBox(height: AppSpacing.md),
-      const Text('iOS checkout notice', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+      const Text('Complete purchase on website', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
       const SizedBox(height: AppSpacing.sm),
       Container(
         width: double.infinity,
@@ -605,7 +607,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           border: Border.all(color: const Color(0xFFBFDBFE)),
         ),
         child: const Text(
-          'In-app payment is not available on iOS in this build. Tap "Pay now" to contact support and complete your purchase.',
+          'Due to App Store payment rules, purchases cannot be completed inside this iOS app. When you tap Continue on website, we will open akhdmedia.com with your billing details and cart so you can finish payment securely on the website.',
           style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A), height: 1.35),
         ),
       ),
@@ -1125,7 +1127,7 @@ class _BottomBar extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : Text(step == 0 ? 'Continue' : 'Pay now'),
+                  : Text(step == 0 ? 'Continue' : 'Continue on website'),
             ),
           ],
         ),

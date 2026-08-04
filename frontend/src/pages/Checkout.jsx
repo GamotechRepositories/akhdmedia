@@ -10,6 +10,7 @@ import OrderAmountSummary from '../components/OrderAmountSummary';
 import PageLoader from '../components/ui/PageLoader';
 import PhoneCountryInput, { isPhoneNumberValid, normalizePhoneValue } from '../components/ui/PhoneCountryInput';
 import { BRAND } from '../config/brand';
+import { IOS_APP_BILLING_KEY } from './FromIosApp';
 
 const STEPS = ['billing', 'summary'];
 
@@ -245,15 +246,43 @@ const Checkout = () => {
 
   useEffect(() => {
     const loadProfile = async () => {
+      let iosBilling = null
+      try {
+        const raw = sessionStorage.getItem(IOS_APP_BILLING_KEY)
+        if (raw) {
+          iosBilling = JSON.parse(raw)
+          sessionStorage.removeItem(IOS_APP_BILLING_KEY)
+        }
+      } catch {
+        iosBilling = null
+      }
+
       try {
         if (user) {
           setBillingDetails((prev) => ({
             ...prev,
-            name: user.name || prev.name,
-            email: user.email || prev.email,
-            phone: normalizePhoneValue(user.phone || prev.phone),
+            name: iosBilling?.name || user.name || prev.name,
+            email: iosBilling?.email || user.email || prev.email,
+            phone: normalizePhoneValue(iosBilling?.phone || user.phone || prev.phone),
+            purchaseReasons: Array.isArray(iosBilling?.purchaseReasons) && iosBilling.purchaseReasons.length
+              ? [iosBilling.purchaseReasons[0]]
+              : prev.purchaseReasons,
+            purchaseReasonOther: iosBilling?.purchaseReasonOther || prev.purchaseReasonOther,
           }))
           return
+        }
+
+        if (iosBilling) {
+          setBillingDetails({
+            ...emptyBilling,
+            name: iosBilling.name || '',
+            email: iosBilling.email || '',
+            phone: normalizePhoneValue(iosBilling.phone || ''),
+            purchaseReasons: Array.isArray(iosBilling.purchaseReasons) && iosBilling.purchaseReasons.length
+              ? [iosBilling.purchaseReasons[0]]
+              : [],
+            purchaseReasonOther: iosBilling.purchaseReasonOther || '',
+          })
         }
 
         const response = await checkoutAPI.getProfile();
@@ -263,14 +292,18 @@ const Checkout = () => {
             ? saved.purchaseReasons
             : [];
 
-          setBillingDetails({
+          setBillingDetails((prev) => ({
             ...emptyBilling,
-            name: saved.name || '',
-            email: saved.email || '',
-            phone: normalizePhoneValue(saved.phone || ''),
-            purchaseReasons: savedReasons.length ? [savedReasons[0]] : [],
-            purchaseReasonOther: saved.purchaseReasonOther || '',
-          });
+            name: prev.name || saved.name || '',
+            email: prev.email || saved.email || '',
+            phone: normalizePhoneValue(prev.phone || saved.phone || ''),
+            purchaseReasons: prev.purchaseReasons.length
+              ? prev.purchaseReasons
+              : savedReasons.length
+                ? [savedReasons[0]]
+                : [],
+            purchaseReasonOther: prev.purchaseReasonOther || saved.purchaseReasonOther || '',
+          }));
         }
       } catch (profileError) {
         console.error('Failed to load billing profile:', profileError);

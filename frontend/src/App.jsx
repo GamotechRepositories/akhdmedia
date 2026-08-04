@@ -33,6 +33,7 @@ import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import ProtectedRoute from './components/ProtectedRoute';
+import FromIosApp from './pages/FromIosApp';
 
 function AppContent() {
   return (
@@ -47,6 +48,7 @@ function AppContent() {
           <Route path="/videos/:category/:subCategory" element={<CategoryPage />} />
           <Route path="/videos/:category" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/from-app" element={<FromIosApp />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/paypal/complete" element={<PayPalComplete />} />
