@@ -21,6 +21,7 @@ const Login = () => {
   const [error, setError] = useState('')
 
   const redirectTo = location.state?.from || '/'
+  const loginMessage = location.state?.loginMessage || ''
   const isBusy = submitting || loading
 
   if (!loading && user) {
@@ -96,6 +97,13 @@ const Login = () => {
           onSubmit={handleSubmit}
           className="rounded-2xl border border-white/40 bg-white/95 p-6 shadow-2xl sm:p-8"
         >
+          {loginMessage ? (
+            <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-900">
+              {loginMessage.includes('Authentication required')
+                ? 'Login is required'
+                : loginMessage}
+            </div>
+          ) : null}
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
