@@ -79,6 +79,8 @@ const Products = () => {
   const navigate = useNavigate()
   const { hasPermission } = useAuth()
   const canWrite = hasPermission(ADMIN_PERMISSIONS.PRODUCTS_WRITE)
+  const canViewSales = hasPermission(ADMIN_PERMISSIONS.PRODUCTS_SALES_VIEW)
+  const tableColumnCount = canViewSales ? 9 : 6
   const tableContainerRef = useRef(null)
   const skipSearchResetRef = useRef(true)
   const restore = location.state?.restore
@@ -266,12 +268,20 @@ const Products = () => {
     return () => cancelAnimationFrame(frame)
   }, [location.state, navigate, invalidateProductCache])
 
+  useEffect(() => {
+    if (!canViewSales && salesFilter !== 'all') {
+      clearProductsRequestCache()
+      setSalesFilter('all')
+      setCurrentPage(1)
+    }
+  }, [canViewSales, salesFilter])
+
   const hasActiveFilters =
     searchQuery.trim() ||
     typeFilter !== 'all' ||
     categoryFilter !== 'all' ||
     statusFilter !== 'all' ||
-    salesFilter !== 'all'
+    (canViewSales && salesFilter !== 'all')
 
   const clearFilters = () => {
     clearProductsRequestCache()
@@ -337,7 +347,9 @@ const Products = () => {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          className={`grid gap-3 sm:grid-cols-2 ${canViewSales ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
+        >
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Type
@@ -402,26 +414,28 @@ const Products = () => {
             </select>
           </label>
 
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Sales
-            </span>
-            <select
-              value={salesFilter}
-              onChange={(e) => {
-                clearProductsRequestCache()
-                setSalesFilter(e.target.value)
-                setCurrentPage(1)
-              }}
-              className={inputClass}
-            >
-              {SALES_FILTERS.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {canViewSales ? (
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Sales
+              </span>
+              <select
+                value={salesFilter}
+                onChange={(e) => {
+                  clearProductsRequestCache()
+                  setSalesFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className={inputClass}
+              >
+                {SALES_FILTERS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
 
         {!loading && (
@@ -440,19 +454,27 @@ const Products = () => {
             <th className={thClass}>Name</th>
             <th className={thClass}>Type</th>
             <th className={thHideMd}>Category</th>
-            <th className={thClass}>Price</th>
-            <th className={thClass}>Sold</th>
-            <th className={thClass}>Total Rs</th>
+            {canViewSales ? (
+              <>
+                <th className={thClass}>Price</th>
+                <th className={thClass}>Sold</th>
+                <th className={thClass}>Total Rs</th>
+              </>
+            ) : null}
             <th className={thClass}>Status</th>
             <th className={thRightClass}>Actions</th>
           </tr>
         </thead>
         <tbody className={tableBodyClass}>
           {loading ? (
-            <TableLoader label="Loading products..." colSpan={9} className={tableEmptyClass} />
+            <TableLoader
+              label="Loading products..."
+              colSpan={tableColumnCount}
+              className={tableEmptyClass}
+            />
           ) : products.length === 0 ? (
             <tr>
-              <td colSpan={9} className={tableEmptyClass}>
+              <td colSpan={tableColumnCount} className={tableEmptyClass}>
                 {hasActiveFilters
                   ? 'No products match your search or filters.'
                   : 'No products found.'}
@@ -496,13 +518,17 @@ const Products = () => {
                   </span>
                 </td>
                 <td className={`${tdHideMd} text-slate-600`}>{product.category}</td>
-                <td className={tdClass}>{formatCurrency(product.price)}</td>
-                <td className={`${tdClass} font-semibold text-slate-900`}>
-                  {Number(product.soldCount) || 0}
-                </td>
-                <td className={`${tdClass} font-semibold text-emerald-700`}>
-                  {formatCurrency(product.totalRevenue)}
-                </td>
+                {canViewSales ? (
+                  <>
+                    <td className={tdClass}>{formatCurrency(product.price)}</td>
+                    <td className={`${tdClass} font-semibold text-slate-900`}>
+                      {Number(product.soldCount) || 0}
+                    </td>
+                    <td className={`${tdClass} font-semibold text-emerald-700`}>
+                      {formatCurrency(product.totalRevenue)}
+                    </td>
+                  </>
+                ) : null}
                 <td className={tdClass}>
                   <StatusBadge active={product.isActive} />
                 </td>

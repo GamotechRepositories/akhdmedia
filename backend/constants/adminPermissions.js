@@ -7,6 +7,7 @@ export const ADMIN_PERMISSIONS = {
   ACTORS_WRITE: 'actors:write',
   PRODUCTS_READ: 'products:read',
   PRODUCTS_WRITE: 'products:write',
+  PRODUCTS_SALES_VIEW: 'products:sales',
   PROMO_CODES_READ: 'promo-codes:read',
   PROMO_CODES_WRITE: 'promo-codes:write',
   ORDERS_READ: 'orders:read',
@@ -54,6 +55,10 @@ export const ADMIN_PERMISSION_GROUPS = [
     permissions: [
       { key: ADMIN_PERMISSIONS.PRODUCTS_READ, label: 'View products' },
       { key: ADMIN_PERMISSIONS.PRODUCTS_WRITE, label: 'Create & edit products' },
+      {
+        key: ADMIN_PERMISSIONS.PRODUCTS_SALES_VIEW,
+        label: 'View price, sold count & total revenue columns',
+      },
     ],
   },
   {

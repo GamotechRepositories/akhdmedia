@@ -16,6 +16,10 @@ import { attachMasterVideoSignedUrl } from '../utils/attachMasterVideoSignedUrl.
 import { applyActorSelection } from '../utils/applyActorToProduct.js'
 import { cleanupReplacedProductDemoMedia } from '../services/storageService.js'
 import { getProductSalesStatsMap, getProductSalesStats } from '../utils/productSales.js'
+import {
+  ADMIN_PERMISSIONS,
+  hasAdminPermission,
+} from '../constants/adminPermissions.js'
 const getCategoryMap = async () => {
   const categories = await Category.find()
   return buildCategoryMap(categories)
@@ -80,9 +84,21 @@ const ensureClipIds = async (products = []) => {
   }
 }
 
-const formatProductList = (products, categoryMap, includeDelivery, salesMap = null) =>
+const formatProductList = (
+  products,
+  categoryMap,
+  includeDelivery,
+  salesMap = null,
+  { includePricing = true } = {},
+) =>
   products.map((product) => {
     const formatted = formatProduct(product, categoryMap, { includeDelivery })
+    if (!includePricing) {
+      delete formatted.price
+      delete formatted.resolutionPricing
+      delete formatted.imageSizes
+      delete formatted.gstPercentage
+    }
     if (salesMap) {
       const stats = getProductSalesStats(salesMap, product._id.toString())
       formatted.soldCount = stats.soldCount
@@ -98,18 +114,22 @@ export const reserveClipId = asyncHandler(async (req, res) => {
 
 export const getProducts = asyncHandler(async (req, res) => {
   const isAdmin = req.query.admin === 'true'
+  const canViewSales =
+    isAdmin && hasAdminPermission(req.adminProfile, ADMIN_PERMISSIONS.PRODUCTS_SALES_VIEW)
   const page = Number.parseInt(req.query.page, 10)
   const limit = Number.parseInt(req.query.limit, 10)
   const usePagination =
     isAdmin && Number.isFinite(page) && page > 0 && Number.isFinite(limit) && limit > 0
-  const salesSort = ['top', 'low', 'revenue'].includes(req.query.sales)
-    ? req.query.sales
-    : 'all'
+  const salesSort =
+    canViewSales && ['top', 'low', 'revenue'].includes(req.query.sales)
+      ? req.query.sales
+      : 'all'
 
   if (usePagination) {
     const safeLimit = Math.min(Math.max(limit, 1), 100)
     const filter = buildAdminListFilter(req.query)
     const skip = (page - 1) * safeLimit
+    const listOptions = { includePricing: canViewSales }
 
     if (salesSort !== 'all') {
       const [allProducts, total, categoryMap, salesMap] = await Promise.all([
@@ -152,7 +172,13 @@ export const getProducts = asyncHandler(async (req, res) => {
 
       res.json({
         data: {
-          products: formatProductList(pageProducts, categoryMap, true, salesMap),
+          products: formatProductList(
+            pageProducts,
+            categoryMap,
+            true,
+            salesMap,
+            listOptions,
+          ),
           pagination: {
             page,
             limit: safeLimit,
@@ -172,13 +198,13 @@ export const getProducts = asyncHandler(async (req, res) => {
 
     await ensureClipIds(products)
 
-    const salesMap = await getProductSalesStatsMap(
-      products.map((product) => product._id.toString()),
-    )
+    const salesMap = canViewSales
+      ? await getProductSalesStatsMap(products.map((product) => product._id.toString()))
+      : null
 
     res.json({
       data: {
-        products: formatProductList(products, categoryMap, true, salesMap),
+        products: formatProductList(products, categoryMap, true, salesMap, listOptions),
         pagination: {
           page,
           limit: safeLimit,
@@ -205,9 +231,13 @@ export const getProducts = asyncHandler(async (req, res) => {
   await ensureClipIds(products)
 
   const categoryMap = await getCategoryMap()
-  const salesMap = isAdmin ? await getProductSalesStatsMap() : null
+  const salesMap = canViewSales ? await getProductSalesStatsMap() : null
 
-  res.json(formatProductList(products, categoryMap, isAdmin, salesMap))
+  res.json(
+    formatProductList(products, categoryMap, isAdmin, salesMap, {
+      includePricing: !isAdmin || canViewSales,
+    }),
+  )
 })
 
 export const getProductById = asyncHandler(async (req, res) => {
