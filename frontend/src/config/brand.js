@@ -1,6 +1,8 @@
 export const BRAND = {
   name: 'AKHD MEDIA & CO',
   tagline: 'Premium Video Marketplace',
+  description:
+    "India's First Premium Editorial Video Marketplace. Browse and license broadcast-ready red carpet, and media event footage with transparent pricing and instant digital delivery.",
   domain: 'akhdmedia.com',
   supportEmail: 'support@akhdmedia.com',
   supportPhone: '+918591443501',

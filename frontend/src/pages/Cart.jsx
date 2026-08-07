@@ -7,6 +7,7 @@ import { preventMediaContextMenu } from '../utils/mediaProtection';
 import { formatCurrency } from '../utils/formatters';
 import { getCartItemBasePrice } from '../utils/cartHelpers';
 import OrderAmountSummary from '../components/OrderAmountSummary';
+import PaymentMethodLogos from '../components/PaymentMethodLogos';
 import PageLoader from '../components/ui/PageLoader';
 
 const IconTrash = (props) => (
@@ -354,17 +355,7 @@ const Cart = () => {
 
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <p className="text-xs font-medium text-gray-500 mb-3 text-center">Secure Payment</p>
-                <div className="flex justify-center gap-4 opacity-60">
-                  <svg className="h-6" viewBox="0 0 38 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="38" height="24" rx="4" fill="#F3F4F6" />
-                    <path d="M14.07 15.631H16.485L18 8.42H15.657C15.12 8.42 14.628 8.736 14.436 9.197L12.333 14.238L10.153 9.197C9.972 8.71 9.564 8.42 8.949 8.42H5.733L5.617 8.974C6.828 9.243 7.824 9.612 8.718 10.536C9.564 11.433 9.513 11.248 9.87 13.069L8.475 19.82H11.025L14.07 15.631Z" fill="#1A1F71" />
-                  </svg>
-                  <svg className="h-6" viewBox="0 0 38 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="38" height="24" rx="4" fill="#F3F4F6" />
-                    <path d="M13.6 12C13.6 14.333 14.65 16.433 16.3 17.9C15.033 18.8 13.516 19.333 11.85 19.333C7.8 19.333 4.51667 16.05 4.51667 12C4.51667 7.95 7.8 4.66667 11.85 4.66667C13.516 4.66667 15.033 5.2 16.3 6.1C14.65 7.56667 13.6 9.66667 13.6 12Z" fill="#EB001B" />
-                    <path d="M26.2667 12C26.2667 16.05 22.9833 19.333 18.9333 19.333C17.2667 19.333 15.75 18.8 14.4833 17.9C16.1333 16.433 17.1833 14.333 17.1833 12C17.1833 9.66667 16.1333 7.56667 14.4833 6.1C15.75 5.2 17.2667 4.66667 18.9333 4.66667C22.9833 4.66667 26.2667 7.95 26.2667 12Z" fill="#F79E1B" />
-                  </svg>
-                </div>
+                <PaymentMethodLogos />
               </div>
             </div>
           </div>

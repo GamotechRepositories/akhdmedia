@@ -7,7 +7,6 @@ import {
   createPendingOnlineOrderFromCart,
   deleteAdminOrderById,
   getAdminOrderById,
-  getAllOrders,
   getCheckoutProfile,
   resolveAccessibleOrder,
   saveCheckoutProfile,
@@ -335,7 +334,11 @@ export const listAdminOrders = asyncHandler(async (req, res) => {
     return
   }
 
-  const orders = await getAllOrders()
+  const filter = {
+    ...buildOrderListFilter(req.query),
+    paymentStatus: 'paid',
+  }
+  const orders = await Order.find(filter).sort({ createdAt: -1 })
 
   res.json({
     success: true,

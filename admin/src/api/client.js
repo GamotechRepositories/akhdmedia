@@ -341,7 +341,24 @@ export const updateProduct = (id, payload) => api.put(`/products/${id}`, payload
 
 export const deleteProduct = (id) => api.delete(`/products/${id}`)
 
-export const fetchOrders = () => api.get('/admin/orders')
+export const fetchOrders = ({
+  search = '',
+  paymentStatus = 'all',
+  status = 'all',
+  customerEmail = '',
+  dateFrom = '',
+  dateTo = '',
+} = {}) =>
+  api.get('/admin/orders', {
+    params: {
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(paymentStatus !== 'all' ? { paymentStatus } : {}),
+      ...(status !== 'all' ? { status } : {}),
+      ...(customerEmail.trim() ? { customerEmail: customerEmail.trim() } : {}),
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+    },
+  })
 
 export const fetchAdminOrders = ({
   page = 1,

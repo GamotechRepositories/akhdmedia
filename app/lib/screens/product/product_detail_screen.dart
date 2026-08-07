@@ -677,7 +677,7 @@ class _QualitySelector extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  isVideo ? 'Video + stills' : 'Licensed file',
+                  isVideo ? 'RAW VIDEO' : 'Licensed file',
                   style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                 ),
               ],

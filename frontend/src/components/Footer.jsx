@@ -11,7 +11,7 @@ const Footer = () => {
         <div>
           <Logo theme="dark" className="mb-4" />
           <p className="mb-4 text-sm leading-relaxed text-gray-400">
-            {BRAND.tagline}. License broadcast-ready clips with transparent pricing and instant delivery.
+            {BRAND.description}
           </p>
           <Link to="/about-us" className="text-sm text-white transition hover:text-gray-200">
             About Us

@@ -277,13 +277,26 @@ const Orders = () => {
     setExporting(true)
     setError('')
     try {
-      const response = await fetchOrders()
+      const response = await fetchOrders({
+        search: debouncedSearch,
+        paymentStatus: paymentFilter,
+        status: statusFilter,
+        customerEmail: customerEmailFilter,
+        dateFrom,
+        dateTo,
+      })
       const allOrders = response.data?.data?.orders || []
       if (!allOrders.length) {
-        setError('No orders to export')
+        setError(
+          hasActiveFilters
+            ? 'No orders match the selected filters to export'
+            : 'No orders to export',
+        )
         return
       }
-      downloadOrdersExcel(allOrders, { scope: 'all' })
+      downloadOrdersExcel(allOrders, {
+        scope: hasActiveFilters ? 'filtered' : 'all',
+      })
     } catch (exportError) {
       setError(exportError.message || 'Could not export orders')
     } finally {

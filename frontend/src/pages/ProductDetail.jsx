@@ -369,7 +369,7 @@ const ProductDetail = () => {
                   Select download quality
                 </h3>
                 <span className="text-[10px] font-medium text-gray-500">
-                  {isVideo ? 'Video + stills' : 'Licensed file'}
+                  {isVideo ? 'RAW VIDEO' : 'Licensed file'}
                 </span>
               </div>
 
