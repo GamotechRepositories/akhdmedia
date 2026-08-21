@@ -15,6 +15,7 @@ export const downloadUsersExcel = (users = [], { scope = 'all' } = {}) => {
   const rows = users.map((user, index) => ({
     '#': index + 1,
     Name: user.name || '',
+    Premium: user.isPremium ? 'Yes' : 'No',
     Email: user.email || '',
     Phone: user.phone || '',
     Role: 'Customer',
@@ -26,6 +27,7 @@ export const downloadUsersExcel = (users = [], { scope = 'all' } = {}) => {
   worksheet['!cols'] = [
     { wch: 5 },
     { wch: 28 },
+    { wch: 12 },
     { wch: 34 },
     { wch: 16 },
     { wch: 12 },

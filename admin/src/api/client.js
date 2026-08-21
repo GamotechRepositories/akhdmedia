@@ -445,6 +445,8 @@ export const fetchAdminUsers = ({ page = 1, limit = 50, search = '', orders = 'a
 
 export const fetchUser = (id) => api.get(`/admin/users/${id}`)
 export const fetchUserEmailHistory = (id) => api.get(`/admin/users/${id}/email-history`)
+export const updateUserPremium = (id, isPremium) =>
+  api.patch(`/admin/users/${id}/premium`, isPremium !== undefined ? { isPremium } : {})
 
 export const deleteUser = (id) => api.delete(`/admin/users/${id}`)
 

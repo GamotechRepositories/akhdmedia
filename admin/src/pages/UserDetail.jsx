@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { fetchUser } from '../api/client'
+import { fetchUser, updateUserPremium } from '../api/client'
 import AdminAlertModal from '../components/AdminAlertModal'
 import OrderAmountSummary from '../components/OrderAmountSummary'
 import FormStep from '../components/FormStep'
 import PageLoader from '../components/ui/PageLoader'
 import AdminTable from '../components/ui/AdminTable'
+import { IconSpinner, IconStar, IconStarFilled } from '../components/icons/AdminIcons'
 import {
   actionViewClass,
   cardClass,
@@ -55,10 +56,16 @@ const formatCurrency = (amount = 0) =>
 
 const shortOrderNumber = (orderNumber = '') => orderNumber.slice(-8).toUpperCase()
 
-const ReadOnlyField = ({ label, value }) => (
+const ReadOnlyField = ({ label, value, highlight = false }) => (
   <div>
     <label className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</label>
-    <div className={`${inputClass} mt-0 cursor-default bg-white text-slate-900`}>{value || '—'}</div>
+    <div
+      className={`${inputClass} mt-0 cursor-default bg-white ${
+        highlight ? 'font-semibold text-amber-700 bg-amber-50/40 border-amber-200' : 'text-slate-900'
+      }`}
+    >
+      {value || '—'}
+    </div>
   </div>
 )
 
@@ -83,6 +90,7 @@ const UserDetail = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
+  const [togglingPremium, setTogglingPremium] = useState(false)
 
   useEffect(() => {
     const loadUser = async () => {
@@ -108,6 +116,21 @@ const UserDetail = () => {
     setErrorDismissed(false)
   }, [id])
 
+  const handleTogglePremium = async () => {
+    if (!user || togglingPremium) return
+    const nextIsPremium = !user.isPremium
+    setTogglingPremium(true)
+    try {
+      const response = await updateUserPremium(user.id, nextIsPremium)
+      const updated = response.data?.data?.user
+      setUser((prev) => (prev ? { ...prev, ...updated, isPremium: nextIsPremium } : prev))
+    } catch (toggleError) {
+      setError(toggleError.message || 'Could not update premium customer status')
+    } finally {
+      setTogglingPremium(false)
+    }
+  }
+
   if (loading) {
     return <PageLoader label="Loading user profile..." />
   }
@@ -131,7 +154,27 @@ const UserDetail = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={handleTogglePremium}
+          disabled={togglingPremium}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+            user.isPremium
+              ? 'border border-amber-300 bg-amber-50 text-amber-800 shadow-xs hover:bg-amber-100'
+              : 'border border-slate-300 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50/50 hover:text-amber-800'
+          }`}
+        >
+          {togglingPremium ? (
+            <IconSpinner className="h-4 w-4 text-amber-600" />
+          ) : user.isPremium ? (
+            <IconStarFilled className="h-4 w-4 text-amber-500" />
+          ) : (
+            <IconStar className="h-4 w-4 text-slate-400" />
+          )}
+          <span>{user.isPremium ? '⭐ Premium Customer' : 'Mark as Premium Customer'}</span>
+        </button>
+
         <Link to="/users" state={backState} className={secondaryBtnClass}>
           Back to Users
         </Link>
@@ -158,6 +201,11 @@ const UserDetail = () => {
         <FormStep step="1" title="Profile" hint="Registered customer details" tone="sky">
           <div className="grid gap-3 sm:grid-cols-2">
             <ReadOnlyField label="Name" value={user.name} />
+            <ReadOnlyField
+              label="Account Status"
+              value={user.isPremium ? '⭐ Premium Customer' : 'Standard Customer'}
+              highlight={user.isPremium}
+            />
             <ReadOnlyField label="Email" value={user.email} />
             <ReadOnlyField label="Phone" value={user.phone} />
             <ReadOnlyField label="Joined on" value={formatDate(user.createdAt)} />

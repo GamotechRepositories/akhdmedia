@@ -38,6 +38,9 @@ const normalizeFromAddress = (raw = '') => {
 
 const buildUserListFilter = (query = {}) => {
   const filter = { role: { $ne: 'admin' } }
+  if (query.orders === 'premium') {
+    filter.isPremium = true
+  }
   const searchFilter = buildTokenSearchFilter(query.search, USER_SEARCH_FIELDS)
 
   if (searchFilter.$and) {
@@ -53,6 +56,7 @@ const formatUser = (user, stats = null) => ({
   email: user.email,
   phone: user.phone,
   role: user.role || 'user',
+  isPremium: Boolean(user.isPremium),
   orderCount: stats?.orderCount ?? user.orderCount ?? 0,
   totalSpent: stats?.totalSpent ?? user.totalSpent ?? 0,
   createdAt: user.createdAt,
@@ -64,18 +68,20 @@ const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value 
 export const listUsers = asyncHandler(async (req, res) => {
   const pagination = parsePageLimit(req.query)
   const ordersSort =
-    req.query.orders === 'most' || req.query.orders === 'spend' ? req.query.orders : 'all'
+    req.query.orders === 'most' || req.query.orders === 'spend' || req.query.orders === 'premium'
+      ? req.query.orders
+      : 'all'
 
   if (pagination) {
     const { page, limit, skip } = pagination
     const filter = buildUserListFilter(req.query)
 
-    if (ordersSort !== 'all') {
+    if (ordersSort === 'most' || ordersSort === 'spend') {
       const sortKey = ordersSort === 'most' ? 'orders' : 'spend'
-      const [allUsers, total, latestUser, grandTotal, statsMaps] = await Promise.all([
+      const [allUsers, total, latestUser, grandTotal, premiumCount, statsMaps] = await Promise.all([
         User.find(filter)
-          .select('name email phone role createdAt updatedAt')
-          .sort({ createdAt: -1 })
+          .select('name email phone role isPremium createdAt updatedAt')
+          .sort({ isPremium: -1, createdAt: -1 })
           .lean(),
         User.countDocuments(filter),
         User.findOne({ role: { $ne: 'admin' } })
@@ -83,6 +89,7 @@ export const listUsers = asyncHandler(async (req, res) => {
           .select('createdAt')
           .lean(),
         User.countDocuments({ role: { $ne: 'admin' } }),
+        User.countDocuments({ role: { $ne: 'admin' }, isPremium: true }),
         getUserOrderStatsMaps(),
       ])
 
@@ -97,6 +104,7 @@ export const listUsers = asyncHandler(async (req, res) => {
           pagination: buildPaginationMeta(page, limit, total),
           meta: {
             grandTotal,
+            premiumCount,
             latestSignup: latestUser?.createdAt || null,
           },
         },
@@ -104,10 +112,10 @@ export const listUsers = asyncHandler(async (req, res) => {
       return
     }
 
-    const [users, total, latestUser, grandTotal, statsMaps] = await Promise.all([
+    const [users, total, latestUser, grandTotal, premiumCount, statsMaps] = await Promise.all([
       User.find(filter)
-        .select('name email phone role createdAt updatedAt')
-        .sort({ createdAt: -1 })
+        .select('name email phone role isPremium createdAt updatedAt')
+        .sort({ isPremium: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -117,6 +125,7 @@ export const listUsers = asyncHandler(async (req, res) => {
         .select('createdAt')
         .lean(),
       User.countDocuments({ role: { $ne: 'admin' } }),
+      User.countDocuments({ role: { $ne: 'admin' }, isPremium: true }),
       getUserOrderStatsMaps(),
     ])
 
@@ -129,6 +138,7 @@ export const listUsers = asyncHandler(async (req, res) => {
         pagination: buildPaginationMeta(page, limit, total),
         meta: {
           grandTotal,
+          premiumCount,
           latestSignup: latestUser?.createdAt || null,
         },
       },
@@ -138,8 +148,8 @@ export const listUsers = asyncHandler(async (req, res) => {
 
   const [users, statsMaps] = await Promise.all([
     User.find({ role: { $ne: 'admin' } })
-      .select('name email phone role createdAt updatedAt')
-      .sort({ createdAt: -1 })
+      .select('name email phone role isPremium createdAt updatedAt')
+      .sort({ isPremium: -1, createdAt: -1 })
       .lean(),
     getUserOrderStatsMaps(),
   ])
@@ -154,9 +164,41 @@ export const listUsers = asyncHandler(async (req, res) => {
   })
 })
 
+export const updateUserPremium = asyncHandler(async (req, res) => {
+  const userId = String(req.params.id || '').trim()
+  if (!isValidObjectId(userId)) {
+    throw new AppError('Invalid user ID', 400)
+  }
+
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new AppError('User not found', 404)
+  }
+
+  if (user.role === 'admin') {
+    throw new AppError('Admin accounts cannot be modified here', 400)
+  }
+
+  const isPremium =
+    req.body?.isPremium !== undefined ? Boolean(req.body.isPremium) : !user.isPremium
+
+  user.isPremium = isPremium
+  await user.save()
+
+  res.json({
+    success: true,
+    message: isPremium
+      ? 'Customer marked as Premium'
+      : 'Customer removed from Premium',
+    data: {
+      user: formatUser(user),
+    },
+  })
+})
+
 export const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id)
-    .select('name email phone role createdAt updatedAt')
+    .select('name email phone role isPremium createdAt updatedAt')
     .lean()
 
   if (!user) {

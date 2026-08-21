@@ -79,19 +79,45 @@ export const attachUserOrderStats = (users = [], userIdMap, emailMap) =>
   })
 
 export const sortUsersByOrderStats = (users = [], sortKey = 'all') => {
-  if (sortKey !== 'orders' && sortKey !== 'spend') {
-    return [...users].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  const comparePremium = (a, b) => (b.isPremium ? 1 : 0) - (a.isPremium ? 1 : 0)
+
+  if (sortKey === 'orders') {
+    return [...users].sort((a, b) => {
+      const orderA = Number(a.orderCount) || 0
+      const orderB = Number(b.orderCount) || 0
+      if (orderA !== orderB) return orderB - orderA
+
+      const spendA = Number(a.totalSpent) || 0
+      const spendB = Number(b.totalSpent) || 0
+      if (spendA !== spendB) return spendB - spendA
+
+      const premiumDiff = comparePremium(a, b)
+      if (premiumDiff !== 0) return premiumDiff
+
+      return new Date(b.createdAt) - new Date(a.createdAt)
+    })
+  }
+
+  if (sortKey === 'spend') {
+    return [...users].sort((a, b) => {
+      const spendA = Number(a.totalSpent) || 0
+      const spendB = Number(b.totalSpent) || 0
+      if (spendA !== spendB) return spendB - spendA
+
+      const orderA = Number(a.orderCount) || 0
+      const orderB = Number(b.orderCount) || 0
+      if (orderA !== orderB) return orderB - orderA
+
+      const premiumDiff = comparePremium(a, b)
+      if (premiumDiff !== 0) return premiumDiff
+
+      return new Date(b.createdAt) - new Date(a.createdAt)
+    })
   }
 
   return [...users].sort((a, b) => {
-    if (sortKey === 'orders') {
-      if (a.orderCount !== b.orderCount) return b.orderCount - a.orderCount
-      if (a.totalSpent !== b.totalSpent) return b.totalSpent - a.totalSpent
-    } else {
-      if (a.totalSpent !== b.totalSpent) return b.totalSpent - a.totalSpent
-      if (a.orderCount !== b.orderCount) return b.orderCount - a.orderCount
-    }
-
+    const premiumDiff = comparePremium(a, b)
+    if (premiumDiff !== 0) return premiumDiff
     return new Date(b.createdAt) - new Date(a.createdAt)
   })
 }

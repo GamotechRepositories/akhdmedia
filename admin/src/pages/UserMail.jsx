@@ -5,11 +5,11 @@ import UserMailComposer from '../components/UserMailComposer'
 import AdminPagination from '../components/ui/AdminPagination'
 import AdminTable from '../components/ui/AdminTable'
 import TableLoader from '../components/ui/TableLoader'
+import { IconStarFilled } from '../components/icons/AdminIcons'
 import {
   cardClass,
   primaryBtnClass,
   secondaryBtnClass,
-  statGridClass,
   tableBodyClass,
   tableEmptyClass,
   tableHeadClass,
@@ -85,6 +85,7 @@ const UserMail = () => {
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [grandTotal, setGrandTotal] = useState(0)
+  const [premiumGrandTotal, setPremiumGrandTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState(restore?.search || '')
@@ -99,6 +100,7 @@ const UserMail = () => {
   const [mailing, setMailing] = useState(false)
   const [selectionReady, setSelectionReady] = useState(false)
   const [selectingAll, setSelectingAll] = useState(false)
+  const [selectingPremium, setSelectingPremium] = useState(false)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
@@ -137,6 +139,7 @@ const UserMail = () => {
               totalCount: payload.pagination?.total || 0,
               totalPages: payload.pagination?.totalPages || 1,
               grandTotal: payload.meta?.grandTotal ?? payload.pagination?.total ?? 0,
+              premiumTotal: payload.meta?.premiumCount ?? 0,
             }
           },
         })
@@ -145,6 +148,7 @@ const UserMail = () => {
         setTotalCount(result.totalCount)
         setTotalPages(result.totalPages)
         setGrandTotal(result.grandTotal)
+        setPremiumGrandTotal(result.premiumTotal)
       } catch (loadError) {
         setError(loadError.message || 'Could not load users')
         setUsers([])
@@ -273,6 +277,12 @@ const UserMail = () => {
   const allOnPageSelected = users.length > 0 && selectedOnPageCount === users.length
   const allUsersSelected = grandTotal > 0 && selectedUserIds.length === grandTotal
 
+  const visiblePremiumUsers = users.filter((u) => Boolean(u.isPremium))
+  const isAllPremiumSelected =
+    premiumGrandTotal > 0 &&
+    visiblePremiumUsers.length > 0 &&
+    visiblePremiumUsers.every((u) => selectedUserIds.includes(u.id))
+
   const selectedUsersOnPage = users.filter((user) => selectedUserIds.includes(user.id))
   const toLabel = useMemo(() => {
     if (selectedUserIds.length === 0) return 'No recipients selected'
@@ -314,6 +324,36 @@ const UserMail = () => {
       setError(selectError.message || 'Could not select all users')
     } finally {
       setSelectingAll(false)
+    }
+  }
+
+  const handleSelectPremiumUsers = async () => {
+    setSelectingPremium(true)
+    setError('')
+    try {
+      const response = await fetchUsers()
+      const allUsers = response.data?.data?.users || []
+      const premiumUsers = allUsers.filter((user) => Boolean(user.isPremium))
+      const premiumUserIds = premiumUsers.map((user) => user.id)
+
+      if (premiumUserIds.length === 0) {
+        setError('No premium users found to select.')
+        return
+      }
+
+      const allPremiumSelected =
+        premiumUserIds.length > 0 &&
+        premiumUserIds.every((id) => selectedUserIds.includes(id))
+
+      if (allPremiumSelected) {
+        setSelectedUserIds((prev) => prev.filter((id) => !premiumUserIds.includes(id)))
+      } else {
+        setSelectedUserIds((prev) => [...new Set([...prev, ...premiumUserIds])])
+      }
+    } catch (selectError) {
+      setError(selectError.message || 'Could not select premium users')
+    } finally {
+      setSelectingPremium(false)
     }
   }
 
@@ -469,10 +509,21 @@ const UserMail = () => {
 
   return (
     <section className="space-y-4">
-      <div className={statGridClass}>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={`${cardClass} p-4`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total users</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">{grandTotal}</p>
+        </div>
+        <div className={`${cardClass} border-amber-200/80 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 p-4`}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+              Premium users
+            </p>
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <IconStarFilled className="h-3.5 w-3.5" />
+            </span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-amber-900">{premiumGrandTotal}</p>
         </div>
         <div className={`${cardClass} p-4`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected</p>
@@ -567,18 +618,35 @@ const UserMail = () => {
               className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
             />
           </label>
-          <button
-            type="button"
-            onClick={handleSelectAllUsers}
-            disabled={loading || selectingAll || grandTotal === 0}
-            className={secondaryBtnClass}
-          >
-            {selectingAll
-              ? 'Selecting...'
-              : allUsersSelected
-                ? `Deselect All (${grandTotal})`
-                : `Select All (${grandTotal})`}
-          </button>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleSelectPremiumUsers}
+              disabled={loading || selectingPremium || grandTotal === 0}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 shadow-xs transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-5"
+            >
+              <IconStarFilled className="h-4 w-4 text-amber-500" />
+              <span>
+                {selectingPremium
+                  ? 'Selecting...'
+                  : isAllPremiumSelected
+                    ? `Deselect Premium (${premiumGrandTotal})`
+                    : `Select Premium (${premiumGrandTotal})`}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSelectAllUsers}
+              disabled={loading || selectingAll || grandTotal === 0}
+              className={secondaryBtnClass}
+            >
+              {selectingAll
+                ? 'Selecting...'
+                : allUsersSelected
+                  ? `Deselect All (${grandTotal})`
+                  : `Select All (${grandTotal})`}
+            </button>
+          </div>
         </div>
         {!loading && (
           <p className="mt-2 text-xs text-slate-500">
@@ -624,42 +692,57 @@ const UserMail = () => {
 
           {!loading &&
             !error &&
-            users.map((user) => (
-              <tr
-                key={user.id}
-                id={`user-mail-row-${user.id}`}
-                className={`${tableRowClass} cursor-pointer ${
-                  highlightedId === user.id ? 'bg-amber-50 ring-1 ring-inset ring-amber-200' : ''
-                }`}
-                onClick={() =>
-                  navigate(`/user-mail/${user.id}`, {
-                    state: {
-                      fromList: {
-                        search,
-                        page: currentPage,
-                        userId: user.id,
+            users.map((user) => {
+              const isPremium = Boolean(user.isPremium)
+
+              return (
+                <tr
+                  key={user.id}
+                  id={`user-mail-row-${user.id}`}
+                  className={`${tableRowClass} cursor-pointer ${
+                    isPremium ? 'bg-amber-50/30 hover:bg-amber-50/60' : ''
+                  } ${
+                    highlightedId === user.id ? 'bg-amber-100/70 ring-1 ring-inset ring-amber-300' : ''
+                  }`}
+                  onClick={() =>
+                    navigate(`/user-mail/${user.id}`, {
+                      state: {
+                        fromList: {
+                          search,
+                          page: currentPage,
+                          userId: user.id,
+                        },
                       },
-                    },
-                  })
-                }
-              >
-                <td className={tdClass}>
-                  <input
-                    type="checkbox"
-                    checked={selectedUserIds.includes(user.id)}
-                    onChange={() => toggleUserSelection(user.id)}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                </td>
-                <td className={tdPrimaryClass}>{user.name || '—'}</td>
-                <td className={tdClass}>
-                  <p className="break-all">{user.email || '—'}</p>
-                  <p className="mt-0.5 text-xs text-slate-500 sm:hidden">{user.phone || '—'}</p>
-                </td>
-                <td className={tdHideSm}>{user.phone || '—'}</td>
-                <td className={`${tdHideMd} text-slate-600`}>{formatDate(user.createdAt)}</td>
-              </tr>
-            ))}
+                    })
+                  }
+                >
+                  <td className={tdClass}>
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.includes(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </td>
+                  <td className={tdPrimaryClass}>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-slate-900">{user.name || '—'}</span>
+                      {isPremium && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-100/90 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-800 shadow-2xs">
+                          ⭐ Premium
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className={tdClass}>
+                    <p className="break-all">{user.email || '—'}</p>
+                    <p className="mt-0.5 text-xs text-slate-500 sm:hidden">{user.phone || '—'}</p>
+                  </td>
+                  <td className={tdHideSm}>{user.phone || '—'}</td>
+                  <td className={`${tdHideMd} text-slate-600`}>{formatDate(user.createdAt)}</td>
+                </tr>
+              )
+            })}
         </tbody>
       </AdminTable>
 

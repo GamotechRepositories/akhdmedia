@@ -9,6 +9,7 @@ import {
   listUsers,
   saveUserSelection,
   sendUserEmail,
+  updateUserPremium,
 } from '../controllers/adminUserController.js'
 
 const router = Router()
@@ -21,6 +22,8 @@ router.get('/selection', getSavedUserSelection)
 router.post('/selection', saveUserSelection)
 router.get('/:id/email-history', getUserEmailHistory)
 router.get('/:id', getUser)
+router.patch('/:id/premium', updateUserPremium)
+router.put('/:id/premium', updateUserPremium)
 router.delete('/:id', deleteUser)
 
 export default router
