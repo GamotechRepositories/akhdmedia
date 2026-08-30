@@ -270,29 +270,50 @@ export const generateLicenseCertificateBuffer = ({
     y += 24
   }
 
-  writeAt(doc, 'LICENSED ASSETS', margin, y, { size: 8, style: 'bold', color: CERT.navyDark })
-  y += 5
-  const tableTop = y
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const pageBottom = pageHeight - 14
   const rowH = 9.5
   const cols = [8, 58, 28, 22, 38]
   const headers = ['#', 'Asset title', 'Clip ID', 'Tier', 'License No.']
-  doc.setFillColor(...CERT.navy)
-  doc.roundedRect(margin, tableTop, contentWidth, rowH, 1.5, 1.5, 'F')
-  let colX = margin + 2
-  headers.forEach((header, i) => {
-    writeAt(doc, header.toUpperCase(), colX, tableTop + 6.5, { size: 6.2, style: 'bold', color: CERT.white })
-    colX += cols[i]
-  })
-  y = tableTop + rowH
+  const footerBlockH = 42
+
+  const drawAssetsTableHeader = (topY, title) => {
+    writeAt(doc, title, margin, topY, { size: 8, style: 'bold', color: CERT.navyDark })
+    const tableTop = topY + 5
+    doc.setFillColor(...CERT.navy)
+    doc.roundedRect(margin, tableTop, contentWidth, rowH, 1.5, 1.5, 'F')
+    let colX = margin + 2
+    headers.forEach((header, i) => {
+      writeAt(doc, header.toUpperCase(), colX, tableTop + 6.5, {
+        size: 6.2,
+        style: 'bold',
+        color: CERT.white,
+      })
+      colX += cols[i]
+    })
+    return tableTop + rowH
+  }
+
+  const startAssetsContinuationPage = () => {
+    doc.addPage()
+    drawGoldFrame(doc, pageWidth, pageHeight)
+    return drawAssetsTableHeader(16, 'LICENSED ASSETS (continued)')
+  }
+
+  y = drawAssetsTableHeader(y, 'LICENSED ASSETS')
 
   orderItems.forEach((item, index) => {
+    if (y + rowH > pageBottom) {
+      y = startAssetsContinuationPage()
+    }
+
     if (index % 2 === 1) {
       doc.setFillColor(...CERT.panel)
       doc.rect(margin, y, contentWidth, rowH, 'F')
     }
     doc.setDrawColor(...CERT.border)
     doc.line(margin, y + rowH, margin + contentWidth, y + rowH)
-    colX = margin + 2
+    let colX = margin + 2
     const cells = [
       String(index + 1),
       item.name || '—',
@@ -312,6 +333,12 @@ export const generateLicenseCertificateBuffer = ({
     y += rowH
   })
   y += 7
+
+  if (y + footerBlockH > pageBottom) {
+    doc.addPage()
+    drawGoldFrame(doc, pageWidth, pageHeight)
+    y = 18
+  }
 
   doc.setFillColor(...CERT.greenBg)
   doc.setDrawColor(...CERT.greenBorder)
