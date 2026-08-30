@@ -51,8 +51,8 @@ export const buildYoutubeEmbedSrc = (url = '', { autoplay = false } = {}) => {
     playsinline: '1',
     fs: '1',
     controls: '1',
-    // Preferred starting quality (falls back if 1080p is unavailable).
-    vq: 'hd1080',
+    // Preferred starting quality (falls back if 1440p / 2K is unavailable).
+    vq: 'hd1440',
   })
 
   if (autoplay) {
