@@ -111,10 +111,26 @@ class _YoutubeShortPreviewState extends State<YoutubeShortPreview> {
       html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
       .frame { position: relative; width: 100%; height: 100%; }
       iframe { border: 0; width: 100%; height: 100%; display: block; }
+      /* Drawn inside the WebView so it stays above the YouTube iframe (Flutter overlays cannot). */
+      .wm {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .wm::before {
+        content: '';
+        position: absolute;
+        inset: -20%;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180' viewBox='0 0 320 180'%3E%3Ctext x='160' y='92' text-anchor='middle' dominant-baseline='middle' fill='rgba(255%2C255%2C255%2C0.24)' font-family='system-ui%2C-apple-system%2CBlinkMacSystemFont%2CSegoe%20UI%2Csans-serif' font-size='15' font-weight='800' letter-spacing='5' transform='rotate(-24 160 92)'%3EAKHDMEDIA%20PREVIEW%3C/text%3E%3C/svg%3E");
+        background-repeat: repeat;
+        background-size: 300px 170px;
+      }
       /* Channel/title stay visible; taps on chrome cannot open YouTube. */
       .click-shield {
         position: absolute;
-        z-index: 2;
+        z-index: 6;
         background: transparent;
       }
       .click-shield-top { top: 0; left: 0; right: 0; height: 64px; }
@@ -125,11 +141,11 @@ class _YoutubeShortPreviewState extends State<YoutubeShortPreview> {
     <div class="frame">
       <iframe
         src="$embedSrc"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-        allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
         referrerpolicy="origin"
         sandbox="allow-scripts allow-same-origin allow-presentation"
       ></iframe>
+      <div class="wm" aria-hidden="true"></div>
       <div class="click-shield click-shield-top" aria-hidden="true"></div>
       <div class="click-shield click-shield-logo" aria-hidden="true"></div>
     </div>

@@ -5,7 +5,7 @@ import { PROTECTED_MEDIA_CLASS } from '../../utils/mediaProtection'
 
 const PREVIEW_AUTH_LIMIT_SECONDS = 10
 const IFRAME_ALLOW =
-  'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen'
+  'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope'
 
 const blockOutboundClick = (event) => {
   event.preventDefault()
@@ -98,21 +98,22 @@ const YoutubeShortPreview = ({
             src={iframeSrc}
             className="h-full w-full border-0"
             allow={IFRAME_ALLOW}
-            allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
             // No allow-popups / allow-top-navigation → blocks opening youtube.com.
             sandbox="allow-scripts allow-same-origin allow-presentation"
           />
+          {/* Keep watermark above the iframe (same stacking context). */}
+          <div className="protected-media-watermark" aria-hidden />
           {/* Channel/title remain visible; clicks cannot leave to YouTube. */}
           <div
-            className="absolute inset-x-0 top-0 z-10 h-14 sm:h-16"
+            className="absolute inset-x-0 top-0 z-20 h-14 sm:h-16"
             aria-hidden="true"
             onClick={blockOutboundClick}
             onMouseDown={blockOutboundClick}
             onTouchStart={blockOutboundClick}
           />
           <div
-            className="absolute bottom-0 right-0 z-10 h-12 w-28 sm:h-14 sm:w-32"
+            className="absolute bottom-0 right-0 z-20 h-12 w-28 sm:h-14 sm:w-32"
             aria-hidden="true"
             onClick={blockOutboundClick}
             onMouseDown={blockOutboundClick}

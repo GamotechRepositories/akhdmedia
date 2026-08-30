@@ -409,7 +409,7 @@ const ProductMediaGallery = ({ product }) => {
   // iOS stays overlay-only — document fullscreen interrupts inline playback.
   const enterFullscreen = useCallback(async () => {
     const frame = frameRef.current;
-    if (!frame || isYoutubeSelected) return;
+    if (!frame) return;
 
     captureSnapshot();
     inTransitionRef.current = true;
@@ -420,7 +420,8 @@ const ProductMediaGallery = ({ product }) => {
 
     setIsLightboxOpen(true);
 
-    if (!isIOSDevice() && supportsElementFullscreen() && !getFullscreenElement()) {
+    // Document fullscreen can interrupt YouTube iframe playback; use lightbox only for Shorts.
+    if (!isYoutubeSelected && !isIOSDevice() && supportsElementFullscreen() && !getFullscreenElement()) {
       try {
         await requestElementFullscreen(document.documentElement);
         browserFullscreenRef.current = true;
@@ -915,14 +916,6 @@ const ProductMediaGallery = ({ product }) => {
     });
   }, [selectMedia, selectedMediaIndex, mediaItems.length, isLightboxOpen]);
 
-  // Leave custom immersive mode on YouTube — the embed has native fullscreen
-  useEffect(() => {
-    if (!isYoutubeSelected) return;
-    if (isFullscreen || isLightboxOpen || isNativeVideoFullscreen) {
-      void exitFullscreen();
-    }
-  }, [isYoutubeSelected, isFullscreen, isLightboxOpen, isNativeVideoFullscreen, exitFullscreen]);
-
   // ─── Progress bar renderers ───────────────────────────────────────────────
 
   const playedPercent = videoDuration ? Math.min(100, (videoCurrentTime / videoDuration) * 100) : 0;
@@ -1081,22 +1074,19 @@ const ProductMediaGallery = ({ product }) => {
         {isPreviewDemoSelected ? (isYoutubeSelected ? 'YouTube Short Preview' : '40 Sec Preview Demo Only!') : 'Preview'}
       </div>
 
-      {/* YouTube Shorts already expose native fullscreen in the embed player */}
-      {!isYoutubeSelected && (
-        <button
-          type="button"
-          onClick={isImmersive ? handleExitImmersive : toggleFullscreen}
-          className={`pointer-events-auto absolute ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass} ${isImmersive ? '!z-[120] touch-manipulation' : 'z-30'}`}
-          aria-label={isImmersive ? 'Exit fullscreen' : 'View fullscreen'}
-          title={isImmersive ? 'Exit fullscreen' : 'Fullscreen'}
-        >
-          {isImmersive ? (
-            <IconMinimize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
-          ) : (
-            <IconMaximize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
-          )}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={isImmersive ? handleExitImmersive : toggleFullscreen}
+        className={`pointer-events-auto absolute ${compact ? 'right-3 top-3' : 'right-4 top-4'} ${fullscreenButtonClass} ${isImmersive ? '!z-[120] touch-manipulation' : 'z-30'}`}
+        aria-label={isImmersive ? 'Exit fullscreen' : 'View fullscreen'}
+        title={isImmersive ? 'Exit fullscreen' : 'Fullscreen'}
+      >
+        {isImmersive ? (
+          <IconMinimize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+        ) : (
+          <IconMaximize className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+        )}
+      </button>
 
       {mediaItems.length > 1 && (!isImmersive || !isPreviewDemoSelected) && (
         <div
