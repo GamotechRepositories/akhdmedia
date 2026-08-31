@@ -134,7 +134,9 @@ class _YoutubeShortPreviewState extends State<YoutubeShortPreview> {
         background: transparent;
       }
       .click-shield-top { top: 0; left: 0; right: 0; height: 64px; }
-      .click-shield-logo { right: 0; bottom: 0; width: 120px; height: 48px; }
+      /* Shorts action rail (share, etc.) on the right edge. */
+      .click-shield-right { top: 0; right: 0; bottom: 0; width: 72px; }
+      .click-shield-bottom { right: 0; bottom: 0; width: 160px; height: 56px; }
     </style>
   </head>
   <body>
@@ -147,7 +149,8 @@ class _YoutubeShortPreviewState extends State<YoutubeShortPreview> {
       ></iframe>
       <div class="wm" aria-hidden="true"></div>
       <div class="click-shield click-shield-top" aria-hidden="true"></div>
-      <div class="click-shield click-shield-logo" aria-hidden="true"></div>
+      <div class="click-shield click-shield-right" aria-hidden="true"></div>
+      <div class="click-shield click-shield-bottom" aria-hidden="true"></div>
     </div>
   </body>
 </html>

@@ -52,7 +52,8 @@ export const buildYoutubeEmbedSrc = (url = '', { autoplay = false } = {}) => {
     // Keep playback in-app so the AKHD watermark overlay cannot be escaped via YouTube fullscreen.
     fs: '0',
     iv_load_policy: '3',
-    controls: '1',
+    // Hide native bar (share, watch later, etc.); preview uses our own play overlay.
+    controls: '0',
     // Preferred starting quality (falls back if 1440p / 2K is unavailable).
     vq: 'hd1440',
   })

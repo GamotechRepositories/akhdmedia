@@ -1071,7 +1071,7 @@ const ProductMediaGallery = ({ product }) => {
           compact ? 'left-3 top-3' : 'left-4 top-4'
         } ${isPreviewDemoSelected ? '' : 'uppercase'}`}
       >
-        {isPreviewDemoSelected ? (isYoutubeSelected ? 'YouTube Short Preview' : '40 Sec Preview Demo Only!') : 'Preview'}
+        {isPreviewDemoSelected ? '40 Sec Preview Demo Only!' : 'Preview'}
       </div>
 
       <button

@@ -104,7 +104,7 @@ const YoutubeShortPreview = ({
           />
           {/* Keep watermark above the iframe (same stacking context). */}
           <div className="protected-media-watermark" aria-hidden />
-          {/* Channel/title remain visible; clicks cannot leave to YouTube. */}
+          {/* Channel/title stay visible; taps on chrome cannot open YouTube. */}
           <div
             className="absolute inset-x-0 top-0 z-20 h-14 sm:h-16"
             aria-hidden="true"
@@ -112,8 +112,16 @@ const YoutubeShortPreview = ({
             onMouseDown={blockOutboundClick}
             onTouchStart={blockOutboundClick}
           />
+          {/* Shorts action rail (share, etc.) on the right edge. */}
           <div
-            className="absolute bottom-0 right-0 z-20 h-12 w-28 sm:h-14 sm:w-32"
+            className="absolute bottom-0 right-0 top-0 z-20 w-16 sm:w-[4.5rem]"
+            aria-hidden="true"
+            onClick={blockOutboundClick}
+            onMouseDown={blockOutboundClick}
+            onTouchStart={blockOutboundClick}
+          />
+          <div
+            className="absolute bottom-0 right-0 z-20 h-14 w-36 sm:h-16 sm:w-40"
             aria-hidden="true"
             onClick={blockOutboundClick}
             onMouseDown={blockOutboundClick}
