@@ -20,9 +20,29 @@ import {
   ADMIN_PERMISSIONS,
   hasAdminPermission,
 } from '../constants/adminPermissions.js'
+const PUBLIC_CATALOG_CACHE_MS = 2 * 60 * 1000
+const HEAVY_PRODUCT_FIELDS =
+  '-deliveryFiles -masterVideoSignedUrl -masterVideoFilename -masterVideoTier'
+
+let publicCatalogCache = { key: '', data: null, fetchedAt: 0 }
+
+export const invalidatePublicCatalogCache = () => {
+  publicCatalogCache = { key: '', data: null, fetchedAt: 0 }
+}
+
 const getCategoryMap = async () => {
-  const categories = await Category.find()
+  const categories = await Category.find().lean()
   return buildCategoryMap(categories)
+}
+
+const buildListQuery = (filter, { excludeHeavyFields = false } = {}) => {
+  let query = Product.find(filter).sort({ createdAt: -1 })
+
+  if (excludeHeavyFields) {
+    query = query.select(HEAVY_PRODUCT_FIELDS)
+  }
+
+  return query.lean()
 }
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -75,12 +95,14 @@ const buildAdminListFilter = (query = {}) => {
   return filter
 }
 
-const ensureClipIds = async (products = []) => {
-  for (const product of products) {
-    if (!product.clipId) {
-      product.clipId = await generateClipId()
-      await product.save()
-    }
+const backfillMissingClipIds = async () => {
+  const missing = await Product.find({
+    $or: [{ clipId: null }, { clipId: '' }],
+  }).limit(10)
+
+  for (const product of missing) {
+    product.clipId = await generateClipId()
+    await product.save()
   }
 }
 
@@ -133,13 +155,13 @@ export const getProducts = asyncHandler(async (req, res) => {
 
     if (salesSort !== 'all') {
       const [allProducts, total, categoryMap, salesMap] = await Promise.all([
-        Product.find(filter).sort({ createdAt: -1 }),
+        buildListQuery(filter),
         Product.countDocuments(filter),
         getCategoryMap(),
         getProductSalesStatsMap(),
       ])
 
-      await ensureClipIds(allProducts)
+      backfillMissingClipIds().catch(() => {})
 
       const sorted = [...allProducts].sort((a, b) => {
         const aStats = getProductSalesStats(salesMap, a._id.toString())
@@ -191,12 +213,12 @@ export const getProducts = asyncHandler(async (req, res) => {
     }
 
     const [products, total, categoryMap] = await Promise.all([
-      Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(safeLimit),
+      buildListQuery(filter).skip(skip).limit(safeLimit),
       Product.countDocuments(filter),
       getCategoryMap(),
     ])
 
-    await ensureClipIds(products)
+    backfillMissingClipIds().catch(() => {})
 
     const salesMap = canViewSales
       ? await getProductSalesStatsMap(products.map((product) => product._id.toString()))
@@ -226,18 +248,42 @@ export const getProducts = asyncHandler(async (req, res) => {
     filter.subCategorySlug = req.query.subCategorySlug
   }
 
-  const products = await Product.find(filter).sort({ createdAt: -1 })
+  const excludeHeavyFields = !isAdmin
+  const cacheKey = JSON.stringify(filter)
 
-  await ensureClipIds(products)
+  if (!isAdmin && !canViewSales) {
+    const cached = publicCatalogCache
+    if (
+      cached.key === cacheKey &&
+      cached.data &&
+      Date.now() - cached.fetchedAt < PUBLIC_CATALOG_CACHE_MS
+    ) {
+      res.json(cached.data)
+      return
+    }
+  }
 
-  const categoryMap = await getCategoryMap()
-  const salesMap = canViewSales ? await getProductSalesStatsMap() : null
+  const [products, categoryMap, salesMap] = await Promise.all([
+    buildListQuery(filter, { excludeHeavyFields }),
+    getCategoryMap(),
+    canViewSales ? getProductSalesStatsMap() : Promise.resolve(null),
+  ])
 
-  res.json(
-    formatProductList(products, categoryMap, isAdmin, salesMap, {
-      includePricing: !isAdmin || canViewSales,
-    }),
-  )
+  backfillMissingClipIds().catch(() => {})
+
+  const formatted = formatProductList(products, categoryMap, isAdmin, salesMap, {
+    includePricing: !isAdmin || canViewSales,
+  })
+
+  if (!isAdmin && !canViewSales) {
+    publicCatalogCache = {
+      key: cacheKey,
+      data: formatted,
+      fetchedAt: Date.now(),
+    }
+  }
+
+  res.json(formatted)
 })
 
 export const getProductById = asyncHandler(async (req, res) => {
@@ -277,6 +323,7 @@ export const createProduct = asyncHandler(async (req, res) => {
   await attachMasterVideoSignedUrl(payload)
 
   const product = await Product.create(payload)
+  invalidatePublicCatalogCache()
   const categoryMap = await getCategoryMap()
 
   res.status(201).json(
@@ -312,6 +359,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     runValidators: true,
   })
 
+  invalidatePublicCatalogCache()
   const categoryMap = await getCategoryMap()
   res.json(await enrichAdminProduct(product, categoryMap, { includeDelivery: true }))
 })
@@ -324,5 +372,6 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   }
 
   await product.deleteOne()
+  invalidatePublicCatalogCache()
   res.json({ message: 'Product deleted successfully' })
 })

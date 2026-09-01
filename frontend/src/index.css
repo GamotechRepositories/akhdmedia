@@ -286,11 +286,27 @@ body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 .protected-media {
   -webkit-user-drag: none;
   user-drag: none;
+  /* Prefer parent shell for context menu so "Save image/video" is harder to reach. */
+  -webkit-touch-callout: none;
+}
+
+.protected-media-shell img.protected-media {
+  pointer-events: none;
+}
+
+.protected-media-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  /* Let intentional UI (play / chrome z-20+) receive clicks; still sit above raw media. */
+  pointer-events: none;
 }
 
 .protected-media-watermark {

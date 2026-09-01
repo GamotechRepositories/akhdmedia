@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { fetchCatalog } from '../services/catalogApi';
+import { fetchCatalog, fetchSiteContent } from '../services/catalogApi';
 import { getSubCategoryLabel as resolveSubCategoryLabel } from '../utils/catalogHelpers';
 import {
   createProductSearchIndex,
@@ -18,6 +18,7 @@ const CatalogContext = createContext(null);
 
 const emptyCatalog = {
   loading: true,
+  siteContentLoading: true,
   error: null,
   categories: [],
   products: [],
@@ -35,17 +36,43 @@ export const CatalogProvider = ({ children }) => {
   const [catalog, setCatalog] = useState(emptyCatalog);
 
   const loadCatalog = useCallback(async () => {
-    setCatalog((current) => ({ ...current, loading: true, error: null }));
+    setCatalog((current) => ({
+      ...current,
+      loading: true,
+      siteContentLoading: true,
+      error: null,
+    }));
 
     try {
-      const data = await fetchCatalog();
-      setCatalog({ ...data, loading: false, error: null });
-    } catch (err) {
+      // Start all requests together; apply site-content as soon as it arrives
+      // so the hero image can begin loading without waiting on /products.
+      const siteContentPromise = fetchSiteContent();
+      const catalogPromise = fetchCatalog({
+        siteContent: siteContentPromise,
+      });
+
+      const siteContent = await siteContentPromise;
+      setCatalog((current) => ({
+        ...current,
+        siteContent,
+        siteContentLoading: false,
+      }));
+
+      const data = await catalogPromise;
       setCatalog({
+        ...data,
+        loading: false,
+        siteContentLoading: false,
+        error: null,
+      });
+    } catch (err) {
+      setCatalog((current) => ({
         ...emptyCatalog,
+        siteContent: current.siteContent,
+        siteContentLoading: false,
         loading: false,
         error: err.message || 'Failed to load catalog from server',
-      });
+      }));
     }
   }, []);
 

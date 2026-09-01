@@ -28,12 +28,24 @@ const sortActorsByOrder = (actors = []) =>
 
 export { DEFAULT_SITE_CONTENT };
 
-export const fetchCatalog = async () => {
-  const [categoriesRes, productsRes, siteContentRes, actorsRes] = await Promise.all([
+/** Lightweight first paint payload (hero / ticker) — do not wait on products. */
+export const fetchSiteContent = async () => {
+  try {
+    const { data } = await api.get('/site-content');
+    return data || DEFAULT_SITE_CONTENT;
+  } catch {
+    return DEFAULT_SITE_CONTENT;
+  }
+};
+
+export const fetchCatalog = async ({ siteContent } = {}) => {
+  const [categoriesRes, productsRes, actorsRes, resolvedSiteContent] = await Promise.all([
     api.get('/categories'),
     api.get('/products'),
-    api.get('/site-content').catch(() => ({ data: DEFAULT_SITE_CONTENT })),
     api.get('/actors').catch(() => ({ data: [] })),
+    siteContent != null
+      ? Promise.resolve(siteContent)
+      : fetchSiteContent(),
   ]);
 
   const categories = categoriesRes.data;
@@ -46,7 +58,7 @@ export const fetchCatalog = async () => {
     navLinks: buildNavLinks(categories),
     catalogCategories: buildCatalogCategories(categories),
     subCategoriesMap: buildSubCategories(categories),
-    siteContent: siteContentRes.data || DEFAULT_SITE_CONTENT,
+    siteContent: resolvedSiteContent || DEFAULT_SITE_CONTENT,
     homeSections: HOME_SECTIONS,
     source: 'api',
   };

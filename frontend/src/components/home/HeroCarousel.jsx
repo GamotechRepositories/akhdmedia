@@ -1,10 +1,11 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCatalog } from '../../context/CatalogContext';
 import { HeroSkeleton } from '../ui/HomeSectionSkeletons';
 import OptimizedImage from '../ui/OptimizedImage';
 import { useCarousel } from '../../hooks/useCarousel';
 import { useInView } from '../../hooks/useInView';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { IconChevronLeft, IconChevronRight } from '../icons/Icons';
 import {
   HERO_BANNER_DESKTOP_RATIO,
@@ -17,11 +18,32 @@ import {
   DEFAULT_CTA_POSITION,
   DEFAULT_HEADLINE_POSITION,
 } from '../../constants/heroTypography';
+import { optimizeImageUrl } from '../../utils/optimizeImageUrl';
 
-const HeroSlide = ({ slide, isActive, compact = false, device = 'desktop', motionEnabled = true }) => {
+const HERO_IMAGE_SIZES = {
+  mobile: { width: 720, height: 960, quality: 70 },
+  tablet: { width: 1100, height: 700, quality: 75 },
+  desktop: { width: 1400, height: 560, quality: 75 },
+};
+
+const HERO_ASPECT = {
+  mobile: HERO_BANNER_MOBILE_RATIO,
+  tablet: HERO_BANNER_TABLET_RATIO,
+  desktop: HERO_BANNER_DESKTOP_RATIO,
+};
+
+const HeroSlide = ({
+  slide,
+  isActive,
+  compact = false,
+  device = 'desktop',
+  motionEnabled = true,
+  prioritize = false,
+}) => {
   const hasLink = Boolean(slide.link?.trim());
   const hasOverlay = Boolean(slide.headline?.trim() || slide.cta?.trim());
   const imageFocus = resolveImageFocus(slide.imageFocus, device);
+  const imageSize = HERO_IMAGE_SIZES[device] || HERO_IMAGE_SIZES.desktop;
   const slideClassName = `absolute inset-0 transition-opacity duration-700 ease-in-out ${
     isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
   }`;
@@ -39,11 +61,12 @@ const HeroSlide = ({ slide, isActive, compact = false, device = 'desktop', motio
           <OptimizedImage
             src={slide.image}
             alt=""
-            width={compact ? 900 : device === 'tablet' ? 1200 : 1400}
-            height={compact ? 675 : device === 'tablet' ? 750 : 560}
-            quality={80}
-            loading={isActive ? 'eager' : 'lazy'}
-            fetchPriority={isActive ? 'high' : undefined}
+            width={imageSize.width}
+            height={imageSize.height}
+            quality={imageSize.quality}
+            loading={prioritize ? 'eager' : 'lazy'}
+            fetchPriority={prioritize ? 'high' : 'low'}
+            decoding={prioritize ? 'sync' : 'async'}
             style={{ objectPosition: `${imageFocus.x}% ${imageFocus.y}%` }}
             className={`absolute inset-0 h-full w-full object-cover ${
               isActive && motionEnabled ? 'hero-kenburns' : ''
@@ -161,7 +184,8 @@ const mapSettingsHeroSlides = (slides = []) =>
     }));
 
 const HeroCarousel = () => {
-  const { siteContent, loading } = useCatalog();
+  const { siteContent, siteContentLoading } = useCatalog();
+  const breakpoint = useBreakpoint();
   const heroSlides = useMemo(
     () => mapSettingsHeroSlides(siteContent?.heroSlides || []),
     [siteContent?.heroSlides],
@@ -173,6 +197,26 @@ const HeroCarousel = () => {
   const { ref, isInView } = useInView();
   const motionEnabled = isInView;
   const touchStart = useRef({ x: 0, y: 0 });
+  const compact = breakpoint === 'mobile';
+  const aspectRatio = HERO_ASPECT[breakpoint];
+  const lcpImageSize = HERO_IMAGE_SIZES[breakpoint];
+
+  // Preload only the visible LCP hero image (one size, one slide).
+  useEffect(() => {
+    const firstImage = heroSlides[0]?.image;
+    if (!firstImage) return undefined;
+
+    const href = optimizeImageUrl(firstImage, lcpImageSize);
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    link.fetchPriority = 'high';
+    document.head.appendChild(link);
+    return () => {
+      link.remove();
+    };
+  }, [heroSlides, lcpImageSize]);
 
   const handleTouchStart = (e) => {
     pause();
@@ -194,7 +238,7 @@ const HeroCarousel = () => {
     resume();
   };
 
-  if (loading || heroSlides.length === 0) {
+  if (siteContentLoading || heroSlides.length === 0) {
     return <HeroSkeleton />;
   }
 
@@ -206,21 +250,21 @@ const HeroCarousel = () => {
       onMouseLeave={resume}
       aria-label="Featured collections"
     >
-      {/* Mobile — phones */}
       <div
-        className="relative mx-auto w-full max-w-[2000px] touch-pan-y [container-type:size] md:hidden"
-        style={{ aspectRatio: HERO_BANNER_MOBILE_RATIO }}
+        className="relative mx-auto w-full max-w-[2000px] touch-pan-y [container-type:size]"
+        style={{ aspectRatio }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {heroSlides.map((slide, index) => (
           <HeroSlide
-            key={slide.id}
+            key={`${breakpoint}-${slide.id}`}
             slide={slide}
             isActive={index === activeIndex}
-            compact
-            device="mobile"
+            compact={compact}
+            device={breakpoint}
             motionEnabled={motionEnabled}
+            prioritize={index === 0}
           />
         ))}
         <CarouselControls
@@ -229,55 +273,7 @@ const HeroCarousel = () => {
           prev={prev}
           next={next}
           goTo={goTo}
-          compact
-        />
-      </div>
-
-      {/* iPad / tablet */}
-      <div
-        className="relative mx-auto hidden w-full max-w-[2000px] touch-pan-y [container-type:size] md:block lg:hidden"
-        style={{ aspectRatio: HERO_BANNER_TABLET_RATIO }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        {heroSlides.map((slide, index) => (
-          <HeroSlide
-            key={`tablet-${slide.id}`}
-            slide={slide}
-            isActive={index === activeIndex}
-            device="tablet"
-            motionEnabled={motionEnabled}
-          />
-        ))}
-        <CarouselControls
-          heroSlides={heroSlides}
-          activeIndex={activeIndex}
-          prev={prev}
-          next={next}
-          goTo={goTo}
-        />
-      </div>
-
-      {/* Desktop */}
-      <div
-        className="relative mx-auto hidden w-full max-w-[2000px] [container-type:size] lg:block"
-        style={{ aspectRatio: HERO_BANNER_DESKTOP_RATIO }}
-      >
-        {heroSlides.map((slide, index) => (
-          <HeroSlide
-            key={`desktop-${slide.id}`}
-            slide={slide}
-            isActive={index === activeIndex}
-            device="desktop"
-            motionEnabled={motionEnabled}
-          />
-        ))}
-        <CarouselControls
-          heroSlides={heroSlides}
-          activeIndex={activeIndex}
-          prev={prev}
-          next={next}
-          goTo={goTo}
+          compact={compact}
         />
       </div>
     </section>

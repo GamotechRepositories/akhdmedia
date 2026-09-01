@@ -6,8 +6,11 @@ import { CatalogProvider } from './context/CatalogContext'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './components/ToastContainer'
+import { installMediaDownloadProtection } from './utils/mediaProtection'
 import './index.css'
 import App from './App.jsx'
+
+installMediaDownloadProtection()
 
 const appTree = (
   <CatalogProvider>

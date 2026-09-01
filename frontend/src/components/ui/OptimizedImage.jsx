@@ -14,6 +14,7 @@ const OptimizedImage = ({
   className = '',
   style,
   loading = 'lazy',
+  decoding = 'async',
   fetchPriority,
   onError,
   protected: isProtected = true,
@@ -27,7 +28,7 @@ const OptimizedImage = ({
       width={width}
       height={height}
       loading={loading}
-      decoding="async"
+      decoding={decoding}
       fetchPriority={fetchPriority}
       style={style}
       className={`${isProtected ? PROTECTED_MEDIA_CLASS : ''} ${className}`.trim()}
