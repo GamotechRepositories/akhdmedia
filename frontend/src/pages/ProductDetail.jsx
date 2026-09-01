@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import ProductMediaGallery from '../components/product/ProductMediaGallery';
+import ProductDetailSkeleton from '../components/product/ProductDetailSkeleton';
 import { scrollPageToTop } from '../components/ScrollToTop';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -46,13 +47,16 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { getProductById, getRelatedProducts, loading: catalogLoading } = useCatalog();
+  const { getProductById, getRelatedProducts } = useCatalog();
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const { success, error: showError } = useToast();
   const processedAuthIntentRef = useRef(false);
 
   const [product, setProduct] = useState(null);
+  const [productLoading, setProductLoading] = useState(true);
+  const [productError, setProductError] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImageSize, setSelectedImageSize] = useState('');
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -67,10 +71,41 @@ const ProductDetail = () => {
   }, [product?.id]);
 
   useEffect(() => {
-    const found = getProductById(id);
-    setProduct(found);
-    setSelectedImageSize(found ? getDefaultImageSize(found.imageSizes) : '');
-  }, [id, getProductById, catalogLoading]);
+    let cancelled = false;
+
+    const loadProduct = async () => {
+      setProductLoading(true);
+      setProductError(null);
+      setProduct(null);
+      setRelatedProducts([]);
+
+      try {
+        const found = await getProductById(id);
+        if (cancelled) return;
+
+        setProduct(found);
+        setSelectedImageSize(found ? getDefaultImageSize(found.imageSizes) : '');
+
+        if (found) {
+          const related = await getRelatedProducts(found.id, 32);
+          if (!cancelled) setRelatedProducts(related);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProduct(null);
+          setProductError(error.message || 'Failed to load product');
+        }
+      } finally {
+        if (!cancelled) setProductLoading(false);
+      }
+    };
+
+    loadProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, getProductById, getRelatedProducts]);
 
   useEffect(() => {
     const intent = location.state?.afterLoginAction;
@@ -119,11 +154,17 @@ const ProductDetail = () => {
     success,
   ]);
 
+  if (productLoading) {
+    return <ProductDetailSkeleton />;
+  }
+
   if (!product) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-4 text-center text-white">
         <h1 className="mb-2 text-2xl font-bold">Clip Not Found</h1>
-        <p className="mb-6 text-gray-400">This footage may have been removed from the library.</p>
+        <p className="mb-6 text-gray-400">
+          {productError || 'This footage may have been removed from the library.'}
+        </p>
         <Link to="/videos" className="rounded-lg bg-white px-8 py-3 font-medium text-gray-900 hover:bg-gray-100">
           Browse Footage
         </Link>
@@ -133,7 +174,6 @@ const ProductDetail = () => {
 
   const isVideo = isVideoProduct(product);
   const isPurchasable = Boolean(product.isPurchasable);
-  const relatedProducts = getRelatedProducts(product.id, 32);
   const relatedPreviewLimit = 19;
   const relatedPreview = relatedProducts.slice(0, relatedPreviewLimit);
   const relatedViewAllLink = '/videos';

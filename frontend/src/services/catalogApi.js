@@ -38,22 +38,17 @@ export const fetchSiteContent = async () => {
   }
 };
 
-export const fetchCatalog = async ({ siteContent } = {}) => {
-  const [categoriesRes, productsRes, actorsRes, resolvedSiteContent] = await Promise.all([
+export const fetchCatalogMetadata = async ({ siteContent } = {}) => {
+  const [categoriesRes, actorsRes, resolvedSiteContent] = await Promise.all([
     api.get('/categories'),
-    api.get('/products'),
     api.get('/actors').catch(() => ({ data: [] })),
-    siteContent != null
-      ? Promise.resolve(siteContent)
-      : fetchSiteContent(),
+    siteContent != null ? Promise.resolve(siteContent) : fetchSiteContent(),
   ]);
 
   const categories = categoriesRes.data;
-  const products = productsRes.data.map(enrichProduct);
 
   return {
     categories,
-    products,
     actors: sortActorsByOrder(actorsRes.data || []),
     navLinks: buildNavLinks(categories),
     catalogCategories: buildCatalogCategories(categories),
@@ -61,5 +56,58 @@ export const fetchCatalog = async ({ siteContent } = {}) => {
     siteContent: resolvedSiteContent || DEFAULT_SITE_CONTENT,
     homeSections: HOME_SECTIONS,
     source: 'api',
+  };
+};
+
+const normalizeProductsResponse = (data) => {
+  if (Array.isArray(data)) {
+    return data.map(enrichProduct);
+  }
+
+  if (Array.isArray(data?.products)) {
+    return data.products.map(enrichProduct);
+  }
+
+  if (Array.isArray(data?.data?.products)) {
+    return data.data.products.map(enrichProduct);
+  }
+
+  return [];
+};
+
+export const fetchProductsPage = async (params = {}) => {
+  const { data } = await api.get('/products', { params });
+  const products = normalizeProductsResponse(data);
+  const pagination = data?.pagination || data?.data?.pagination || {
+    page: params.page || 1,
+    limit: params.limit || products.length,
+    total: products.length,
+    totalPages: 1,
+  };
+
+  return { products, pagination };
+};
+
+export const fetchProductsByIds = async (ids = []) => {
+  const uniqueIds = [...new Set(ids.map((id) => String(id)).filter(Boolean))];
+  if (!uniqueIds.length) return [];
+
+  const { products } = await fetchProductsPage({ ids: uniqueIds.join(',') });
+  return products;
+};
+
+export const fetchProductById = async (id) => {
+  const { data } = await api.get(`/products/${id}`);
+  return enrichProduct(data);
+};
+
+/** @deprecated Use fetchCatalogMetadata + section-specific product fetches. */
+export const fetchCatalog = async ({ siteContent } = {}) => {
+  const metadata = await fetchCatalogMetadata({ siteContent });
+  const { products } = await fetchProductsPage({ page: 1, limit: 60 });
+
+  return {
+    ...metadata,
+    products,
   };
 };

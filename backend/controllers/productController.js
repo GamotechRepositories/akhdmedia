@@ -1,5 +1,6 @@
 import Category from '../models/Category.js'
 import Product from '../models/Product.js'
+import mongoose from 'mongoose'
 import asyncHandler from '../utils/asyncHandler.js'
 import formatProduct, { buildCategoryMap } from '../utils/formatProduct.js'
 import {
@@ -35,14 +36,131 @@ const getCategoryMap = async () => {
   return buildCategoryMap(categories)
 }
 
-const buildListQuery = (filter, { excludeHeavyFields = false } = {}) => {
-  let query = Product.find(filter).sort({ createdAt: -1 })
+const buildListQuery = (filter, { excludeHeavyFields = false, sort = { createdAt: -1 } } = {}) => {
+  let query = Product.find(filter).sort(sort)
 
   if (excludeHeavyFields) {
     query = query.select(HEAVY_PRODUCT_FIELDS)
   }
 
   return query.lean()
+}
+
+const parseListParam = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => String(entry).trim()).filter(Boolean)
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    return value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+  }
+
+  return []
+}
+
+const appendSearchFilter = (filter, search = '') => {
+  const tokens = String(search || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (!tokens.length) return
+
+  const searchFields = [
+    'name',
+    'clipId',
+    'categorySlug',
+    'subCategorySlug',
+    'brand',
+    'description',
+    'actorName',
+    'actorNames',
+    'actorSearchKeywords',
+  ]
+
+  const tokenFilters = tokens.map((token) => {
+    const regex = new RegExp(escapeRegex(token), 'i')
+    return {
+      $or: searchFields.map((field) => ({ [field]: regex })),
+    }
+  })
+
+  if (tokenFilters.length) {
+    filter.$and = [...(filter.$and || []), ...tokenFilters]
+  }
+}
+
+const buildPublicListFilter = (query = {}) => {
+  const filter = { isActive: true }
+
+  if (query.categorySlug) {
+    filter.categorySlug = query.categorySlug
+  }
+
+  if (query.subCategorySlug) {
+    filter.subCategorySlug = query.subCategorySlug
+  }
+
+  if (query.actorId && mongoose.Types.ObjectId.isValid(query.actorId)) {
+    const actorObjectId = new mongoose.Types.ObjectId(query.actorId)
+    filter.$or = [{ actorIds: actorObjectId }, { actorId: actorObjectId }]
+  }
+
+  const brands = parseListParam(query.brands)
+  if (brands.length) {
+    filter.brand = { $in: brands }
+  }
+
+  const fpsValues = parseListParam(query.fps)
+  if (fpsValues.length) {
+    filter['videoInfo.fps'] = { $in: fpsValues }
+  }
+
+  const resolutions = parseListParam(query.resolutions)
+  if (resolutions.length) {
+    filter.availableTiers = { $in: resolutions }
+  }
+
+  const priceMin = Number.parseFloat(query.priceMin)
+  const priceMax = Number.parseFloat(query.priceMax)
+  if (Number.isFinite(priceMin) || Number.isFinite(priceMax)) {
+    filter.price = {}
+    if (Number.isFinite(priceMin)) filter.price.$gte = priceMin
+    if (Number.isFinite(priceMax)) filter.price.$lte = priceMax
+  }
+
+  appendSearchFilter(filter, query.search)
+
+  return filter
+}
+
+const buildPublicSort = (query = {}) => {
+  const sortBy = String(query.sortBy || 'default')
+
+  switch (sortBy) {
+    case 'price-low-high':
+      return { price: 1, createdAt: -1 }
+    case 'price-high-low':
+      return { price: -1, createdAt: -1 }
+    case 'newest':
+      return { createdAt: -1 }
+    default:
+      if (query.actorId) {
+        return { actorListingOrder: 1, createdAt: -1 }
+      }
+      if (query.categorySlug) {
+        return { categoryListingOrder: 1, createdAt: -1 }
+      }
+      return { createdAt: -1 }
+  }
+}
+
+const orderProductsByIds = (products = [], ids = []) => {
+  const productMap = new Map(products.map((product) => [product._id.toString(), product]))
+  return ids.map((id) => productMap.get(String(id))).filter(Boolean)
 }
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -70,26 +188,7 @@ const buildAdminListFilter = (query = {}) => {
 
   const search = String(query.search || '').trim()
   if (search) {
-    const tokens = search.split(/\s+/).filter(Boolean)
-    const searchFields = [
-      'name',
-      'clipId',
-      'categorySlug',
-      'subCategorySlug',
-      'brand',
-      'description',
-    ]
-
-    const tokenFilters = tokens.map((token) => {
-      const regex = new RegExp(escapeRegex(token), 'i')
-      return {
-        $or: searchFields.map((field) => ({ [field]: regex })),
-      }
-    })
-
-    if (tokenFilters.length) {
-      filter.$and = tokenFilters
-    }
+    appendSearchFilter(filter, search)
   }
 
   return filter
@@ -140,14 +239,55 @@ export const getProducts = asyncHandler(async (req, res) => {
     isAdmin && hasAdminPermission(req.adminProfile, ADMIN_PERMISSIONS.PRODUCTS_SALES_VIEW)
   const page = Number.parseInt(req.query.page, 10)
   const limit = Number.parseInt(req.query.limit, 10)
-  const usePagination =
-    isAdmin && Number.isFinite(page) && page > 0 && Number.isFinite(limit) && limit > 0
+  const wantsPagination = Number.isFinite(page) && page > 0 && Number.isFinite(limit) && limit > 0
+  const useAdminPagination = isAdmin && wantsPagination
+  const usePublicPagination = !isAdmin && wantsPagination
   const salesSort =
     canViewSales && ['top', 'low', 'revenue'].includes(req.query.sales)
       ? req.query.sales
       : 'all'
 
-  if (usePagination) {
+  const requestedIds = parseListParam(req.query.ids)
+  if (!isAdmin && requestedIds.length) {
+    const validIds = requestedIds.filter((id) => mongoose.Types.ObjectId.isValid(id))
+    const [products, categoryMap] = await Promise.all([
+      buildListQuery(
+        { _id: { $in: validIds }, isActive: true },
+        { excludeHeavyFields: true },
+      ),
+      getCategoryMap(),
+    ])
+
+    const ordered = orderProductsByIds(products, validIds)
+    res.json(formatProductList(ordered, categoryMap, false, null, { includePricing: true }))
+    return
+  }
+
+  if (usePublicPagination) {
+    const safeLimit = Math.min(Math.max(limit, 1), 60)
+    const filter = buildPublicListFilter(req.query)
+    const sort = buildPublicSort(req.query)
+    const skip = (page - 1) * safeLimit
+
+    const [products, total, categoryMap] = await Promise.all([
+      buildListQuery(filter, { excludeHeavyFields: true, sort }).skip(skip).limit(safeLimit),
+      Product.countDocuments(filter),
+      getCategoryMap(),
+    ])
+
+    res.json({
+      products: formatProductList(products, categoryMap, false, null, { includePricing: true }),
+      pagination: {
+        page,
+        limit: safeLimit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+      },
+    })
+    return
+  }
+
+  if (useAdminPagination) {
     const safeLimit = Math.min(Math.max(limit, 1), 100)
     const filter = buildAdminListFilter(req.query)
     const skip = (page - 1) * safeLimit
@@ -287,20 +427,23 @@ export const getProducts = asyncHandler(async (req, res) => {
 })
 
 export const getProductById = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id)
+  const isAdminRequest = req.query.admin === 'true'
+  const product = isAdminRequest
+    ? await Product.findById(req.params.id)
+    : await Product.findById(req.params.id).select(HEAVY_PRODUCT_FIELDS).lean()
   if (!product) {
     res.status(404).json({ message: 'Product not found' })
     return
   }
 
   if (!product.clipId) {
-    product.clipId = await generateClipId()
-    await product.save()
+    const clipId = await generateClipId()
+    await Product.findByIdAndUpdate(req.params.id, { clipId })
+    product.clipId = clipId
   }
 
   const categoryMap = await getCategoryMap()
-  const includeDelivery = req.query.admin === 'true'
-  if (includeDelivery) {
+  if (isAdminRequest) {
     res.json(await enrichAdminProduct(product, categoryMap, { includeDelivery: true }))
     return
   }

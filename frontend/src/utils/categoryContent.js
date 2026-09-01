@@ -14,8 +14,13 @@ export const getPinnedProductsFromIds = (productIds = [], products = []) => {
     .slice(0, HOME_CATEGORY_PIN_LIMIT);
 };
 
-const getPinnedCategoryProducts = (category, products = []) =>
-  getPinnedProductsFromIds(category.homePinnedProductIds, products);
+const getPinnedCategoryProducts = (category, products = []) => {
+  const pinnedIds = category.homePinnedProductIds || [];
+  if (!products.length) {
+    return pinnedIds.map((id) => ({ id: String(id) }));
+  }
+  return getPinnedProductsFromIds(pinnedIds, products);
+};
 
 const compareCategorySortOrder = (left, right) => {
   const orderDiff = (left.sortOrder ?? 0) - (right.sortOrder ?? 0);

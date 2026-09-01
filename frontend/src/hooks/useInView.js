@@ -1,21 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 
-export const useInView = (rootMargin = '0px 0px 200px 0px') => {
+export const useInView = (options = {}) => {
+  const { rootMargin = '200px 0px', enabled = true } = options;
   const ref = useRef(null);
-  const [isInView, setIsInView] = useState(true);
+  const [isInView, setIsInView] = useState(false);
 
   useEffect(() => {
+    if (!enabled) return undefined;
+
     const node = ref.current;
     if (!node) return undefined;
 
     const observer = new IntersectionObserver(
-      ([entry]) => setIsInView(entry.isIntersecting),
-      { rootMargin, threshold: 0 },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin },
     );
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [rootMargin]);
+  }, [enabled, rootMargin]);
 
   return { ref, isInView };
 };

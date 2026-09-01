@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
 import ActorRail from '../components/home/ActorRail';
@@ -8,17 +8,12 @@ import ProductSection from '../components/home/ProductSection';
 import DualCategoryGrid from '../components/home/DualCategoryGrid';
 import { HOME_SECTIONS } from '../constants/siteContent';
 import { useCatalog } from '../context/CatalogContext';
-import { getPinnedProductsFromIds } from '../utils/categoryContent';
 
 const Home = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { products, actors, loading, siteContent } = useCatalog();
-  const latestProducts = useMemo(
-    () => getPinnedProductsFromIds(siteContent?.homeLatestProductIds, products),
-    [siteContent?.homeLatestProductIds, products],
-  );
-  const showLatestSection = loading || latestProducts.length > 0;
+  const { actors, loading, siteContent } = useCatalog();
+  const showLatestSection = Boolean(siteContent?.homeLatestProductIds?.length);
   const showActorsSection = siteContent?.showActorsSection !== false;
 
   useEffect(() => {
@@ -44,9 +39,8 @@ const Home = () => {
       {showLatestSection ? (
         <ProductSection
           title={HOME_SECTIONS.freshDrops.title}
-          products={latestProducts}
+          productIds={siteContent.homeLatestProductIds}
           viewAllLink={HOME_SECTIONS.freshDrops.viewAllLink}
-          isLoading={loading}
           tightTop
         />
       ) : null}

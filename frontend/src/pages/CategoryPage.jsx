@@ -2,27 +2,21 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/catalog/FilterSidebar';
-import Pagination from '../components/catalog/Pagination';
 import ProductSkeleton from '../components/ui/ProductSkeleton';
+import InfiniteScrollSentinel from '../components/ui/InfiniteScrollSentinel';
 import { DEFAULT_CATALOG_FILTERS } from '../constants/catalog';
 import { useCatalog } from '../context/CatalogContext';
 import {
   CATALOG_PRODUCT_GRID,
   CATALOG_PRODUCT_GRID_EXPANDED,
 } from '../constants/layout';
-import { productHasActor } from '../utils/productActors';
 import {
   applyCatalogFiltersToSearchParams,
   clearCatalogFilterParams,
   parseCatalogFiltersFromSearchParams,
-  parseCatalogPageFromSearchParams,
 } from '../utils/catalogFilterParams';
-import {
-  useCatalogFilters,
-  extractCatalogFacets,
-  filterByCategory,
-} from '../hooks/useCatalogFilters';
-import { usePagination } from '../hooks/usePagination';
+import { extractCatalogFacets } from '../hooks/useCatalogFilters';
+import { useInfiniteProducts } from '../hooks/useInfiniteProducts';
 
 const CategoryPage = () => {
   const { category, subCategory } = useParams();
@@ -30,12 +24,10 @@ const CategoryPage = () => {
   const searchQuery = searchParams.get('search')?.trim() || '';
   const actorId = searchParams.get('actor')?.trim() || '';
   const {
-    products,
     actors,
     catalogCategories,
-    filterProducts,
     getSubCategoryLabel,
-    loading: catalogLoading,
+    rememberProducts,
   } = useCatalog();
   const subCategoryLabel = category && subCategory
     ? getSubCategoryLabel(category, subCategory)
@@ -45,18 +37,14 @@ const CategoryPage = () => {
     () => parseCatalogFiltersFromSearchParams(searchParams),
     [searchParams],
   );
-  const pageFromUrl = useMemo(
-    () => parseCatalogPageFromSearchParams(searchParams),
-    [searchParams],
-  );
 
   const updateFilters = useCallback(
-    (nextFilters, { resetPage = true } = {}) => {
+    (nextFilters) => {
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
           applyCatalogFiltersToSearchParams(params, nextFilters);
-          if (resetPage) params.delete('page');
+          params.delete('page');
           return params;
         },
         { replace: true },
@@ -69,24 +57,8 @@ const CategoryPage = () => {
     updateFilters(DEFAULT_CATALOG_FILTERS);
   }, [updateFilters]);
 
-  const handlePageChange = useCallback(
-    (nextPage) => {
-      setSearchParams(
-        (prev) => {
-          const params = new URLSearchParams(prev);
-          if (nextPage > 1) params.set('page', String(nextPage));
-          else params.delete('page');
-          return params;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
-
   const [showFilters, setShowFilters] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   const selectedActor = useMemo(
     () => actors.find((actor) => actor.id === actorId) || null,
@@ -143,42 +115,43 @@ const CategoryPage = () => {
     };
   }, [category, subCategory, subCategoryLabel, catalogCategories, searchQuery, selectedActor]);
 
-  const baseProducts = useMemo(() => {
-    if (actorId) {
-      return products.filter((product) => productHasActor(product, actorId));
-    }
+  const productQuery = useMemo(() => {
+    const query = {
+      sortBy: filters.sortBy,
+    };
 
-    if (searchQuery) {
-      return filterProducts({ search: searchQuery });
-    }
+    if (category) query.categorySlug = category;
+    if (subCategory) query.subCategorySlug = subCategory;
+    if (actorId) query.actorId = actorId;
+    if (searchQuery) query.search = searchQuery;
+    if (filters.brands?.length) query.brands = filters.brands.join(',');
+    if (filters.resolutions?.length) query.resolutions = filters.resolutions.join(',');
+    if (filters.fps?.length) query.fps = filters.fps.join(',');
+    if (filters.priceRange?.min != null) query.priceMin = filters.priceRange.min;
+    if (filters.priceRange?.max != null) query.priceMax = filters.priceRange.max;
 
-    return filterByCategory(products, category, subCategory);
-  }, [products, actorId, category, subCategory, searchQuery, filterProducts]);
+    return query;
+  }, [actorId, category, filters, searchQuery, subCategory]);
 
-  const listingOrderKey = actorId
-    ? 'actorListingOrder'
-    : category
-      ? 'categoryListingOrder'
-      : null;
-
-  const filteredProducts = useCatalogFilters(baseProducts, filters, listingOrderKey);
-  const { brands, resolutions, fps } = useMemo(
-    () => extractCatalogFacets(baseProducts),
-    [baseProducts]
-  );
-
-  const itemsPerPage = 102;
-  const { paginatedItems, range, page, totalPages, pageNumbers, goToPage } =
-    usePagination(filteredProducts, itemsPerPage, {
-      page: pageFromUrl,
-      onPageChange: handlePageChange,
-    });
+  const {
+    products,
+    total,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    reload,
+  } = useInfiniteProducts({ params: productQuery });
 
   useEffect(() => {
-    setIsLoading(true);
-    const timer = window.setTimeout(() => setIsLoading(false), 300);
-    return () => window.clearTimeout(timer);
-  }, [category, subCategory, filters, catalogLoading, searchQuery, actorId]);
+    rememberProducts(products);
+  }, [products, rememberProducts]);
+
+  const { brands, resolutions, fps } = useMemo(
+    () => extractCatalogFacets(products),
+    [products],
+  );
 
   const listingScope = `${category || ''}|${subCategory || ''}|${actorId || ''}`;
   const prevListingScopeRef = useRef(listingScope);
@@ -198,17 +171,20 @@ const CategoryPage = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [category, subCategory, searchQuery, actorId]);
+  }, [category, subCategory, searchQuery, actorId, filters]);
 
   const toggleFilters = () => {
     if (window.innerWidth >= 1024) {
-      setShowFilters((v) => !v);
+      setShowFilters((value) => !value);
     } else {
-      setShowMobileFilters((v) => !v);
+      setShowMobileFilters((value) => !value);
     }
   };
 
   const gridClass = showFilters ? CATALOG_PRODUCT_GRID : CATALOG_PRODUCT_GRID_EXPANDED;
+  const range = products.length
+    ? { start: 1, end: products.length }
+    : { start: 0, end: 0 };
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
@@ -219,7 +195,8 @@ const CategoryPage = () => {
               <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 sm:text-sm">
                 {pageMeta.breadcrumbs.map((crumb, index) => (
                   <li key={crumb.label} className="flex items-center gap-2">
-                    {index > 0 && <span className="text-gray-400">/</span>}                    {crumb.to ? (
+                    {index > 0 && <span className="text-gray-400">/</span>}
+                    {crumb.to ? (
                       <Link to={crumb.to} className="transition hover:text-gray-900">
                         {crumb.label}
                       </Link>
@@ -252,9 +229,10 @@ const CategoryPage = () => {
             )}
           </div>
 
-          <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">            {!isLoading && filteredProducts.length > 0 && (
+          <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+            {!loading && total > 0 && (
               <p className="whitespace-nowrap text-sm text-gray-500">
-                Showing {range.start} - {range.end} of {filteredProducts.length} clips
+                Showing {range.start} - {range.end} of {total} clips
               </p>
             )}
 
@@ -308,25 +286,47 @@ const CategoryPage = () => {
           </div>
 
           <div className="min-w-0 flex-1 transition-all duration-300">
-            {isLoading ? (
+            {loading ? (
               <div className={gridClass}>
-                {Array.from({ length: 8 }, (_, i) => (
-                  <ProductSkeleton key={i} />
+                {Array.from({ length: 8 }, (_, index) => (
+                  <ProductSkeleton key={index} />
                 ))}
               </div>
-            ) : paginatedItems.length > 0 ? (
+            ) : error ? (
+              <div className="py-12 text-center">
+                <p className="mb-4 text-lg text-gray-600">{error}</p>
+                <button
+                  type="button"
+                  onClick={reload}
+                  className="font-medium text-gray-900 underline underline-offset-4"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : products.length > 0 ? (
               <>
                 <div className={gridClass}>
-                  {paginatedItems.map((product) => (
+                  {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
-                <Pagination
-                  page={page}
-                  totalPages={totalPages}
-                  pageNumbers={pageNumbers}
-                  onPageChange={goToPage}
+
+                {loadingMore ? (
+                  <div className={`mt-6 ${gridClass}`}>
+                    {Array.from({ length: 4 }, (_, index) => (
+                      <ProductSkeleton key={`more-${index}`} />
+                    ))}
+                  </div>
+                ) : null}
+
+                <InfiniteScrollSentinel
+                  disabled={!hasMore || loadingMore}
+                  onVisible={loadMore}
                 />
+
+                {!hasMore && products.length > 0 ? (
+                  <p className="mt-8 text-center text-sm text-gray-500">You&apos;ve reached the end.</p>
+                ) : null}
               </>
             ) : (
               <div className="py-12 text-center">
@@ -334,8 +334,8 @@ const CategoryPage = () => {
                   {selectedActor
                     ? `No clips found for ${selectedActor.name}.`
                     : searchQuery
-                    ? `No clips found for "${searchQuery}".`
-                    : 'No clips match your filters.'}
+                      ? `No clips found for "${searchQuery}".`
+                      : 'No clips match your filters.'}
                 </p>
                 {selectedActor || searchQuery ? (
                   <Link

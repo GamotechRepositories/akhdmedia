@@ -4,14 +4,16 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
-import { fetchCatalog, fetchSiteContent } from '../services/catalogApi';
-import { getSubCategoryLabel as resolveSubCategoryLabel } from '../utils/catalogHelpers';
 import {
-  createProductSearchIndex,
-  filterProductsBySearch,
-} from '../utils/productSearch';
+  fetchCatalogMetadata,
+  fetchProductById,
+  fetchProductsPage,
+  fetchSiteContent,
+} from '../services/catalogApi';
+import { getSubCategoryLabel as resolveSubCategoryLabel } from '../utils/catalogHelpers';
 import { getProductActorIds, productsShareActor } from '../utils/productActors';
 
 const CatalogContext = createContext(null);
@@ -21,7 +23,6 @@ const emptyCatalog = {
   siteContentLoading: true,
   error: null,
   categories: [],
-  products: [],
   actors: [],
   navLinks: [],
   catalogCategories: {},
@@ -30,10 +31,17 @@ const emptyCatalog = {
   source: 'api',
 };
 
-const normalize = (value) => value?.trim().toLowerCase() ?? '';
-
 export const CatalogProvider = ({ children }) => {
   const [catalog, setCatalog] = useState(emptyCatalog);
+  const productCacheRef = useRef(new Map());
+
+  const rememberProducts = useCallback((products = []) => {
+    products.forEach((product) => {
+      if (product?.id) {
+        productCacheRef.current.set(product.id, product);
+      }
+    });
+  }, []);
 
   const loadCatalog = useCallback(async () => {
     setCatalog((current) => ({
@@ -44,10 +52,8 @@ export const CatalogProvider = ({ children }) => {
     }));
 
     try {
-      // Start all requests together; apply site-content as soon as it arrives
-      // so the hero image can begin loading without waiting on /products.
       const siteContentPromise = fetchSiteContent();
-      const catalogPromise = fetchCatalog({
+      const metadataPromise = fetchCatalogMetadata({
         siteContent: siteContentPromise,
       });
 
@@ -58,7 +64,7 @@ export const CatalogProvider = ({ children }) => {
         siteContentLoading: false,
       }));
 
-      const data = await catalogPromise;
+      const data = await metadataPromise;
       setCatalog({
         ...data,
         loading: false,
@@ -81,15 +87,35 @@ export const CatalogProvider = ({ children }) => {
   }, [loadCatalog]);
 
   const getProductById = useCallback(
-    (id) => catalog.products.find((product) => product.id === id) ?? null,
-    [catalog.products],
+    async (id) => {
+      if (!id) return null;
+
+      const cached = productCacheRef.current.get(id);
+      if (cached) return cached;
+
+      const product = await fetchProductById(id);
+      rememberProducts([product]);
+      return product;
+    },
+    [rememberProducts],
   );
 
   const getRelatedProducts = useCallback(
-    (productId, limit = 32) => {
-      const currentProduct = catalog.products.find((product) => product.id === productId);
-      const otherProducts = catalog.products.filter((product) => product.id !== productId);
+    async (productId, limit = 32) => {
+      const currentProduct =
+        productCacheRef.current.get(productId) || (await getProductById(productId));
 
+      if (!currentProduct) return [];
+
+      const { products } = await fetchProductsPage({
+        categorySlug: currentProduct.categorySlug,
+        page: 1,
+        limit: Math.min(limit + 8, 60),
+      });
+
+      rememberProducts(products);
+
+      const otherProducts = products.filter((product) => product.id !== productId);
       const currentActorIds = getProductActorIds(currentProduct);
 
       if (!currentActorIds.length) {
@@ -105,37 +131,7 @@ export const CatalogProvider = ({ children }) => {
 
       return [...sameActorProducts, ...otherActorProducts].slice(0, limit);
     },
-    [catalog.products],
-  );
-
-  const productSearchIndex = useMemo(
-    () => createProductSearchIndex(catalog.products, catalog.subCategoriesMap),
-    [catalog.products, catalog.subCategoriesMap],
-  );
-
-  const filterProducts = useCallback(
-    ({ search, category } = {}) => {
-      let results = search
-        ? filterProductsBySearch(
-            catalog.products,
-            search,
-            catalog.subCategoriesMap,
-            productSearchIndex,
-          )
-        : [...catalog.products];
-
-      if (category) {
-        const normalizedCategory = normalize(category);
-        results = results.filter(
-          (product) =>
-            normalize(product.category) === normalizedCategory ||
-            normalize(product.categorySlug) === normalizedCategory,
-        );
-      }
-
-      return results;
-    },
-    [catalog.products, catalog.subCategoriesMap, productSearchIndex],
+    [getProductById, rememberProducts],
   );
 
   const getSubCategoryLabel = useCallback(
@@ -154,16 +150,16 @@ export const CatalogProvider = ({ children }) => {
       refreshCatalog: loadCatalog,
       getProductById,
       getRelatedProducts,
-      filterProducts,
       getSubCategoryLabel,
+      rememberProducts,
     }),
     [
       catalog,
       loadCatalog,
       getProductById,
       getRelatedProducts,
-      filterProducts,
       getSubCategoryLabel,
+      rememberProducts,
     ],
   );
 
