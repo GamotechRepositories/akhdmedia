@@ -23,6 +23,8 @@ import {
   SIGNED_URL_EXPIRY_SECONDS,
 } from '../config/storage.js'
 import { getCloudFrontSignedDownloadUrl } from './cloudfrontSigner.js'
+import { isBunnyCdnUrl } from '../config/bunny.js'
+import { deleteBunnyFile } from './bunnyStorageService.js'
 
 let s3Client = null
 
@@ -116,6 +118,10 @@ const isDeletableProductPublicMediaKey = (s3Key = '', clipId = '') => {
 }
 
 export const deletePublicFile = async (urlOrKey = '', { clipId = '' } = {}) => {
+  if (isBunnyCdnUrl(urlOrKey)) {
+    return deleteBunnyFile(urlOrKey)
+  }
+
   const s3Key =
     urlOrKey.includes('://') || urlOrKey.startsWith('/uploads')
       ? publicUrlToS3Key(urlOrKey)

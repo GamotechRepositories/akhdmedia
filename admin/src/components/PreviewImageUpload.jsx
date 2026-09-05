@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Cropper from 'react-easy-crop'
 import 'react-easy-crop/react-easy-crop.css'
 import { uploadCroppedPreviewToS3 } from '../api/client'
+import StorageProviderSelect from './StorageProviderSelect'
 import { getCroppedImageBlob } from '../utils/cropImage'
 import {
   formatFileSize,
   formatUploadEta,
   formatUploadSpeed,
 } from '../utils/formatFileSize'
+import { getStoredUploadProvider } from '../utils/uploadProvider'
 import { inputClass } from './ui/adminUi'
 
 const FULL_IMAGE_ASPECT = 'full'
@@ -48,6 +50,7 @@ const PreviewImageUpload = ({
   const [uploadEta, setUploadEta] = useState('')
   const [uploadedSize, setUploadedSize] = useState(0)
   const [error, setError] = useState('')
+  const [storageProvider, setStorageProvider] = useState(getStoredUploadProvider)
 
   const uploadReady = Boolean(clipId?.trim())
 
@@ -116,13 +119,14 @@ const PreviewImageUpload = ({
     const response = await uploadCroppedPreviewToS3(file, reportProgress, {
       clipId,
       previewIndex,
+      provider: storageProvider,
     })
 
     const payload = response.data
     const uploadedUrl = payload.url || ''
 
     if (!uploadedUrl) {
-      throw new Error('S3 upload finished but no public URL was returned')
+      throw new Error('Upload finished but no public URL was returned')
     }
 
     const withCacheBuster = (url) => {
@@ -156,7 +160,7 @@ const PreviewImageUpload = ({
       }
 
       if (!uploadReady) {
-        setError('Wait for Clip ID before uploading to S3.')
+        setError(`Wait for Clip ID before uploading to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'}.`)
         return
       }
 
@@ -186,7 +190,7 @@ const PreviewImageUpload = ({
     }
 
     if (!uploadReady) {
-      setError('Wait for Clip ID before uploading to S3.')
+      setError(`Wait for Clip ID before uploading to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'}.`)
       return
     }
 
@@ -221,7 +225,7 @@ const PreviewImageUpload = ({
   }
 
   const uploadButtonLabel = uploading
-    ? `Uploading to S3 ${uploadProgress}%`
+    ? `Uploading to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'} ${uploadProgress}%`
     : !uploadReady
       ? 'Preparing Clip ID...'
       : imageSrc
@@ -231,17 +235,26 @@ const PreviewImageUpload = ({
           : 'Choose image to crop'
 
   const uploadActionLabel = uploading
-    ? `Uploading to S3 ${uploadProgress}%`
+    ? `Uploading to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'} ${uploadProgress}%`
     : isFullImageMode
-      ? 'Upload full image to S3'
-      : 'Crop & upload to S3'
+      ? `Upload full image to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'}`
+      : `Crop & upload to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'}`
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <p className="mb-2 text-xs font-semibold text-slate-700">{label}</p>
-      <p className="mb-3 text-[11px] text-slate-500">
-        Pick a ratio (or Full Image), select a file, then upload to S3.
-      </p>
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-slate-700">{label}</p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Pick a ratio (or Full Image), select a file, then upload.
+          </p>
+        </div>
+        <StorageProviderSelect
+          value={storageProvider}
+          onChange={setStorageProvider}
+          compact
+        />
+      </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
         {ASPECT_OPTIONS.map((option) => (

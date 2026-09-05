@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { deletePublicMedia, uploadMedia } from '../api/client'
+import StorageProviderSelect from './StorageProviderSelect'
 import { captureVideoPosterFromFile } from '../utils/captureVideoPoster'
 import {
   formatFileSize,
   formatUploadEta,
   formatUploadSpeed,
 } from '../utils/formatFileSize'
+import { getStoredUploadProvider } from '../utils/uploadProvider'
 import { inputClass } from './ui/adminUi'
 
 const waitForVideoReady = (video) =>
@@ -165,6 +167,7 @@ const MediaUpload = ({
   const [uploadedSize, setUploadedSize] = useState(fileSize || 0)
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [storageProvider, setStorageProvider] = useState(getStoredUploadProvider)
 
   const getStoredUrl = () => (valueKind === 'url' ? value : accessUrl || '')?.split('?')[0] || ''
 
@@ -243,6 +246,7 @@ const MediaUpload = ({
         actorSlug,
         previewIndex,
         tier,
+        provider: storageProvider,
       })
       const uploadedBytes = response.data.size || file.size
 
@@ -299,14 +303,14 @@ const MediaUpload = ({
         ? Boolean(categorySlug)
         : Boolean(clipId)
   const uploadButtonLabel = uploading
-    ? `Uploading ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
+    ? `Uploading to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'} ${uploadProgress}%${uploadSpeed && uploadSpeed !== '—' ? ` · ${uploadSpeed}` : ''}`
     : !uploadReady
       ? isCategoryUpload || isActorUpload
         ? 'Enter slug first'
         : 'Preparing Clip ID...'
       : disabled
         ? 'Select quality first'
-        : 'Upload File'
+        : `Upload to ${storageProvider === 'bunny' ? 'Bunny' : 'S3'}`
 
   const handleCopyUrl = async () => {
     if (!accessUrl) return
@@ -319,7 +323,14 @@ const MediaUpload = ({
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <p className="mb-2 text-xs font-semibold text-slate-700">{label}</p>
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+        <p className="text-xs font-semibold text-slate-700">{label}</p>
+        <StorageProviderSelect
+          value={storageProvider}
+          onChange={setStorageProvider}
+          compact
+        />
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <button

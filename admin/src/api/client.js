@@ -180,13 +180,14 @@ const uploadMediaViaProxy = (file, type, onProgress, options = {}) => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
+  formData.append('provider', options.provider || 'aws')
   if (options.clipId) formData.append('clipId', options.clipId)
   if (options.categorySlug) formData.append('categorySlug', options.categorySlug)
   if (options.actorSlug) formData.append('actorSlug', options.actorSlug)
   if (options.previewIndex) formData.append('previewIndex', String(options.previewIndex))
   if (options.tier) formData.append('tier', options.tier)
   return api.post('/upload', formData, {
-    params: { type },
+    params: { type, provider: options.provider || 'aws' },
     onUploadProgress: (event) => {
       reportXHRProgress(event, file, onProgress, tracker)
     },
@@ -264,6 +265,7 @@ const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
 const requestUploadPresign = async (file, type, options = {}) => {
   const { data } = await api.post('/upload/presign', {
     type,
+    provider: options.provider || 'aws',
     filename: file.name,
     contentType: file.type || 'application/octet-stream',
     size: file.size,
@@ -295,9 +297,10 @@ const buildPresignUploadResult = (presign, file, type) => ({
 })
 
 const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
+  const provider = options.provider || 'aws'
   const presign = await requestUploadPresign(file, type, options)
 
-  if (presign.method === 'proxy') {
+  if (presign.method === 'proxy' || provider === 'bunny') {
     return uploadMediaViaProxy(file, type, onProgress, options)
   }
 
@@ -310,14 +313,13 @@ const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
   return buildPresignUploadResult(presign, file, type)
 }
 
-/** Crop in browser, then PUT the file directly to S3 via presigned URL. */
+/** Crop in browser, then upload (AWS direct or Bunny via API proxy). */
 export const uploadCroppedPreviewToS3 = async (file, onProgress, options = {}) => {
+  const provider = options.provider || 'aws'
   const presign = await requestUploadPresign(file, 'preview-image', options)
 
-  if (presign.method === 'proxy') {
-    throw new Error(
-      'Direct S3 upload is unavailable. Configure AWS on the API server and allow CORS on the S3 bucket for this admin domain.',
-    )
+  if (presign.method === 'proxy' || provider === 'bunny') {
+    return uploadMediaViaProxy(file, 'preview-image', onProgress, options)
   }
 
   try {

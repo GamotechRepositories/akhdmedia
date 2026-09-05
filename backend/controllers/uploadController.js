@@ -1,4 +1,11 @@
 import asyncHandler from '../utils/asyncHandler.js'
+import { isBunnyCdnUrl, isBunnyEnabled } from '../config/bunny.js'
+import { isAwsEnabled } from '../config/storage.js'
+import {
+  deleteBunnyFile,
+  uploadPrivateFileToBunny,
+  uploadPublicFileToBunny,
+} from '../services/bunnyStorageService.js'
 import {
   createPresignedUploadForTarget,
   deletePublicFile,
@@ -13,6 +20,8 @@ import {
   resolveUploadTarget,
 } from '../utils/storagePaths.js'
 
+const STORAGE_PROVIDERS = new Set(['aws', 'bunny'])
+
 const readUploadContext = (req) => ({
   type: req.body?.type || req.query?.type || '',
   clipId: req.body?.clipId || req.query?.clipId || '',
@@ -23,6 +32,45 @@ const readUploadContext = (req) => ({
   size: Number(req.body?.size) || Number(req.file?.size) || 0,
   previewIndex: Number(req.body?.previewIndex || req.query?.previewIndex) || 1,
   tier: req.body?.tier || req.query?.tier || '',
+  provider: String(req.body?.provider || req.query?.provider || 'aws')
+    .trim()
+    .toLowerCase(),
+})
+
+const resolveStorageProvider = (requested = 'aws') => {
+  const provider = STORAGE_PROVIDERS.has(requested) ? requested : 'aws'
+
+  if (provider === 'bunny') {
+    if (!isBunnyEnabled()) {
+      const error = new Error(
+        'Bunny Storage is not configured. Add BUNNY_STORAGE_ZONE_NAME and BUNNY_STORAGE_API_KEY to backend/.env',
+      )
+      error.statusCode = 400
+      throw error
+    }
+    return 'bunny'
+  }
+
+  return 'aws'
+}
+
+export const getUploadProviders = asyncHandler(async (_req, res) => {
+  res.json({
+    providers: [
+      {
+        id: 'aws',
+        label: 'AWS S3',
+        cdn: process.env.AWS_S3_PUBLIC_URL || process.env.CLOUDFRONT_URL || '',
+        enabled: isAwsEnabled(),
+      },
+      {
+        id: 'bunny',
+        label: 'Bunny CDN',
+        cdn: process.env.BUNNY_CDN_URL || 'https://cdn-v2.akhdmedia.com',
+        enabled: isBunnyEnabled(),
+      },
+    ],
+  })
 })
 
 export const presignUpload = asyncHandler(async (req, res) => {
@@ -38,16 +86,25 @@ export const presignUpload = asyncHandler(async (req, res) => {
     return
   }
 
+  const provider = resolveStorageProvider(context.provider)
+
+  // Bunny AccessKey must stay on the server — always proxy uploads.
+  if (provider === 'bunny') {
+    res.json({ method: 'proxy', type: context.type, provider: 'bunny' })
+    return
+  }
+
   const target = resolveUploadTarget(context)
   const result = await createPresignedUploadForTarget(target, context.contentType)
 
   if (result.method === 'proxy') {
-    res.json({ method: 'proxy', type: context.type })
+    res.json({ method: 'proxy', type: context.type, provider: 'aws' })
     return
   }
 
   res.json({
     method: 'direct',
+    provider: 'aws',
     uploadUrl: result.uploadUrl,
     uploadFields: result.uploadFields,
     key: result.key,
@@ -66,31 +123,46 @@ export const uploadMedia = asyncHandler(async (req, res) => {
   }
 
   const context = readUploadContext(req)
+  const provider = resolveStorageProvider(context.provider)
   const target = resolveUploadTarget(context)
 
   if (target.scope === 'private') {
-    const result = await uploadPrivateFileToTarget(req.file, target)
-    const accessUrl = await getPrivateDownloadUrl(result.key, result.filename, {
-      inline: true,
-    })
+    const result =
+      provider === 'bunny'
+        ? await uploadPrivateFileToBunny(req.file, target)
+        : await uploadPrivateFileToTarget(req.file, target)
+
+    const accessUrl =
+      provider === 'bunny' && result.url
+        ? result.url
+        : await getPrivateDownloadUrl(result.key, result.filename, {
+            inline: true,
+          })
+
     res.json({
       key: result.key,
       filename: result.filename,
       size: req.file.size,
       type: context.type,
-      url: toAbsolutePrivateUrl(accessUrl),
+      provider,
+      url: provider === 'bunny' ? result.url : toAbsolutePrivateUrl(accessUrl),
     })
     return
   }
 
   if (target.scope === 'public') {
-    const result = await uploadPublicFileToTarget(req.file, target)
+    const result =
+      provider === 'bunny'
+        ? await uploadPublicFileToBunny(req.file, target)
+        : await uploadPublicFileToTarget(req.file, target)
+
     res.json({
       url: result.url,
       key: result.key,
       filename: result.filename,
       size: req.file.size,
       type: context.type,
+      provider,
     })
     return
   }
@@ -109,6 +181,12 @@ export const deletePublicMedia = asyncHandler(async (req, res) => {
 
   if (!clipId) {
     res.status(400).json({ message: 'clipId is required' })
+    return
+  }
+
+  if (isBunnyCdnUrl(url)) {
+    const result = await deleteBunnyFile(url)
+    res.json(result)
     return
   }
 
