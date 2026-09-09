@@ -49,7 +49,11 @@ const buildBunnyStorageUrl = (key = '') => {
   const zone = getBunnyStorageZoneName()
   const host = getBunnyStorageHostname()
   const pathKey = normalizeStoragePath(key)
-  return `https://${host}/${zone}/${pathKey}`
+  const encodedPath = pathKey
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+  return `https://${host}/${zone}/${encodedPath}`
 }
 
 const assertBunnyConfigured = () => {
@@ -57,6 +61,30 @@ const assertBunnyConfigured = () => {
     throw new Error(
       'Bunny Storage is not configured. Set BUNNY_STORAGE_ZONE_NAME and BUNNY_STORAGE_API_KEY in backend/.env',
     )
+  }
+}
+
+/** Browser uploads PUT directly to Bunny — avoids API 413 body limits. */
+export const createBunnyDirectUploadForTarget = (target, contentType = '') => {
+  assertBunnyConfigured()
+
+  const { s3Key, key, filename, scope } = target
+  const resolvedContentType = contentType || 'application/octet-stream'
+  const publicUrl = getBunnyPublicUrl(s3Key)
+
+  return {
+    method: 'direct',
+    provider: 'bunny',
+    uploadUrl: buildBunnyStorageUrl(s3Key),
+    uploadFields: null,
+    headers: {
+      AccessKey: getBunnyStorageApiKey(),
+      'Content-Type': resolvedContentType,
+    },
+    // Private master keys store the CDN URL so download flow can pass it through.
+    key: scope === 'private' ? publicUrl : key,
+    filename,
+    url: publicUrl,
   }
 }
 

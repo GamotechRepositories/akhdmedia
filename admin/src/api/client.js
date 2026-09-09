@@ -229,7 +229,7 @@ const uploadFileToS3Post = (uploadUrl, fields, file, onProgress) =>
     xhr.send(formData)
   })
 
-const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
+const uploadFileDirectPut = (uploadUrl, file, headers, onProgress, providerLabel = 'storage') =>
   new Promise((resolve, reject) => {
     const tracker = createProgressTracker()
     const xhr = new XMLHttpRequest()
@@ -248,19 +248,27 @@ const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
         resolve()
         return
       }
-      reject(new Error(`S3 upload failed (${xhr.status})`))
+      reject(new Error(`${providerLabel} upload failed (${xhr.status})`))
     }
 
     xhr.onerror = () => {
       reject(
         new Error(
-          `Direct S3 upload failed. Add CORS on your S3 bucket for ${window.location.origin} with PUT allowed.`,
+          providerLabel === 'Bunny'
+            ? `Direct Bunny upload failed. Ensure storage CORS allows PUT from ${window.location.origin}.`
+            : `Direct S3 upload failed. Add CORS on your S3 bucket for ${window.location.origin} with PUT allowed.`,
         ),
       )
     }
 
     xhr.send(file)
   })
+
+const uploadFileToS3 = (uploadUrl, file, headers, onProgress) =>
+  uploadFileDirectPut(uploadUrl, file, headers, onProgress, 'S3')
+
+const uploadFileToBunny = (uploadUrl, file, headers, onProgress) =>
+  uploadFileDirectPut(uploadUrl, file, headers, onProgress, 'Bunny')
 
 const requestUploadPresign = async (file, type, options = {}) => {
   const { data } = await api.post('/upload/presign', {
@@ -278,11 +286,17 @@ const requestUploadPresign = async (file, type, options = {}) => {
   return data
 }
 
-const uploadDirectToPresignedS3 = async (presign, file, onProgress) => {
+const uploadDirectToPresignedTarget = async (presign, file, onProgress) => {
   if (presign.uploadFields) {
     await uploadFileToS3Post(presign.uploadUrl, presign.uploadFields, file, onProgress)
     return
   }
+
+  if (presign.provider === 'bunny') {
+    await uploadFileToBunny(presign.uploadUrl, file, presign.headers, onProgress)
+    return
+  }
+
   await uploadFileToS3(presign.uploadUrl, file, presign.headers, onProgress)
 }
 
@@ -293,39 +307,42 @@ const buildPresignUploadResult = (presign, file, type) => ({
     size: file.size,
     type,
     url: presign.url,
+    provider: presign.provider || 'aws',
   },
 })
 
 const uploadMediaViaS3 = async (file, type, onProgress, options = {}) => {
-  const provider = options.provider || 'aws'
   const presign = await requestUploadPresign(file, type, options)
 
-  if (presign.method === 'proxy' || provider === 'bunny') {
+  if (presign.method === 'proxy') {
     return uploadMediaViaProxy(file, type, onProgress, options)
   }
 
   try {
-    await uploadDirectToPresignedS3(presign, file, onProgress)
+    await uploadDirectToPresignedTarget(presign, file, onProgress)
   } catch (error) {
-    throw error instanceof Error ? error : new Error('S3 upload failed')
+    throw error instanceof Error
+      ? error
+      : new Error(presign.provider === 'bunny' ? 'Bunny upload failed' : 'S3 upload failed')
   }
 
   return buildPresignUploadResult(presign, file, type)
 }
 
-/** Crop in browser, then upload (AWS direct or Bunny via API proxy). */
+/** Crop in browser, then PUT directly to AWS or Bunny. */
 export const uploadCroppedPreviewToS3 = async (file, onProgress, options = {}) => {
-  const provider = options.provider || 'aws'
   const presign = await requestUploadPresign(file, 'preview-image', options)
 
-  if (presign.method === 'proxy' || provider === 'bunny') {
+  if (presign.method === 'proxy') {
     return uploadMediaViaProxy(file, 'preview-image', onProgress, options)
   }
 
   try {
-    await uploadDirectToPresignedS3(presign, file, onProgress)
+    await uploadDirectToPresignedTarget(presign, file, onProgress)
   } catch (error) {
-    throw error instanceof Error ? error : new Error('S3 upload failed')
+    throw error instanceof Error
+      ? error
+      : new Error(presign.provider === 'bunny' ? 'Bunny upload failed' : 'S3 upload failed')
   }
 
   return buildPresignUploadResult(presign, file, 'preview-image')

@@ -3,6 +3,7 @@ import { isBunnyCdnUrl, isBunnyEnabled } from '../config/bunny.js'
 import { isAwsEnabled } from '../config/storage.js'
 import {
   deleteBunnyFile,
+  createBunnyDirectUploadForTarget,
   uploadPrivateFileToBunny,
   uploadPublicFileToBunny,
 } from '../services/bunnyStorageService.js'
@@ -87,14 +88,25 @@ export const presignUpload = asyncHandler(async (req, res) => {
   }
 
   const provider = resolveStorageProvider(context.provider)
+  const target = resolveUploadTarget(context)
 
-  // Bunny AccessKey must stay on the server — always proxy uploads.
   if (provider === 'bunny') {
-    res.json({ method: 'proxy', type: context.type, provider: 'bunny' })
+    const result = createBunnyDirectUploadForTarget(target, context.contentType)
+    res.json({
+      method: 'direct',
+      provider: 'bunny',
+      uploadUrl: result.uploadUrl,
+      uploadFields: result.uploadFields,
+      key: result.key,
+      filename: result.filename,
+      headers: result.headers,
+      url: result.url,
+      size: context.size,
+      type: context.type,
+    })
     return
   }
 
-  const target = resolveUploadTarget(context)
   const result = await createPresignedUploadForTarget(target, context.contentType)
 
   if (result.method === 'proxy') {
