@@ -23,8 +23,9 @@ import {
   SIGNED_URL_EXPIRY_SECONDS,
 } from '../config/storage.js'
 import { getCloudFrontSignedDownloadUrl } from './cloudfrontSigner.js'
-import { isBunnyCdnUrl } from '../config/bunny.js'
-import { deleteBunnyFile } from './bunnyStorageService.js'
+import { isBunnyCdnUrl, isBunnyStoredKey, toBunnyStorageKey } from '../config/bunny.js'
+import { getBunnySignedDownloadUrl } from './bunnySigner.js'
+import { deleteBunnyFile, downloadBunnyPrivateFileToPath } from './bunnyStorageService.js'
 
 let s3Client = null
 
@@ -355,6 +356,10 @@ export const uploadPrivateFileFromPath = async (filePath, target, filename) => {
 }
 
 export const downloadPrivateFileToPath = async (key, destPath) => {
+  if (isBunnyStoredKey(key) || isBunnyCdnUrl(key)) {
+    return downloadBunnyPrivateFileToPath(key, destPath)
+  }
+
   const relativeKey = key.replace(/^private\//, '').replace(`${AWS_S3_PRIVATE_PREFIX}/`, '')
   await ensureDir(path.dirname(destPath))
 
@@ -383,6 +388,21 @@ export const toAbsolutePrivateUrl = (url = '') => {
 
 export const getPrivateDownloadUrl = async (key, filename = '', options = {}) => {
   if (!key) return null
+
+  // Bunny master/delivery keys: bunny:private/... or legacy full CDN URLs
+  if (isBunnyStoredKey(key) || isBunnyCdnUrl(key)) {
+    const storagePath = isBunnyCdnUrl(key)
+      ? (() => {
+          try {
+            return new URL(key).pathname.replace(/^\/+/, '')
+          } catch {
+            return toBunnyStorageKey(key)
+          }
+        })()
+      : toBunnyStorageKey(key)
+
+    return getBunnySignedDownloadUrl(storagePath)
+  }
 
   if (/^https?:\/\//i.test(key)) return key
 

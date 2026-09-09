@@ -91,7 +91,7 @@ export const presignUpload = asyncHandler(async (req, res) => {
   const target = resolveUploadTarget(context)
 
   if (provider === 'bunny') {
-    const result = createBunnyDirectUploadForTarget(target, context.contentType)
+    const result = await createBunnyDirectUploadForTarget(target, context.contentType)
     res.json({
       method: 'direct',
       provider: 'bunny',

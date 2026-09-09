@@ -1,11 +1,13 @@
 import fs from 'fs/promises'
 import {
-  getBunnyCdnUrl,
   getBunnyStorageApiKey,
   getBunnyStorageHostname,
   getBunnyStorageZoneName,
   isBunnyEnabled,
+  toBunnyStorageKey,
+  toBunnyStoredKey,
 } from '../config/bunny.js'
+import { getBunnySignedDownloadUrl } from './bunnySigner.js'
 
 const getUploadBody = async (file) => {
   if (file?.buffer) return file.buffer
@@ -64,13 +66,34 @@ const assertBunnyConfigured = () => {
   }
 }
 
-/** Browser uploads PUT directly to Bunny — avoids API 413 body limits. */
-export const createBunnyDirectUploadForTarget = (target, contentType = '') => {
+/** Browser uploads PUT directly to Bunny — mirrors AWS S3 presign flow. */
+export const createBunnyDirectUploadForTarget = async (target, contentType = '') => {
   assertBunnyConfigured()
 
   const { s3Key, key, filename, scope } = target
   const resolvedContentType = contentType || 'application/octet-stream'
-  const publicUrl = getBunnyPublicUrl(s3Key)
+
+  if (scope === 'private') {
+    // Same shape as AWS: store private path key, return temporary signed access URL.
+    const storedKey = toBunnyStoredKey(key)
+    const accessUrl = getBunnySignedDownloadUrl(toBunnyStorageKey(storedKey), {
+      expiresInSeconds: undefined,
+    })
+
+    return {
+      method: 'direct',
+      provider: 'bunny',
+      uploadUrl: buildBunnyStorageUrl(s3Key),
+      uploadFields: null,
+      headers: {
+        AccessKey: getBunnyStorageApiKey(),
+        'Content-Type': resolvedContentType,
+      },
+      key: storedKey,
+      filename,
+      url: accessUrl,
+    }
+  }
 
   return {
     method: 'direct',
@@ -81,10 +104,9 @@ export const createBunnyDirectUploadForTarget = (target, contentType = '') => {
       AccessKey: getBunnyStorageApiKey(),
       'Content-Type': resolvedContentType,
     },
-    // Private master keys store the CDN URL so download flow can pass it through.
-    key: scope === 'private' ? publicUrl : key,
+    key,
     filename,
-    url: publicUrl,
+    url: getBunnyPublicUrl(s3Key),
   }
 }
 
@@ -144,12 +166,11 @@ export const uploadPrivateFileToBunny = async (file, target) => {
 
   try {
     await putBunnyObject(s3Key, body, file.mimetype || 'application/octet-stream')
-    const url = getBunnyPublicUrl(s3Key)
+    const storedKey = toBunnyStoredKey(key)
     return {
-      // Store CDN URL as key so existing download flow can pass it through.
-      key: url,
+      key: storedKey,
       filename: originalFilename,
-      url,
+      url: getBunnySignedDownloadUrl(toBunnyStorageKey(storedKey)),
       provider: 'bunny',
     }
   } finally {
@@ -157,12 +178,39 @@ export const uploadPrivateFileToBunny = async (file, target) => {
   }
 }
 
+export const downloadBunnyPrivateFileToPath = async (key, destPath) => {
+  assertBunnyConfigured()
+
+  const storageKey = toBunnyStorageKey(key)
+  if (!storageKey) {
+    throw new Error('Invalid Bunny private key')
+  }
+
+  const response = await fetch(buildBunnyStorageUrl(storageKey), {
+    method: 'GET',
+    headers: {
+      AccessKey: getBunnyStorageApiKey(),
+    },
+  })
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '')
+    throw new Error(
+      `Bunny download failed (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`,
+    )
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer())
+  await fs.writeFile(destPath, buffer)
+  return destPath
+}
+
 export const deleteBunnyFile = async (urlOrKey = '') => {
   assertBunnyConfigured()
 
   const key = urlOrKey.includes('://')
     ? bunnyPublicUrlToKey(urlOrKey)
-    : normalizeStoragePath(urlOrKey)
+    : toBunnyStorageKey(urlOrKey)
 
   if (!key) {
     throw new Error('Invalid Bunny file URL')
