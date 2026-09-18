@@ -28,6 +28,7 @@ dependencies:
   screen_protector: ^1.5.2
   google_sign_in: ^7.2.0
   country_picker: ^2.0.27
+  in_app_purchase: ^3.2.3
 
 dev_dependencies:
   flutter_test:

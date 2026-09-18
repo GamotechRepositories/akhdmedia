@@ -2,6 +2,10 @@ import mongoose from 'mongoose'
 import { DEMO_VIDEO_SOURCE_LIST, DEFAULT_DEMO_VIDEO_SOURCE } from '../constants/demoVideoSource.js'
 import { MEDIA_TYPE_LIST, MEDIA_TYPES } from '../constants/mediaTypes.js'
 import { PRICING_MODE_LIST, PRICING_MODES } from '../constants/pricingModes.js'
+import {
+  DEFAULT_PURCHASE_TYPE,
+  PURCHASE_TYPE_LIST,
+} from '../constants/purchaseTypes.js'
 import { RESOLUTION_ORDER } from '../constants/resolutionTiers.js'
 
 const resolutionTierSchema = new mongoose.Schema(
@@ -55,6 +59,21 @@ const productSchema = new mongoose.Schema(
     },
     price: { type: Number, required: true, min: 0 },
     gstPercentage: { type: Number, default: 0, min: 0, max: 100 },
+    /** STANDARD = Razorpay/PayPal/website; APPLE_IAP = StoreKit on iOS */
+    purchaseType: {
+      type: String,
+      enum: PURCHASE_TYPE_LIST,
+      default: DEFAULT_PURCHASE_TYPE,
+      index: true,
+    },
+    /** App Store Connect product id, e.g. com.akhdmedia.video.{mongoObjectId} */
+    appleProductId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+      sparse: true,
+    },
     availableTiers: { type: [String], default: () => [...RESOLUTION_ORDER] },
     resolutionPricing: {
       type: Map,

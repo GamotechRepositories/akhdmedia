@@ -14,6 +14,8 @@ import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/catalog_provider.dart';
+import '../../services/apple_iap_service.dart';
+import '../../services/order_service.dart';
 import '../../widgets/cards/tight_product_card.dart';
 import '../../widgets/common/loading_view.dart';
 import '../../widgets/product/product_media_gallery.dart';
@@ -140,6 +142,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       _ActionButtons(
                         isPurchasable: product.isPurchasable,
                         isBusy: _cartBusy,
+                        isAppleIap: product.isAppleIap,
                         onAddToCart: () => _addToCart(context, product),
                         onBuyNow: () => _buyNow(context, product),
                       ),
@@ -252,6 +255,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _addToCart(BuildContext context, Product product) async {
+    if (product.isAppleIap) {
+      await _buyWithApple(context, product);
+      return;
+    }
+
     final ok = await ensureAuthenticated(
       context,
       redirectTo: '/product/${product.id}',
@@ -286,6 +294,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _buyNow(BuildContext context, Product product) async {
+    if (product.isAppleIap) {
+      await _buyWithApple(context, product);
+      return;
+    }
+
     final ok = await ensureAuthenticated(
       context,
       redirectTo: '/product/${product.id}',
@@ -308,6 +321,64 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cartBusy = false);
+    }
+  }
+
+  Future<void> _buyWithApple(BuildContext context, Product product) async {
+    final ok = await ensureAuthenticated(
+      context,
+      redirectTo: '/product/${product.id}',
+    );
+    if (!ok || !mounted) return;
+
+    if (!product.isPurchasable) {
+      _showUnavailableModal();
+      return;
+    }
+
+    if (product.appleProductId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Apple product id is missing for this clip.')),
+      );
+      return;
+    }
+
+    setState(() => _cartBusy = true);
+    try {
+      final iap = context.read<AppleIapService>();
+      final orders = context.read<OrderService>();
+      final auth = context.read<AuthProvider>();
+
+      final purchase = await iap.buyProduct(product.appleProductId);
+      final order = await orders.verifyApplePurchase(
+        productId: product.id,
+        appleProductId: purchase.productId,
+        transactionId: purchase.transactionId,
+        originalTransactionId: purchase.originalTransactionId,
+        receiptData: purchase.receiptData,
+        imageSize: _selectedImageSize,
+        billingAddress: {
+          'name': auth.user?.name ?? '',
+          'email': auth.user?.email ?? '',
+          'phone': auth.user?.phone ?? 'Apple IAP',
+          'purchaseReasons': ['personal'],
+          'purchaseReasonOther': '',
+        },
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchase successful')),
+      );
+      context.go('/order-success?orderId=${order.id}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     } finally {
@@ -574,17 +645,34 @@ class _ActionButtons extends StatelessWidget {
   const _ActionButtons({
     required this.isPurchasable,
     required this.isBusy,
+    required this.isAppleIap,
     required this.onAddToCart,
     required this.onBuyNow,
   });
 
   final bool isPurchasable;
   final bool isBusy;
+  final bool isAppleIap;
   final VoidCallback onAddToCart;
   final VoidCallback onBuyNow;
 
   @override
   Widget build(BuildContext context) {
+    if (isAppleIap) {
+      return FilledButton.icon(
+        onPressed: !isPurchasable || isBusy ? null : onBuyNow,
+        icon: const Icon(Icons.apple, size: 20),
+        label: Text(isBusy ? 'Processing…' : 'Buy with Apple'),
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF111827),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

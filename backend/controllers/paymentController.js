@@ -4,6 +4,7 @@ import {
   confirmOnlineOrderPayment,
   resolveAccessibleOrder,
 } from '../services/orderService.js'
+import { createPaidOrderFromApplePurchase } from '../services/appleIapService.js'
 import { getOrderItemDownloads } from '../services/downloadService.js'
 import { sendOrderLicenseEmail } from '../services/emailService.js'
 import {
@@ -150,5 +151,59 @@ export const getPaymentConfig = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: await getPaymentProvidersConfig(),
+  })
+})
+
+export const verifyAppleIapPayment = asyncHandler(async (req, res) => {
+  if (!req.user?.id) {
+    throw new AppError('Sign in required', 401)
+  }
+
+  const user = await getUserById(req.user.id)
+  const {
+    productId,
+    appleProductId,
+    transactionId,
+    originalTransactionId = '',
+    receiptData = '',
+    imageSize = '',
+    billingAddress = {},
+  } = req.body || {}
+
+  if (!productId || !transactionId) {
+    throw new AppError('productId and transactionId are required', 400)
+  }
+
+  const order = await createPaidOrderFromApplePurchase({
+    sessionId: req.sessionId,
+    userId: user._id,
+    productId,
+    appleProductId,
+    transactionId,
+    originalTransactionId,
+    receiptData,
+    imageSize,
+    billingAddress: {
+      name: billingAddress.name || user.name || '',
+      email: billingAddress.email || user.email || '',
+      phone: billingAddress.phone || user.phone || 'Apple IAP',
+      purchaseReasons: billingAddress.purchaseReasons?.length
+        ? billingAddress.purchaseReasons
+        : ['personal'],
+      purchaseReasonOther: billingAddress.purchaseReasonOther || '',
+    },
+  })
+
+  try {
+    const downloads = await getOrderItemDownloads(order)
+    await sendOrderLicenseEmail({ order, downloads })
+  } catch (emailError) {
+    console.error('[email] Failed to send Apple IAP license email:', emailError.message)
+  }
+
+  res.json({
+    success: true,
+    message: 'Apple purchase verified successfully',
+    data: { order: formatOrderResponse(order) },
   })
 })

@@ -9,6 +9,7 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/catalog_provider.dart';
 import 'services/order_service.dart';
+import 'services/apple_iap_service.dart';
 import 'services/support_service.dart';
 
 class AkhdMediaApp extends StatefulWidget {
@@ -19,6 +20,7 @@ class AkhdMediaApp extends StatefulWidget {
     required this.cartProvider,
     required this.orderService,
     required this.supportService,
+    required this.appleIapService,
   });
 
   final CatalogProvider catalogProvider;
@@ -26,6 +28,7 @@ class AkhdMediaApp extends StatefulWidget {
   final CartProvider cartProvider;
   final OrderService orderService;
   final SupportService supportService;
+  final AppleIapService appleIapService;
 
   @override
   State<AkhdMediaApp> createState() => _AkhdMediaAppState();
@@ -83,6 +86,7 @@ class _AkhdMediaAppState extends State<AkhdMediaApp> with WidgetsBindingObserver
         ChangeNotifierProvider<CartProvider>.value(value: widget.cartProvider),
         Provider<OrderService>.value(value: widget.orderService),
         Provider<SupportService>.value(value: widget.supportService),
+        Provider<AppleIapService>.value(value: widget.appleIapService),
       ],
       child: MaterialApp.router(
         title: Brand.displayName,

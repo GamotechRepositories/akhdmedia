@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/catalog_provider.dart';
 import 'services/api_client.dart';
+import 'services/apple_iap_service.dart';
 import 'services/auth_service.dart';
 import 'services/cart_service.dart';
 import 'services/catalog_service.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
   final orderService = OrderService(apiClient);
   final supportService = SupportService(apiClient);
   final catalogService = CatalogService(apiClient);
+  final appleIapService = AppleIapService();
 
   final authProvider = AuthProvider(authService);
   final cartProvider = CartProvider(cartService);
@@ -37,6 +39,7 @@ Future<void> main() async {
       cartProvider: cartProvider,
       orderService: orderService,
       supportService: supportService,
+      appleIapService: appleIapService,
     ),
   );
 }

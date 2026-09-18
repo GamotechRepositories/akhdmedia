@@ -55,4 +55,33 @@ class OrderService {
         .where((order) => order.isPaid)
         .toList();
   }
+
+  Future<Order> verifyApplePurchase({
+    required String productId,
+    required String appleProductId,
+    required String transactionId,
+    String originalTransactionId = '',
+    String receiptData = '',
+    String imageSize = '',
+    Map<String, dynamic>? billingAddress,
+  }) async {
+    final response = await _api.postJson(
+      '/payments/apple/verify',
+      data: {
+        'productId': productId,
+        'appleProductId': appleProductId,
+        'transactionId': transactionId,
+        'originalTransactionId': originalTransactionId,
+        'receiptData': receiptData,
+        'imageSize': imageSize,
+        if (billingAddress != null) 'billingAddress': billingAddress,
+      },
+    );
+
+    final orderJson = response['data']?['order'];
+    if (orderJson is! Map<String, dynamic>) {
+      throw Exception('Apple purchase verification failed');
+    }
+    return Order.fromJson(orderJson);
+  }
 }

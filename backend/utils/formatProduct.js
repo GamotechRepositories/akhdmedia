@@ -1,4 +1,9 @@
 import { PRICING_MODES } from '../constants/pricingModes.js'
+import {
+  DEFAULT_PURCHASE_TYPE,
+  PURCHASE_TYPES,
+  buildAppleProductId,
+} from '../constants/purchaseTypes.js'
 import { getAvailableTiers, sortTierList } from '../constants/resolutionTiers.js'
 import {
   getListingPrice,
@@ -46,6 +51,12 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     id: product._id.toString(),
     mediaType: product.mediaType || 'video',
     pricingMode,
+    purchaseType: product.purchaseType || DEFAULT_PURCHASE_TYPE,
+    appleProductId:
+      product.appleProductId ||
+      (product.purchaseType === PURCHASE_TYPES.APPLE_IAP
+        ? buildAppleProductId(product._id, product.mediaType)
+        : ''),
     resolutionPricing: Object.fromEntries(
       Object.entries(allPricing).filter(([tier]) => enabledTiers.includes(tier)),
     ),

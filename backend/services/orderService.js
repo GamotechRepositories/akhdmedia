@@ -270,6 +270,13 @@ export const confirmOnlineOrderPayment = async (
     if (paymentDetails.paypalOrderId) {
       order.paypalOrderId = paymentDetails.paypalOrderId
     }
+  } else if (paymentDetails.appleTransactionId) {
+    order.appleTransactionId = paymentDetails.appleTransactionId || ''
+    order.appleOriginalTransactionId =
+      paymentDetails.appleOriginalTransactionId || paymentDetails.appleTransactionId || ''
+    if (paymentDetails.appleProductId) {
+      order.appleProductId = paymentDetails.appleProductId
+    }
   } else {
     order.razorpayPaymentId = paymentDetails.razorpayPaymentId || ''
     order.razorpaySignature = paymentDetails.razorpaySignature || ''

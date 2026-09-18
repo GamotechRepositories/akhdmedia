@@ -20,6 +20,8 @@ class Product {
     required this.videoPoster,
     required this.isActive,
     required this.isPurchasable,
+    this.purchaseType = 'STANDARD',
+    this.appleProductId = '',
     this.imageSizes = const {},
     this.rating,
     this.videoInfo,
@@ -46,6 +48,8 @@ class Product {
   final String videoPoster;
   final bool isActive;
   final bool isPurchasable;
+  final String purchaseType;
+  final String appleProductId;
   final Map<String, ProductImageSize> imageSizes;
   final num? rating;
   final Map<String, dynamic>? videoInfo;
@@ -53,6 +57,8 @@ class Product {
   final List<String> actorIds;
   final String actorName;
   final List<String> actorNames;
+
+  bool get isAppleIap => purchaseType == 'APPLE_IAP' && appleProductId.isNotEmpty;
 
   List<String> get resolvedActorIds {
     if (actorIds.isNotEmpty) return actorIds;
@@ -157,6 +163,8 @@ class Product {
       videoPoster: json['videoPoster']?.toString() ?? '',
       isActive: json['isActive'] != false,
       isPurchasable: json['isPurchasable'] != false,
+      purchaseType: json['purchaseType']?.toString() ?? 'STANDARD',
+      appleProductId: json['appleProductId']?.toString() ?? '',
       imageSizes: imageSizes,
       rating: json['rating'] is num ? json['rating'] as num : null,
       videoInfo: json['videoInfo'] is Map<String, dynamic>

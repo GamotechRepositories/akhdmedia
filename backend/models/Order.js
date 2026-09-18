@@ -44,7 +44,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentProvider: {
       type: String,
-      enum: ['razorpay', 'paypal'],
+      enum: ['razorpay', 'paypal', 'apple'],
       default: 'razorpay',
     },
     subtotalAmount: { type: Number, required: true, min: 0, default: 0 },
@@ -62,6 +62,10 @@ const orderSchema = new mongoose.Schema(
     razorpaySignature: { type: String, default: '' },
     paypalOrderId: { type: String, default: '' },
     paypalCaptureId: { type: String, default: '' },
+    appleProductId: { type: String, default: '', index: true },
+    appleTransactionId: { type: String, default: '', index: true, sparse: true },
+    appleOriginalTransactionId: { type: String, default: '' },
+    appleReceiptData: { type: String, default: '' },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'completed'],

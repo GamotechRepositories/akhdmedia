@@ -1,0 +1,41 @@
+{
+  "identifier" : "akhdmedia_storekit",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "6AA45F23800412A348A67148",
+      "localizations" : [
+        {
+          "description" : "Editorial license for Alia Bhatt trailer launch clip",
+          "displayName" : "AKHD Clip AKHD-77528",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.akhdmedia.video.6aa45f23800412a348a67148",
+      "referenceName" : "AKHD-77528 Test IAP",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastStorefrontUpdateTime" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
