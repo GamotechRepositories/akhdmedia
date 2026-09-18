@@ -1,0 +1,4 @@
+
+# App Store Connect private keys
+secrets/
+*.p8

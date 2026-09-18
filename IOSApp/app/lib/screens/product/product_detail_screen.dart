@@ -340,7 +340,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return;
     }
 
-    if (product.appleProductId.isEmpty) {
+    final appleProductId = product.resolvedAppleProductId;
+    if (appleProductId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Apple product id is missing for this clip.')),
       );
@@ -353,7 +354,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       final orders = context.read<OrderService>();
       final auth = context.read<AuthProvider>();
 
-      final purchase = await iap.buyProduct(product.appleProductId);
+      final purchase = await iap.buyProduct(appleProductId);
       final order = await orders.verifyApplePurchase(
         productId: product.id,
         appleProductId: purchase.productId,

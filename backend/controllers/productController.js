@@ -21,6 +21,36 @@ import {
   ADMIN_PERMISSIONS,
   hasAdminPermission,
 } from '../constants/adminPermissions.js'
+import { PURCHASE_TYPES, buildAppleProductId } from '../constants/purchaseTypes.js'
+import {
+  applyAscSyncResultToProduct,
+  markAscSyncError,
+  syncProductToAppStoreConnect,
+} from '../services/appStoreConnectIapService.js'
+
+const applyAppleIapFields = (product) => {
+  if (!product) return product
+  product.purchaseType = PURCHASE_TYPES.APPLE_IAP
+  product.appleProductId = buildAppleProductId(product._id, product.mediaType)
+  if (!product.appleAscSyncStatus) {
+    product.appleAscSyncStatus = 'pending'
+  }
+  return product
+}
+
+const syncAppleIapWithAsc = async (product) => {
+  try {
+    const result = await syncProductToAppStoreConnect(product)
+    await applyAscSyncResultToProduct(product, result)
+  } catch (error) {
+    console.error(
+      `[asc-iap] Failed to sync ${product?.clipId || product?._id}:`,
+      error?.message || error,
+    )
+    await markAscSyncError(product, error)
+  }
+  return product
+}
 const PUBLIC_CATALOG_CACHE_MS = 2 * 60 * 1000
 const HEAVY_PRODUCT_FIELDS =
   '-deliveryFiles -masterVideoSignedUrl -masterVideoFilename -masterVideoTier'
@@ -466,6 +496,9 @@ export const createProduct = asyncHandler(async (req, res) => {
   await attachMasterVideoSignedUrl(payload)
 
   const product = await Product.create(payload)
+  applyAppleIapFields(product)
+  await product.save()
+  await syncAppleIapWithAsc(product)
   invalidatePublicCatalogCache()
   const categoryMap = await getCategoryMap()
 
@@ -501,6 +534,14 @@ export const updateProduct = asyncHandler(async (req, res) => {
     new: true,
     runValidators: true,
   })
+
+  if (product) {
+    applyAppleIapFields(product)
+    await product.save()
+    if (product.appleAscSyncStatus !== 'synced' || !product.appleAscIapId) {
+      await syncAppleIapWithAsc(product)
+    }
+  }
 
   invalidatePublicCatalogCache()
   const categoryMap = await getCategoryMap()

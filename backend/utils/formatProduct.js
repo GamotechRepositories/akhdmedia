@@ -115,6 +115,10 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     formatted.masterVideoKey = product.masterVideoKey || ''
     formatted.masterVideoFilename = product.masterVideoFilename || ''
     formatted.masterVideoTier = product.masterVideoTier || ''
+    formatted.appleAscIapId = product.appleAscIapId || ''
+    formatted.appleAscSyncStatus = product.appleAscSyncStatus || 'pending'
+    formatted.appleAscSyncError = product.appleAscSyncError || ''
+    formatted.appleAscSyncedAt = product.appleAscSyncedAt || null
   }
 
   return formatted

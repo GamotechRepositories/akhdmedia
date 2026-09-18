@@ -154,15 +154,18 @@ export const createPaidOrderFromApplePurchase = async ({
     throw new AppError('Product not found', 404)
   }
 
-  if (product.purchaseType !== PURCHASE_TYPES.APPLE_IAP) {
-    throw new AppError('This product is not available for Apple In-App Purchase', 400)
-  }
-
   const expectedAppleId =
     product.appleProductId || buildAppleProductId(product._id, product.mediaType)
 
   if (appleProductId && expectedAppleId && appleProductId !== expectedAppleId) {
     throw new AppError('Apple product id does not match this catalog item', 400)
+  }
+
+  // Auto-heal older catalog rows that predate APPLE_IAP tagging.
+  if (product.purchaseType !== PURCHASE_TYPES.APPLE_IAP || !product.appleProductId) {
+    product.purchaseType = PURCHASE_TYPES.APPLE_IAP
+    product.appleProductId = expectedAppleId
+    await product.save()
   }
 
   assertProductPurchasable(product)

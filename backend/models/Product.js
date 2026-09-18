@@ -74,6 +74,22 @@ const productSchema = new mongoose.Schema(
       index: true,
       sparse: true,
     },
+    /** ASC resource id returned by POST /v2/inAppPurchases */
+    appleAscIapId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+      sparse: true,
+    },
+    appleAscSyncStatus: {
+      type: String,
+      enum: ['pending', 'synced', 'error', 'skipped'],
+      default: 'pending',
+      index: true,
+    },
+    appleAscSyncError: { type: String, default: '' },
+    appleAscSyncedAt: { type: Date, default: null },
     availableTiers: { type: [String], default: () => [...RESOLUTION_ORDER] },
     resolutionPricing: {
       type: Map,

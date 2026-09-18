@@ -58,7 +58,16 @@ class Product {
   final String actorName;
   final List<String> actorNames;
 
-  bool get isAppleIap => purchaseType == 'APPLE_IAP' && appleProductId.isNotEmpty;
+  /// Always prefer API value; otherwise derive the stable App Store id.
+  String get resolvedAppleProductId {
+    if (appleProductId.isNotEmpty) return appleProductId;
+    if (id.isEmpty) return '';
+    final kind = mediaType == 'image' ? 'image' : 'video';
+    return 'com.akhdmedia.$kind.$id';
+  }
+
+  /// iOS app sells every clip via StoreKit.
+  bool get isAppleIap => resolvedAppleProductId.isNotEmpty;
 
   List<String> get resolvedActorIds {
     if (actorIds.isNotEmpty) return actorIds;
