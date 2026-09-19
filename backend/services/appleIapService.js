@@ -41,8 +41,9 @@ const postAppleReceipt = async (url, receiptData) => {
 }
 
 /**
- * Verify App Store receipt when APPLE_IAP_SHARED_SECRET is configured.
- * Without a shared secret (local/dev), accepts the transaction id after uniqueness checks.
+ * Verify App Store receipt against Apple production.
+ * Sandbox fallback (status 21007) is kept only for TestFlight / sandbox Apple IDs —
+ * local StoreKit Configuration testing is disabled.
  */
 export const verifyAppleReceipt = async ({
   receiptData = '',
@@ -50,27 +51,27 @@ export const verifyAppleReceipt = async ({
   transactionId = '',
 } = {}) => {
   if (!getAppleSharedSecret()) {
-    if (!transactionId?.trim()) {
-      throw new AppError('Missing Apple transaction id', 400)
-    }
-    return {
-      verified: false,
-      mode: 'unverified_dev',
-      transactionId: transactionId.trim(),
-      originalTransactionId: transactionId.trim(),
-      productId: appleProductId,
-    }
+    throw new AppError(
+      'Apple IAP shared secret is not configured (APPLE_IAP_SHARED_SECRET)',
+      503,
+    )
   }
 
   if (!receiptData?.trim()) {
     throw new AppError('Missing Apple receipt data', 400)
   }
 
-  let payload = await postAppleReceipt(PRODUCTION_VERIFY_URL, receiptData.trim())
+  if (!transactionId?.trim()) {
+    throw new AppError('Missing Apple transaction id', 400)
+  }
 
-  // 21007 = sandbox receipt sent to production
+  let payload = await postAppleReceipt(PRODUCTION_VERIFY_URL, receiptData.trim())
+  let environment = 'Production'
+
+  // 21007 = receipt is from the sandbox (TestFlight / sandbox Apple ID)
   if (payload.status === 21007) {
     payload = await postAppleReceipt(SANDBOX_VERIFY_URL, receiptData.trim())
+    environment = 'Sandbox'
   }
 
   if (payload.status !== 0) {
@@ -98,6 +99,7 @@ export const verifyAppleReceipt = async ({
   return {
     verified: true,
     mode: 'apple_verify_receipt',
+    environment,
     transactionId: match.transaction_id || transactionId,
     originalTransactionId:
       match.original_transaction_id || match.transaction_id || transactionId,

@@ -1,4 +1,6 @@
 import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 /**
  * App Store Connect API credentials.
@@ -7,6 +9,7 @@ import fs from 'fs'
  * Role must allow In-App Purchase management (Admin / App Manager / Account Holder).
  */
 const trim = (value = '') => String(value || '').trim()
+const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export const getAscIssuerId = () => trim(process.env.APPLE_ASC_ISSUER_ID)
 export const getAscKeyId = () => trim(process.env.APPLE_ASC_KEY_ID)
@@ -22,7 +25,10 @@ export const getAscPrivateKey = () => {
   }
   const keyPath = trim(process.env.APPLE_ASC_PRIVATE_KEY_PATH)
   if (!keyPath) return ''
-  return fs.readFileSync(keyPath, 'utf8')
+  const resolved = path.isAbsolute(keyPath)
+    ? keyPath
+    : path.resolve(backendRoot, keyPath)
+  return fs.readFileSync(resolved, 'utf8')
 }
 
 export const hasAscPrivateKeyConfigured = () =>

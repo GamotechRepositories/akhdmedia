@@ -47,7 +47,7 @@ class AppleIapService {
     }
     if (response.productDetails.isEmpty) {
       throw Exception(
-        'Apple product "$productId" was not found. Create it in App Store Connect / StoreKit config.',
+        'Apple product "$productId" was not found in the App Store. Confirm it exists and is approved in App Store Connect.',
       );
     }
     return response.productDetails.first;
