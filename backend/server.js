@@ -13,7 +13,6 @@ import {
   LOCAL_PUBLIC_DIR,
 } from './config/storage.js'
 import { getBunnyCdnUrl, getBunnyStorageZoneName, isBunnyEnabled } from './config/bunny.js'
-import { verifyBunnyStorageAuth } from './services/bunnyStorageService.js'
 import apiRoutes from './routes/index.js'
 import shareRoutes from './routes/share.js'
 import errorHandler from './middleware/errorHandler.js'
@@ -81,13 +80,6 @@ const startServer = async () => {
         ? `Storage: Bunny (${getBunnyStorageZoneName()} → ${getBunnyCdnUrl()})`
         : 'Storage: Bunny NOT configured (set BUNNY_STORAGE_ZONE_NAME + BUNNY_STORAGE_API_KEY)',
     )
-    if (isBunnyEnabled()) {
-      verifyBunnyStorageAuth({ force: true })
-        .then(() => console.log('Storage: Bunny auth OK'))
-        .catch((error) =>
-          console.error(`Storage: Bunny auth FAILED — ${error?.message || error}`),
-        )
-    }
     if (isAwsEnabled()) {
       console.log(
         isCloudFrontSigningEnabled()

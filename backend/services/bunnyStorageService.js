@@ -66,64 +66,9 @@ const assertBunnyConfigured = () => {
   }
 }
 
-let bunnyAuthCache = { ok: false, checkedAt: 0, error: '' }
-
-/** Confirms BUNNY_STORAGE_API_KEY is the Storage Zone password (not account API key). */
-export const verifyBunnyStorageAuth = async ({ force = false } = {}) => {
-  assertBunnyConfigured()
-
-  const now = Date.now()
-  if (!force && bunnyAuthCache.checkedAt && now - bunnyAuthCache.checkedAt < 60_000) {
-    if (bunnyAuthCache.ok) return true
-    throw new Error(bunnyAuthCache.error || 'Bunny Storage authentication failed (401)')
-  }
-
-  const zone = getBunnyStorageZoneName()
-  const host = getBunnyStorageHostname()
-  const url = `https://${host}/${zone}/`
-  let response
-  try {
-    response = await fetch(url, {
-      method: 'GET',
-      headers: { AccessKey: getBunnyStorageApiKey(), Accept: 'application/json' },
-    })
-  } catch (error) {
-    bunnyAuthCache = {
-      ok: false,
-      checkedAt: now,
-      error: `Bunny Storage unreachable (${host}): ${error?.message || error}`,
-    }
-    throw new Error(bunnyAuthCache.error)
-  }
-
-  if (response.status === 401 || response.status === 403) {
-    bunnyAuthCache = {
-      ok: false,
-      checkedAt: now,
-      error:
-        'Bunny upload auth failed (401). BUNNY_STORAGE_API_KEY must be the Storage Zone password from Bunny → Storage → akhdmedia → FTP & API Access (use the read/write Password, not the account API key or read-only password). Also confirm BUNNY_STORAGE_HOSTNAME matches that page.',
-    }
-    throw new Error(bunnyAuthCache.error)
-  }
-
-  if (!response.ok && response.status !== 404) {
-    const detail = await response.text().catch(() => '')
-    bunnyAuthCache = {
-      ok: false,
-      checkedAt: now,
-      error: `Bunny Storage check failed (${response.status})${detail ? `: ${detail.slice(0, 160)}` : ''}`,
-    }
-    throw new Error(bunnyAuthCache.error)
-  }
-
-  bunnyAuthCache = { ok: true, checkedAt: now, error: '' }
-  return true
-}
-
 /** Browser uploads PUT directly to Bunny — mirrors AWS S3 presign flow. */
 export const createBunnyDirectUploadForTarget = async (target, contentType = '') => {
   assertBunnyConfigured()
-  await verifyBunnyStorageAuth()
 
   const { s3Key, key, filename, scope } = target
   const resolvedContentType = contentType || 'application/octet-stream'
@@ -167,7 +112,6 @@ export const createBunnyDirectUploadForTarget = async (target, contentType = '')
 
 const putBunnyObject = async (key, body, contentType = 'application/octet-stream') => {
   assertBunnyConfigured()
-  await verifyBunnyStorageAuth()
 
   const response = await fetch(buildBunnyStorageUrl(key), {
     method: 'PUT',
