@@ -248,7 +248,13 @@ const uploadFileDirectPut = (uploadUrl, file, headers, onProgress, providerLabel
         resolve()
         return
       }
-      reject(new Error(`${providerLabel} upload failed (${xhr.status})`))
+      reject(
+        new Error(
+          xhr.status === 401 || xhr.status === 403
+            ? `${providerLabel} upload failed (${xhr.status}): invalid storage password or wrong regional hostname. Update BUNNY_STORAGE_API_KEY (Storage Zone Password) and BUNNY_STORAGE_HOSTNAME on the server.`
+            : `${providerLabel} upload failed (${xhr.status})`,
+        ),
+      )
     }
 
     xhr.onerror = () => {
