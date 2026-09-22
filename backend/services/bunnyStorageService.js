@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import {
+  getBunnyCdnUrl,
   getBunnyStorageApiKey,
   getBunnyStorageHostname,
   getBunnyStorageZoneName,
