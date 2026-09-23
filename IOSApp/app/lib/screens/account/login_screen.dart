@@ -27,6 +27,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _submitting = false;
   bool _obscurePassword = true;
   bool _rememberMe = true;
+  bool _redirectedAfterAuth = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfAuthenticated());
+  }
+
+  void _redirectIfAuthenticated() {
+    if (_redirectedAfterAuth || !mounted) return;
+    if (!context.read<AuthProvider>().isAuthenticated) return;
+    _redirectedAfterAuth = true;
+    _navigateAfterAuth();
+  }
 
   @override
   void dispose() {
@@ -80,8 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (outcome == AppleSignInOutcome.success) {
+        if (!context.read<AuthProvider>().isAuthenticated) {
+          throw Exception('Sign-in completed but session was not established. Please try again.');
+        }
         await context.read<CartProvider>().loadCart();
         if (!mounted) return;
+        _redirectedAfterAuth = true;
         _navigateAfterAuth();
         return;
       }
@@ -100,6 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    if (auth.isAuthenticated && !_redirectedAfterAuth && !_submitting) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfAuthenticated());
+    }
     final loading = _submitting || auth.loading;
 
     return AuthScreenShell(

@@ -481,6 +481,18 @@ export const authenticateWithApple = async ({ identityToken, email: clientEmail,
   }
 
   const appleId = payload?.sub
+
+  if (!appleId) {
+    throw new AppError('Apple sign-in failed. Please try again.', 401)
+  }
+
+  // Apple omits email/name after the first authorization — returning users only
+  // need a valid identity token matched to their stored appleId.
+  let user = await User.findOne({ appleId })
+  if (user) {
+    return user
+  }
+
   const tokenEmail = payload?.email?.trim().toLowerCase()
   const email = tokenEmail || clientEmail?.trim().toLowerCase()
   const name =
@@ -488,13 +500,9 @@ export const authenticateWithApple = async ({ identityToken, email: clientEmail,
     email?.split('@')[0] ||
     'User'
 
-  if (!appleId) {
-    throw new AppError('Apple sign-in failed. Please try again.', 401)
-  }
-
   if (!email) {
     throw new AppError(
-      'Apple did not share an email address. Remove this app from Settings → Apple ID → Sign-In & Security → Sign in with Apple, then try again.',
+      'Apple did not share an email address. Remove AKHD from Settings → Apple ID → Sign-In & Security → Sign in with Apple, then sign in again.',
       400,
     )
   }
@@ -502,8 +510,6 @@ export const authenticateWithApple = async ({ identityToken, email: clientEmail,
   if (payload.email_verified === false) {
     throw new AppError('Your Apple email address is not verified', 400)
   }
-
-  let user = await User.findOne({ appleId })
 
   if (!user) {
     user = await User.findOne({ email })

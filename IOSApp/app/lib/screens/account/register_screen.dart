@@ -41,6 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptedTerms = false;
+  bool _redirectedAfterAuth = false;
   _RegisterStep _step = _RegisterStep.details;
   int _resendCooldown = 0;
   Timer? _resendTimer;
@@ -50,6 +51,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.initState();
     _passwordCtrl.addListener(_onPasswordFieldsChanged);
     _confirmPasswordCtrl.addListener(_onPasswordFieldsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfAuthenticated());
+  }
+
+  void _redirectIfAuthenticated() {
+    if (_redirectedAfterAuth || !mounted) return;
+    if (!context.read<AuthProvider>().isAuthenticated) return;
+    _redirectedAfterAuth = true;
+    _navigateAfterAuth();
   }
 
   void _onPasswordFieldsChanged() {
@@ -248,8 +257,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (outcome == AppleSignInOutcome.success) {
+        if (!context.read<AuthProvider>().isAuthenticated) {
+          throw Exception('Sign-in completed but session was not established. Please try again.');
+        }
         await context.read<CartProvider>().loadCart();
         if (!mounted) return;
+        _redirectedAfterAuth = true;
         _navigateAfterAuth();
       }
     } catch (e) {
@@ -267,6 +280,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    if (auth.isAuthenticated && !_redirectedAfterAuth && !_submitting) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _redirectIfAuthenticated());
+    }
     final loading = _submitting || _resending || auth.loading;
     final showPasswordMatchHint = _confirmPasswordCtrl.text.isNotEmpty;
     final isOtpStep = _step == _RegisterStep.otp;
