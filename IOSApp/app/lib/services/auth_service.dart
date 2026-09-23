@@ -1,18 +1,6 @@
-import '../core/constants/auth_config.dart';
 import '../core/errors/api_exception.dart';
-import '../models/google_auth_config.dart';
 import '../models/user.dart';
 import 'api_client.dart';
-
-class GoogleAuthServerStatus {
-  const GoogleAuthServerStatus({
-    required this.serverConfigured,
-    this.hasAndroidClientId = false,
-  });
-
-  final bool serverConfigured;
-  final bool hasAndroidClientId;
-}
 
 class AuthService {
   AuthService(this._api);
@@ -80,36 +68,17 @@ class AuthService {
     return _parseUser(response);
   }
 
-  /// Same source as the website's `GOOGLE_CLIENT_ID` in `config/auth.js`.
-  GoogleAuthConfig get googleAuthConfig => GoogleAuthConfig(
-        webClientId: AuthConfig.googleClientId,
-      );
-
-  Future<AppUser> loginWithGoogle(String credential) async {
-    final response = await _api.postJson('/user/auth/google', data: {
-      'credential': credential,
+  Future<AppUser> loginWithApple({
+    required String identityToken,
+    String? email,
+    String? name,
+  }) async {
+    final response = await _api.postJson('/user/auth/apple', data: {
+      'identityToken': identityToken,
+      if (email != null && email.isNotEmpty) 'email': email,
+      if (name != null && name.isNotEmpty) 'name': name,
     });
     return _parseUser(response);
-  }
-
-  Future<GoogleAuthServerStatus> getGoogleAuthServerStatus() async {
-    try {
-      final response = await _api.getJson('/user/auth/google/status');
-      final data = response['data'];
-      if (data is Map<String, dynamic>) {
-        return GoogleAuthServerStatus(
-          serverConfigured: data['serverConfigured'] == true,
-          hasAndroidClientId: data['hasAndroidClientId'] == true,
-        );
-      }
-    } on ApiException catch (e) {
-      if (e.statusCode == 404) {
-        // Endpoint not deployed yet; infer from google auth error shape.
-        return const GoogleAuthServerStatus(serverConfigured: true);
-      }
-      rethrow;
-    }
-    return const GoogleAuthServerStatus(serverConfigured: false);
   }
 
   Future<String> requestPasswordReset(String email) async {

@@ -6,6 +6,7 @@ import {
 } from '../services/accountDeletionService.js'
 import {
   authenticateUser,
+  authenticateWithApple,
   authenticateWithGoogle,
   formatUserResponse,
   getGoogleAuthStatus,
@@ -87,6 +88,11 @@ export const login = asyncHandler(async (req, res) => {
 export const googleAuth = asyncHandler(async (req, res) => {
   const user = await authenticateWithGoogle(req.body.credential)
   sendAuthResponse(res, user, 'Logged in with Google successfully')
+})
+
+export const appleAuth = asyncHandler(async (req, res) => {
+  const user = await authenticateWithApple(req.body)
+  sendAuthResponse(res, user, 'Logged in with Apple successfully')
 })
 
 export const googleAuthStatus = asyncHandler(async (req, res) => {

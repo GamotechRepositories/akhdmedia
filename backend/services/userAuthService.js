@@ -20,6 +20,7 @@ import Admin from '../models/Admin.js'
 import PendingRegistration from '../models/PendingRegistration.js'
 import User from '../models/User.js'
 import AppError from '../utils/AppError.js'
+import { verifyAppleIdentityToken } from './appleAuthService.js'
 
 const SALT_ROUNDS = 10
 const TOKEN_EXPIRY = '30d'
@@ -71,6 +72,7 @@ export const formatUserResponse = (user) => ({
   phone: user.phone,
   role: user.role,
   hasGoogleAuth: Boolean(user.googleId),
+  hasAppleAuth: Boolean(user.appleId),
   needsPhone: normalizePhone(user.phone).length < 10,
 })
 
@@ -455,6 +457,77 @@ export const authenticateWithGoogle = async (credential) => {
         name,
         email,
         googleId,
+        phone: '',
+      })
+    }
+  }
+
+  return user
+}
+
+export const authenticateWithApple = async ({ identityToken, email: clientEmail, name: clientName }) => {
+  if (!identityToken?.trim()) {
+    throw new AppError('Apple identity token is required', 400)
+  }
+
+  let payload
+  try {
+    payload = await verifyAppleIdentityToken(identityToken.trim())
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[auth] Apple identity token verification failed:', error?.message)
+    }
+    throw new AppError('Apple sign-in failed. Please try again.', 401)
+  }
+
+  const appleId = payload?.sub
+  const tokenEmail = payload?.email?.trim().toLowerCase()
+  const email = tokenEmail || clientEmail?.trim().toLowerCase()
+  const name =
+    clientName?.trim() ||
+    email?.split('@')[0] ||
+    'User'
+
+  if (!appleId) {
+    throw new AppError('Apple sign-in failed. Please try again.', 401)
+  }
+
+  if (!email) {
+    throw new AppError(
+      'Apple did not share an email address. Remove this app from Settings → Apple ID → Sign-In & Security → Sign in with Apple, then try again.',
+      400,
+    )
+  }
+
+  if (payload.email_verified === false) {
+    throw new AppError('Your Apple email address is not verified', 400)
+  }
+
+  let user = await User.findOne({ appleId })
+
+  if (!user) {
+    user = await User.findOne({ email })
+
+    if (user) {
+      if (user.appleId && user.appleId !== appleId) {
+        throw new AppError('This email is linked to another Apple account', 409)
+      }
+
+      user.appleId = appleId
+      if (!user.name?.trim()) {
+        user.name = name
+      }
+      await user.save()
+    } else {
+      const existingAdmin = await Admin.findOne({ email })
+      if (existingAdmin) {
+        throw new AppError('This email is registered as an admin account', 409)
+      }
+
+      user = await User.create({
+        name,
+        email,
+        appleId,
         phone: '',
       })
     }

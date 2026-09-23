@@ -4,6 +4,7 @@ import {
   forgotPassword,
   getAuthConfig,
   getMe,
+  appleAuth,
   googleAuth,
   googleAuthStatus,
   login,
@@ -27,6 +28,7 @@ router.post('/register/send-otp', sendRegisterOtp)
 router.post('/register/resend-otp', resendRegisterOtp)
 router.post('/register/verify-otp', verifyRegisterOtp)
 router.post('/login', login)
+router.post('/apple', appleAuth)
 router.post('/google', googleAuth)
 router.get('/google/status', googleAuthStatus)
 router.post('/forgot-password', forgotPassword)

@@ -6,14 +6,13 @@ import 'package:provider/provider.dart';
 
 import '../../core/utils/auth_navigation.dart';
 import '../../core/utils/phone_utils.dart';
-import '../../core/utils/google_sign_in_setup.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/api_client.dart';
-import '../../services/google_sign_in_service.dart';
+import '../../services/apple_sign_in_service.dart';
+import '../../widgets/auth/apple_sign_in_button.dart';
 import '../../widgets/auth/auth_modal_shell.dart' show showAuthErrorDialog;
 import '../../widgets/auth/auth_screen_layout.dart';
-import '../../widgets/auth/google_sign_in_button.dart';
 import '../../widgets/auth/otp_digit_fields.dart';
 import '../../widgets/auth/phone_country_field.dart';
 
@@ -28,8 +27,7 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen>
-    with WidgetsBindingObserver {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneFieldKey = GlobalKey<PhoneCountryFieldState>();
@@ -43,7 +41,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptedTerms = false;
-  bool _googleSignInInFlight = false;
   _RegisterStep _step = _RegisterStep.details;
   int _resendCooldown = 0;
   Timer? _resendTimer;
@@ -51,7 +48,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _passwordCtrl.addListener(_onPasswordFieldsChanged);
     _confirmPasswordCtrl.addListener(_onPasswordFieldsChanged);
   }
@@ -79,7 +75,6 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _resendTimer?.cancel();
     _passwordCtrl
       ..removeListener(_onPasswordFieldsChanged)
@@ -91,13 +86,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _googleSignInInFlight) {
-      _completeGoogleSignInIfReady();
-    }
   }
 
   String get _redirectQuery {
@@ -128,27 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       _otpCode = '';
       _otpFieldsKey.currentState?.clear();
     });
-  }
-
-  Future<void> _completeGoogleSignInIfReady() async {
-    final auth = context.read<AuthProvider>();
-    if (auth.isAuthenticated) {
-      _googleSignInInFlight = false;
-      await context.read<CartProvider>().loadCart();
-      if (!mounted) return;
-      _navigateAfterAuth();
-      return;
-    }
-
-    await auth.bootstrap();
-    if (!mounted || !_googleSignInInFlight) return;
-
-    if (auth.isAuthenticated) {
-      _googleSignInInFlight = false;
-      await context.read<CartProvider>().loadCart();
-      if (!mounted) return;
-      _navigateAfterAuth();
-    }
   }
 
   Future<void> _submitDetails() async {
@@ -273,44 +240,27 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
-  Future<void> _googleSignIn() async {
-    setState(() {
-      _submitting = true;
-      _googleSignInInFlight = true;
-    });
+  Future<void> _appleSignIn() async {
+    setState(() => _submitting = true);
 
     try {
-      final outcome = await context.read<AuthProvider>().signInWithGoogle();
+      final outcome = await context.read<AuthProvider>().signInWithApple();
       if (!mounted) return;
 
-      if (outcome == GoogleSignInOutcome.success) {
-        _googleSignInInFlight = false;
+      if (outcome == AppleSignInOutcome.success) {
         await context.read<CartProvider>().loadCart();
         if (!mounted) return;
         _navigateAfterAuth();
-        return;
-      }
-
-      if (outcome == GoogleSignInOutcome.cancelled) {
-        _googleSignInInFlight = false;
-        await showAuthErrorDialog(
-          context,
-          title: 'Google sign-in not completed',
-          message: GoogleSignInSetup.cancelledAfterAccountSelection(),
-        );
       }
     } catch (e) {
       if (!mounted) return;
-      _googleSignInInFlight = false;
       await showAuthErrorDialog(
         context,
-        title: 'Google sign-in failed',
+        title: 'Apple sign-in failed',
         message: ApiClient.unwrapError(e).toString(),
       );
     } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -373,7 +323,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ),
             const SizedBox(height: AuthScreenMetrics.sectionGap),
-            GoogleSignInButton(disabled: loading, onPressed: _googleSignIn),
+            AppleSignInButton(disabled: loading, onPressed: _appleSignIn),
             const SizedBox(height: AuthScreenMetrics.fieldGap),
             const AuthOrDivider(),
             const SizedBox(height: AuthScreenMetrics.fieldGap),

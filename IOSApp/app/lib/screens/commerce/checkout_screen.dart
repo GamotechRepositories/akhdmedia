@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/site_content.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/billing_address.dart';
+import '../../models/cart_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../services/apple_iap_service.dart';
 import '../../services/order_service.dart';
 import '../../widgets/common/loading_view.dart';
 
@@ -47,7 +48,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   int _step = 0;
   bool _loadingProfile = true;
-  final bool _processing = false;
+  bool _processing = false;
   bool _acceptedTerms = false;
   bool _acceptedLicensePolicy = false;
   String? _selectedReason;
@@ -214,74 +215,61 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    setState(() {
+      _error = null;
+      _processing = true;
+    });
+
     final cartProvider = context.read<CartProvider>();
-    await context.read<OrderService>().saveCheckoutProfile(_billing);
-    await _openWebsiteCheckout(cartProvider);
+    try {
+      await context.read<OrderService>().saveCheckoutProfile(_billing);
+      await _purchaseWithApple(cartProvider);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
   }
 
-  Future<void> _openWebsiteCheckout(CartProvider cartProvider) async {
-    final items = cartProvider.cart.items;
+  Future<void> _purchaseWithApple(CartProvider cartProvider) async {
+    final items = List<CartItem>.from(cartProvider.cart.items);
     if (items.isEmpty) {
-      if (mounted) {
-        setState(() => _error = 'Your cart is empty');
+      throw Exception('Your cart is empty');
+    }
+
+    final iap = context.read<AppleIapService>();
+    final orders = context.read<OrderService>();
+    final billingJson = _billing.toJson();
+    String? lastOrderId;
+
+    for (final item in items) {
+      final product = item.product;
+      final appleProductId = product?.resolvedAppleProductId ?? '';
+      if (appleProductId.isEmpty) {
+        throw Exception(
+          '${product?.name ?? 'An item'} is not available for in-app purchase.',
+        );
       }
-      return;
+
+      final purchase = await iap.buyProduct(appleProductId);
+      final order = await orders.verifyApplePurchase(
+        productId: item.productId,
+        appleProductId: purchase.productId,
+        transactionId: purchase.transactionId,
+        originalTransactionId: purchase.originalTransactionId,
+        receiptData: purchase.receiptData,
+        imageSize: item.imageSize,
+        billingAddress: billingJson,
+      );
+      lastOrderId = order.id;
     }
 
-    final itemPayload = items
-        .map((item) {
-          final productId = item.product?.id.isNotEmpty == true
-              ? item.product!.id
-              : item.productId;
-          final imageSize = item.imageSize.trim();
-          return '$productId:${item.quantity}:$imageSize';
-        })
-        .where((entry) => !entry.startsWith(':'))
-        .join(',');
+    await cartProvider.clearCart();
 
-    if (itemPayload.isEmpty) {
-      if (mounted) {
-        setState(() => _error = 'Product information is missing');
-      }
-      return;
-    }
-
-    final purchaseReason = _selectedReason ?? '';
-    final uri = Uri.https(
-      'www.akhdmedia.com',
-      '/from-app',
-      {
-        'source': 'ios_app',
-        'fromCheckout': '1',
-        'name': _billing.name,
-        'email': _billing.email,
-        'phone': _billing.phone,
-        'purchaseReason': purchaseReason,
-        'purchaseReasonOther': _billing.purchaseReasonOther.trim(),
-        'cartItems': itemPayload,
-        'cartTotal': cartProvider.cart.total.toString(),
-      },
-    );
-
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched) {
-      if (mounted) {
-        setState(() => _error = 'Could not open website checkout. Please try again.');
-      }
-      return;
-    }
-
-    // Website checkout uses a different browser session. Empty the iOS cart
-    // after a successful handoff so items don't remain after purchase.
-    try {
-      await cartProvider.clearCart();
-    } catch (_) {
-      // Best-effort; cart will refresh again when the app resumes.
-    }
-
-    if (mounted) {
-      context.go('/cart');
-    }
+    if (!mounted || lastOrderId == null) return;
+    context.go('/order-success?orderId=$lastOrderId');
   }
 
   @override
@@ -611,7 +599,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
       const SizedBox(height: AppSpacing.md),
-      const Text('Complete purchase on website', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+      const Text('Pay with Apple', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
       const SizedBox(height: AppSpacing.sm),
       Container(
         width: double.infinity,
@@ -622,7 +610,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           border: Border.all(color: const Color(0xFFBFDBFE)),
         ),
         child: const Text(
-          'Due to App Store payment rules, purchases cannot be completed inside this iOS app. When you tap Continue on website, we will open akhdmedia.com with your billing details and cart so you can finish payment securely on the website.',
+          'Purchases on iOS are completed securely through the App Store. You will confirm each item with Apple Pay / your Apple ID before your license is delivered.',
           style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A), height: 1.35),
         ),
       ),
@@ -1142,7 +1130,7 @@ class _BottomBar extends StatelessWidget {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : Text(step == 0 ? 'Continue' : 'Continue on website'),
+                  : Text(step == 0 ? 'Continue' : 'Buy with Apple'),
             ),
           ],
         ),

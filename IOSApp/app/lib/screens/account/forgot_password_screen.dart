@@ -261,7 +261,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             title: isOtpStep ? 'Verify & Set Password' : 'Forgot Password',
             subtitle: isOtpStep
                 ? 'Enter the code from your email and choose a new password.'
-                : "Enter your email and we'll send a verification code. Works for Google accounts too.",
+                : "Enter your email and we'll send a verification code. Works for Apple sign-in accounts too.",
           ),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
           if (!isOtpStep) ...[

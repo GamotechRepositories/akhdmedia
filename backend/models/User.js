@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, default: '', trim: true },
     password: { type: String, select: false, default: '' },
     googleId: { type: String, unique: true, sparse: true, trim: true },
+    appleId: { type: String, unique: true, sparse: true, trim: true },
     passwordResetToken: { type: String, select: false, default: '' },
     passwordResetExpires: { type: Date, select: false },
     passwordResetLastSentAt: { type: Date, select: false },

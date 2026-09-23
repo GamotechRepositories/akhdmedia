@@ -26,7 +26,7 @@ dependencies:
   flutter_svg: ^2.3.0
   url_launcher: ^6.3.2
   screen_protector: ^1.5.2
-  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
   country_picker: ^2.0.27
   in_app_purchase: ^3.2.3
 
@@ -57,6 +57,4 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/google_sign_in.html
     - assets/IMG_1577.jpg
-    - assets/Google_Favicon_2025.svg

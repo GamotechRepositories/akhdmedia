@@ -73,7 +73,7 @@ class _AkhdMediaAppState extends State<AkhdMediaApp> with WidgetsBindingObserver
     try {
       await widget.cartProvider.loadCart();
     } catch (_) {
-      // Ignore refresh failures while returning from the website.
+      // Ignore transient cart refresh failures.
     }
   }
 
