@@ -1,7 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class ModernBottomBar extends StatefulWidget {
+class ModernBottomBar extends StatelessWidget {
   const ModernBottomBar({
     super.key,
     required this.selectedIndex,
@@ -20,171 +22,121 @@ class ModernBottomBar extends StatefulWidget {
       activeIcon: Icons.home_rounded,
     ),
     _TabData(
-      label: 'Videos',
-      icon: Icons.video_library_outlined,
-      activeIcon: Icons.video_library_rounded,
+      label: 'Browse',
+      icon: Icons.play_circle_outline_rounded,
+      activeIcon: Icons.play_circle_rounded,
     ),
     _TabData(
-      label: 'Cart',
-      icon: Icons.shopping_cart_outlined,
-      activeIcon: Icons.shopping_cart_rounded,
+      label: 'Bag',
+      icon: Icons.shopping_bag_outlined,
+      activeIcon: Icons.shopping_bag_rounded,
       isCart: true,
     ),
     _TabData(
-      label: 'Profile',
+      label: 'Account',
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
     ),
   ];
 
-  @override
-  State<ModernBottomBar> createState() => _ModernBottomBarState();
-}
+  static const _barHeight = 62.0;
+  static const _horizontalInset = 18.0;
+  static const _bottomMargin = 10.0;
 
-class _ModernBottomBarState extends State<ModernBottomBar> {
-  static const double _indicatorSize = 40;
-
-  int? _dragHighlightIndex;
-  int? _lastHapticIndex;
-  bool _isDragging = false;
-
-  int _branchToDisplayIndex(int branchIndex) {
-    return branchIndex.clamp(0, ModernBottomBar._tabs.length - 1);
+  static double totalHeight(BuildContext context) {
+    return _barHeight + _bottomMargin + MediaQuery.paddingOf(context).bottom;
   }
 
-  int get _displayIndex =>
-      _dragHighlightIndex ?? _branchToDisplayIndex(widget.selectedIndex);
-
-  @override
-  void didUpdateWidget(covariant ModernBottomBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedIndex != widget.selectedIndex) {
-      _dragHighlightIndex = null;
-      _lastHapticIndex = _branchToDisplayIndex(widget.selectedIndex);
-    }
-  }
-
-  void _pickTabFromX(double x, double width, {required bool commit}) {
-    final tabCount = ModernBottomBar._tabs.length;
-    final index = ((x / width) * tabCount).floor().clamp(0, tabCount - 1);
-
-    if (_dragHighlightIndex != index) {
-      setState(() => _dragHighlightIndex = index);
-    }
-
-    if (_lastHapticIndex != index) {
-      _lastHapticIndex = index;
-      HapticFeedback.selectionClick();
-    }
-
-    if (!commit) return;
-    if (index != widget.selectedIndex) {
-      widget.onTabSelected(index);
-    }
-  }
-
-  void _onTapTab(int index) {
-    HapticFeedback.mediumImpact();
-    setState(() {
-      _dragHighlightIndex = null;
-      _lastHapticIndex = index;
-    });
-
-    widget.onTabSelected(index);
+  void _onTap(int index) {
+    HapticFeedback.lightImpact();
+    onTabSelected(index);
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final activeIndex = selectedIndex.clamp(0, _tabs.length - 1);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        _horizontalInset,
+        0,
+        _horizontalInset,
+        bottomInset + _bottomMargin,
       ),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottomInset),
-        child: Material(
-          color: Colors.transparent,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LayoutBuilder(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(31),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2F2F7).withValues(alpha: 0.88),
+              borderRadius: BorderRadius.circular(31),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.65),
+                width: 0.6,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.10),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              height: _barHeight,
+              child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final width = constraints.maxWidth;
-                  final tabWidth = width / ModernBottomBar._tabs.length;
+                  final tabWidth = constraints.maxWidth / _tabs.length;
 
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onHorizontalDragStart: (_) {
-                      _isDragging = true;
-                  _lastHapticIndex = _branchToDisplayIndex(widget.selectedIndex);
-                    },
-                    onHorizontalDragUpdate: (details) {
-                      _pickTabFromX(details.localPosition.dx, width, commit: true);
-                    },
-                    onHorizontalDragEnd: (_) {
-                      setState(() {
-                        _dragHighlightIndex = null;
-                        _isDragging = false;
-                      });
-                    },
-                    onHorizontalDragCancel: () {
-                      setState(() {
-                        _dragHighlightIndex = null;
-                        _isDragging = false;
-                      });
-                    },
-                    child: SizedBox(
-                      height: 56,
-                      child: Stack(
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeOutCubic,
+                        left: tabWidth * activeIndex + 6,
+                        top: 6,
+                        width: tabWidth - 12,
+                        height: _barHeight - 12,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.95),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Row(
                         children: [
-                          AnimatedPositioned(
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            left: tabWidth * _displayIndex + (tabWidth - _indicatorSize) / 2,
-                            top: (56 - _indicatorSize) / 2,
-                            width: _indicatorSize,
-                            height: _indicatorSize,
-                            child: const DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Color(0xFFEFF6FF),
-                                shape: BoxShape.circle,
+                          for (var i = 0; i < _tabs.length; i++)
+                            Expanded(
+                              child: _BottomBarItem(
+                                data: _tabs[i],
+                                selected: activeIndex == i,
+                                cartCount: cartCount,
+                                onTap: () => _onTap(i),
                               ),
                             ),
-                          ),
-                          IgnorePointer(
-                            ignoring: _isDragging,
-                            child: Row(
-                              children: [
-                                for (var i = 0; i < ModernBottomBar._tabs.length; i++)
-                                  Expanded(
-                                    child: Center(
-                                      child: _BottomBarItem(
-                                        data: ModernBottomBar._tabs[i],
-                                        selected: _displayIndex == i,
-                                        cartCount: widget.cartCount,
-                                        onTap: () => _onTapTab(i),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
-                    ),
+                    ],
                   );
                 },
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -221,7 +173,8 @@ class _BottomBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8);
+    const activeColor = Color(0xFF111827);
+    const inactiveColor = Color(0xFF8E8E93);
 
     return Semantics(
       button: true,
@@ -230,33 +183,85 @@ class _BottomBarItem extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          customBorder: const CircleBorder(),
-          splashColor: const Color(0xFF2563EB).withValues(alpha: 0.12),
-          highlightColor: const Color(0xFF2563EB).withValues(alpha: 0.08),
           onTap: onTap,
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Center(
-              child: data.isCart && cartCount > 0
-                  ? Badge(
-                      label: Text('$cartCount'),
-                      backgroundColor: const Color(0xFF2563EB),
-                      child: Icon(
-                        selected ? data.activeIcon : data.icon,
-                        size: 24,
-                        color: color,
-                      ),
-                    )
-                  : Icon(
-                      selected ? data.activeIcon : data.icon,
-                      size: 24,
-                      color: color,
-                    ),
+          borderRadius: BorderRadius.circular(24),
+          splashColor: activeColor.withValues(alpha: 0.08),
+          highlightColor: activeColor.withValues(alpha: 0.04),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _TabIcon(
+                  data: data,
+                  selected: selected,
+                  cartCount: cartCount,
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                ),
+                const SizedBox(height: 2),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.1,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    letterSpacing: -0.1,
+                    color: selected ? activeColor : inactiveColor,
+                  ),
+                  child: Text(data.label),
+                ),
+              ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TabIcon extends StatelessWidget {
+  const _TabIcon({
+    required this.data,
+    required this.selected,
+    required this.cartCount,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
+
+  final _TabData data;
+  final bool selected;
+  final int cartCount;
+  final Color activeColor;
+  final Color inactiveColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(
+      selected ? data.activeIcon : data.icon,
+      size: 22,
+      color: selected ? activeColor : inactiveColor,
+    );
+
+    if (!data.isCart || cartCount <= 0) {
+      return icon;
+    }
+
+    return Badge(
+      isLabelVisible: cartCount > 0,
+      label: Text(
+        cartCount > 99 ? '99+' : '$cartCount',
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          height: 1,
+        ),
+      ),
+      backgroundColor: const Color(0xFF2563EB),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      offset: const Offset(8, -6),
+      child: icon,
     );
   }
 }

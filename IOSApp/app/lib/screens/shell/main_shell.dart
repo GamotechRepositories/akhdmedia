@@ -107,6 +107,7 @@ class _MainShellState extends State<MainShell> {
         SystemNavigator.pop();
       },
       child: Scaffold(
+        extendBody: true,
         backgroundColor: const Color(0xFFF8FAFC),
         body: shell,
         bottomNavigationBar: ShellBottomBar(

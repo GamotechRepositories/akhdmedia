@@ -282,7 +282,9 @@ class AuthLogoHeader extends StatelessWidget {
 }
 
 class AuthOrDivider extends StatelessWidget {
-  const AuthOrDivider({super.key});
+  const AuthOrDivider({super.key, this.label = 'OR'});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +296,7 @@ class AuthOrDivider extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
-              'OR',
+              label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

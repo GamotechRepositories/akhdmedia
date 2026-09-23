@@ -138,6 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
             subtitle: 'Login to continue to your account',
           ),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
+          AppleSignInButton(disabled: loading, onPressed: _appleSignIn),
+          const SizedBox(height: AuthScreenMetrics.fieldGap),
+          const AuthOrDivider(label: 'or continue with email'),
+          const SizedBox(height: AuthScreenMetrics.fieldGap),
           AuthStyledField(
             label: 'Email Address',
             controller: _emailCtrl,
@@ -215,10 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
           AuthActionButton(label: 'Login', loading: loading, onPressed: _submit),
-          const SizedBox(height: AuthScreenMetrics.fieldGap),
-          const AuthOrDivider(),
-          const SizedBox(height: AuthScreenMetrics.fieldGap),
-          AppleSignInButton(disabled: loading, onPressed: _appleSignIn),
           const SizedBox(height: AuthScreenMetrics.sectionGap),
           AuthFooterLink(
             prompt: "Don't have an account? ",

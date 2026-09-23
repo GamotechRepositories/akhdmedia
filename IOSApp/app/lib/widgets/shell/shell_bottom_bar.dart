@@ -35,20 +35,23 @@ class ShellBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CartProvider>(
-      builder: (context, cart, _) {
-        return ModernBottomBar(
-          selectedIndex: selectedIndex ?? ShellTabState.lastTabIndex,
-          cartCount: cart.cart.itemCount,
-          onTabSelected: (index) =>
-              (onTabSelected ?? (i) => _defaultSelectTab(context, i))(index),
-        );
-      },
+    return Material(
+      color: Colors.transparent,
+      child: Consumer<CartProvider>(
+        builder: (context, cart, _) {
+          return ModernBottomBar(
+            selectedIndex: selectedIndex ?? ShellTabState.lastTabIndex,
+            cartCount: cart.cart.itemCount,
+            onTabSelected: (index) =>
+                (onTabSelected ?? (i) => _defaultSelectTab(context, i))(index),
+          );
+        },
+      ),
     );
   }
 }
 
-/// Bottom inset to keep scroll content above the shell bottom bar.
+/// Bottom inset to keep scroll content above the floating shell bottom bar.
 double shellBottomBarInset(BuildContext context) {
-  return 56 + MediaQuery.paddingOf(context).bottom;
+  return ModernBottomBar.totalHeight(context);
 }
