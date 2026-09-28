@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../screens/account/delete_account_screen.dart';
 import '../../screens/account/forgot_password_screen.dart';
 import '../../screens/account/login_screen.dart';
 import '../../screens/account/orders_screen.dart';
@@ -125,6 +126,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/delete-account',
+      builder: (context, state) => const DeleteAccountScreen(),
     ),
     GoRoute(
       path: '/orders',

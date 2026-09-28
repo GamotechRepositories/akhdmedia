@@ -156,11 +156,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final phone = _phoneFieldKey.currentState?.internationalPhone ?? '';
-    if (!isPhoneNumberValid(phone)) {
+    if (!isOptionalPhoneValid(phone)) {
       await showAuthErrorDialog(
         context,
         title: 'Registration failed',
-        message: 'Please enter a valid phone number',
+        message: 'Please enter a valid phone number or leave the field empty',
       );
       return;
     }

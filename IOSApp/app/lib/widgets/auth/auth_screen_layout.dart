@@ -327,6 +327,7 @@ class AuthStyledField extends StatelessWidget {
     this.enabled = true,
     this.inputFormatters,
     this.maxLength,
+    this.maxLines = 1,
   });
 
   final String label;
@@ -341,6 +342,7 @@ class AuthStyledField extends StatelessWidget {
   final bool enabled;
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -365,6 +367,7 @@ class AuthStyledField extends StatelessWidget {
           onSubmitted: onSubmitted,
           inputFormatters: inputFormatters,
           maxLength: maxLength,
+          maxLines: maxLines,
           style: const TextStyle(fontSize: 14, color: AuthScreenColors.textDark),
           decoration: authFieldInputDecoration(
             hint: hint,

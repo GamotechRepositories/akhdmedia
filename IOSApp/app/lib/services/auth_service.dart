@@ -141,6 +141,24 @@ class AuthService {
     return _parseUser(response);
   }
 
+  Future<String> requestAccountDeletion(String reason) async {
+    final response = await _api.postJson('/user/auth/delete-account/request', data: {
+      'reason': reason.trim(),
+    });
+    return response['message']?.toString() ??
+        'A confirmation code has been sent to your email.';
+  }
+
+  Future<void> confirmAccountDeletion(String code) async {
+    try {
+      await _api.postJson('/user/auth/delete-account/confirm', data: {
+        'code': code.trim(),
+      });
+    } finally {
+      await _api.clearSessionCookies();
+    }
+  }
+
   AppUser _parseUser(Map<String, dynamic> response) {
     final userJson = response['data']?['user'];
     if (userJson is! Map<String, dynamic>) {

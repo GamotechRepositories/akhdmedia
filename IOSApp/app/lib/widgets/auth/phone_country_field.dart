@@ -69,7 +69,7 @@ class PhoneCountryFieldState extends State<PhoneCountryField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Phone Number',
+          'Phone Number (optional)',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,

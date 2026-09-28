@@ -124,9 +124,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: AuthScreenMetrics.fieldGap),
           AuthStyledField(
-            label: 'Phone Number',
+            label: 'Phone Number (optional)',
             controller: _phoneCtrl,
-            hint: 'Enter your phone number',
+            hint: 'Add a phone number for support callbacks',
             prefixIcon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,

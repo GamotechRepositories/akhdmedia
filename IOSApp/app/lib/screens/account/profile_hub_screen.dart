@@ -65,6 +65,14 @@ class ProfileHubScreen extends StatelessWidget {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.delete_forever_outlined, color: Color(0xFFDC2626)),
+              title: const Text('Delete Account', style: TextStyle(color: Color(0xFFDC2626))),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/delete-account');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626)),
               title: const Text('Logout', style: TextStyle(color: Color(0xFFDC2626))),
               onTap: () {
@@ -113,7 +121,9 @@ class ProfileHubScreen extends StatelessWidget {
               _AccountCreditCard(
                 name: user.name,
                 email: user.email,
-                phone: _formatPhone(user.phone),
+                phone: user.phone.trim().isEmpty
+                    ? 'Not provided'
+                    : _formatPhone(user.phone),
                 onEdit: () => context.push('/profile'),
               ),
               const SizedBox(height: 24),
@@ -121,6 +131,22 @@ class ProfileHubScreen extends StatelessWidget {
               const SizedBox(height: 10),
               _ProfileMenuCard(
                 children: [
+                  _ProfileMenuItem(
+                    icon: Icons.person_outline_rounded,
+                    iconColor: const Color(0xFF64748B),
+                    iconBg: const Color(0xFFF1F5F9),
+                    title: 'Edit Profile',
+                    subtitle: 'Update your name or optional phone number',
+                    onTap: () => context.push('/profile'),
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.delete_forever_outlined,
+                    iconColor: const Color(0xFFDC2626),
+                    iconBg: const Color(0xFFFEF2F2),
+                    title: 'Delete Account',
+                    subtitle: 'Permanently remove your account and data',
+                    onTap: () => context.push('/delete-account'),
+                  ),
                   _ProfileMenuItem(
                     icon: Icons.receipt_long_outlined,
                     iconColor: const Color(0xFF2563EB),

@@ -109,13 +109,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
-  BillingAddress get _billing => BillingAddress(
+  BillingAddress get _billing {
+    final nationalPhone = _phoneCtrl.text.trim();
+    final phone = nationalPhone.isEmpty
+        ? ''
+        : '${_selectedCountry.dialCode} $nationalPhone'.trim();
+    return BillingAddress(
         name: _nameCtrl.text,
         email: _emailCtrl.text,
-        phone: '${_selectedCountry.dialCode} ${_phoneCtrl.text.trim()}'.trim(),
+        phone: phone,
         purchaseReasons: _selectedReason == null ? [] : [_selectedReason!],
         purchaseReasonOther: _otherReasonCtrl.text,
       );
+  }
 
   void _applyPhonePrefill(String rawPhone) {
     final trimmed = rawPhone.trim();
@@ -183,7 +189,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _validateBilling() {
     if (_nameCtrl.text.trim().isEmpty) return 'Please enter your full name';
     if (_emailCtrl.text.trim().isEmpty) return 'Please enter your email';
-    if (_phoneCtrl.text.trim().isEmpty) return 'Please enter your phone number';
     if (_selectedReason == null) return 'Please select where you will use the video';
     final detailConfig = _reasonDetailConfig[_selectedReason];
     if (detailConfig != null && _otherReasonCtrl.text.trim().isEmpty) {
@@ -387,7 +392,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 12),
-            const _FieldLabel(text: 'Phone *'),
+            const _FieldLabel(text: 'Phone (optional)'),
             const SizedBox(height: 7),
             Row(
               children: [

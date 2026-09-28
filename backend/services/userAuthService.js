@@ -109,19 +109,19 @@ const validateUserFields = ({ name, email, phone }) => {
     throw new AppError('Please enter a valid email address', 400)
   }
 
-  if (!trimmedPhone) {
-    throw new AppError('Phone number is required', 400)
-  }
-
-  const digits = normalizePhone(trimmedPhone)
-  if (digits.length < 10) {
-    throw new AppError('Please enter a valid phone number', 400)
+  let normalizedPhone = ''
+  if (trimmedPhone) {
+    const digits = normalizePhone(trimmedPhone)
+    if (digits.length < 10) {
+      throw new AppError('Please enter a valid phone number', 400)
+    }
+    normalizedPhone = trimmedPhone
   }
 
   return {
     name: trimmedName,
     email: trimmedEmail,
-    phone: trimmedPhone,
+    phone: normalizedPhone,
   }
 }
 
@@ -326,18 +326,18 @@ const validateProfileFields = ({ name, phone }) => {
     throw new AppError('Name is required', 400)
   }
 
-  if (!trimmedPhone) {
-    throw new AppError('Phone number is required', 400)
-  }
-
-  const digits = normalizePhone(trimmedPhone)
-  if (digits.length < 10) {
-    throw new AppError('Please enter a valid phone number', 400)
+  let normalizedPhone = ''
+  if (trimmedPhone) {
+    const digits = normalizePhone(trimmedPhone)
+    if (digits.length < 10) {
+      throw new AppError('Please enter a valid phone number', 400)
+    }
+    normalizedPhone = trimmedPhone
   }
 
   return {
     name: trimmedName,
-    phone: trimmedPhone,
+    phone: normalizedPhone,
   }
 }
 

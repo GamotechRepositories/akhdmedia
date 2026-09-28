@@ -184,4 +184,14 @@ class AuthProvider extends ChangeNotifier {
     user = await _authService.updateProfile(name: name, phone: phone);
     notifyListeners();
   }
+
+  Future<String> requestAccountDeletion(String reason) async {
+    return _authService.requestAccountDeletion(reason);
+  }
+
+  Future<void> confirmAccountDeletion(String code) async {
+    await _authService.confirmAccountDeletion(code);
+    user = null;
+    notifyListeners();
+  }
 }

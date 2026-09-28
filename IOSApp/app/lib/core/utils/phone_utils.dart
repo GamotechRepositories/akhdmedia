@@ -31,3 +31,9 @@ bool isPhoneNumberValid(String value) {
   final digits = normalized.replaceAll(RegExp(r'\D'), '');
   return digits.length >= 10 && digits.length <= 15;
 }
+
+/// Empty is allowed; non-empty values must be valid international numbers.
+bool isOptionalPhoneValid(String value) {
+  if (value.trim().isEmpty) return true;
+  return isPhoneNumberValid(value);
+}
