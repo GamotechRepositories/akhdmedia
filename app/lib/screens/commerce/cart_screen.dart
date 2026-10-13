@@ -6,6 +6,7 @@ import '../../core/utils/auth_gate.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/cart_models.dart';
 import '../../providers/cart_provider.dart';
+import '../../services/api_client.dart';
 import '../../widgets/common/loading_view.dart';
 import '../shell/main_shell.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -32,7 +33,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const StoreAppBar(title: 'Shopping bag'),
+      appBar: const StoreAppBar(title: 'Cart'),
       body: Consumer<CartProvider>(
         builder: (context, cartProvider, _) {
           if (cartProvider.loading) {
@@ -49,9 +50,15 @@ class _CartScreenState extends State<CartScreen> {
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  itemCount: cart.items.length,
+                  itemCount: cart.items.length + 1,
                   separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, index) {
+                    if (index == cart.items.length) {
+                      return _PromoCodeCard(
+                        appliedCode: cart.appliedPromoCode,
+                        discountAmount: cart.discountAmount,
+                      );
+                    }
                     final item = cart.items[index];
                     return _CartItemCard(
                       item: item,
@@ -125,10 +132,10 @@ class _EmptyCart extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.shopping_bag_outlined, size: 56, color: Colors.grey.shade400),
+            Icon(Icons.shopping_cart_outlined, size: 56, color: Colors.grey.shade400),
             const SizedBox(height: AppSpacing.md),
             const Text(
-              'Your bag is empty',
+              'Your cart is empty',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -328,7 +335,7 @@ class _CartSummary extends StatelessWidget {
             if (discountAmount > 0) ...[
               const SizedBox(height: 6),
               _SummaryRow(
-                label: 'Discount',
+                label: 'Promo discount',
                 value: '-${Formatters.currency(discountAmount)}',
                 valueColor: const Color(0xFF059669),
               ),
@@ -362,8 +369,295 @@ class _CartSummary extends StatelessWidget {
               ),
               child: const Text('Proceed to checkout'),
             ),
+            const SizedBox(height: AppSpacing.md),
+            const _SecurePaymentFooter(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PromoCodeCard extends StatefulWidget {
+  const _PromoCodeCard({
+    required this.appliedCode,
+    required this.discountAmount,
+  });
+
+  final String appliedCode;
+  final num discountAmount;
+
+  @override
+  State<_PromoCodeCard> createState() => _PromoCodeCardState();
+}
+
+class _PromoCodeCardState extends State<_PromoCodeCard> {
+  final _controller = TextEditingController();
+  late bool _expanded = widget.appliedCode.isNotEmpty;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _apply() async {
+    final code = _controller.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() => _error = 'Enter a promo code');
+      return;
+    }
+
+    final ok = await ensureAuthenticated(context, redirectTo: '/cart');
+    if (!ok || !mounted) return;
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await context.read<CartProvider>().applyPromoCode(code);
+      _controller.clear();
+    } catch (e) {
+      if (mounted) setState(() => _error = ApiClient.unwrapError(e).toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _remove() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await context.read<CartProvider>().removePromoCode();
+    } catch (e) {
+      if (mounted) setState(() => _error = ApiClient.unwrapError(e).toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final applied = widget.appliedCode.isNotEmpty;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_offer_outlined, size: 18, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Do you have a promo code?',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Icon(Icons.keyboard_arrow_down, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_expanded) ...[
+              const SizedBox(height: AppSpacing.sm),
+              if (applied)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${widget.appliedCode} applied',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF065F46),
+                              ),
+                            ),
+                            Text(
+                              'You save ${Formatters.currency(widget.discountAmount)}',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF047857)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _loading ? null : _remove,
+                        style: TextButton.styleFrom(foregroundColor: const Color(0xFF065F46)),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('REMOVE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        enabled: !_loading,
+                        textCapitalization: TextCapitalization.characters,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _apply(),
+                        onChanged: (_) {
+                          if (_error != null) setState(() => _error = null);
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Enter code',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 44,
+                      child: FilledButton.tonal(
+                        onPressed: _loading ? null : _apply,
+                        child: _loading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('APPLY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              if (_error != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _error!,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SecurePaymentFooter extends StatelessWidget {
+  const _SecurePaymentFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 13, color: Colors.grey.shade600),
+            const SizedBox(width: 4),
+            Text(
+              'Secure Payment',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _PaymentBadge(
+              label: 'Razorpay',
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: 'Razor', style: TextStyle(color: Color(0xFF072654))),
+                    TextSpan(text: 'pay', style: TextStyle(color: Color(0xFF3395FF))),
+                  ],
+                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, fontStyle: FontStyle.italic),
+              ),
+            ),
+            SizedBox(width: 10),
+            _PaymentBadge(
+              label: 'PayPal',
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: 'Pay', style: TextStyle(color: Color(0xFF003087))),
+                    TextSpan(text: 'Pal', style: TextStyle(color: Color(0xFF009CDE))),
+                  ],
+                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PaymentBadge extends StatelessWidget {
+  const _PaymentBadge({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: ExcludeSemantics(child: child),
       ),
     );
   }

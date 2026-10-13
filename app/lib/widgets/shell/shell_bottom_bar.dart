@@ -48,7 +48,10 @@ class ShellBottomBar extends StatelessWidget {
   }
 }
 
-/// Bottom inset to keep scroll content above the shell bottom bar.
+/// Bottom inset to keep scroll content above the floating shell bottom bar.
+///
+/// Call with a context above the [Scaffold] hosting the bar; inside a body
+/// with `extendBody: true`, use `MediaQuery.paddingOf(context).bottom` instead.
 double shellBottomBarInset(BuildContext context) {
-  return 56 + MediaQuery.paddingOf(context).bottom;
+  return ModernBottomBar.totalHeight(context);
 }

@@ -66,6 +66,16 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> applyPromoCode(String code) async {
+    cart = await _cartService.applyPromoCode(code);
+    notifyListeners();
+  }
+
+  Future<void> removePromoCode() async {
+    cart = await _cartService.removePromoCode();
+    notifyListeners();
+  }
+
   Future<void> clearCart() async {
     cart = await _cartService.clearCart();
     notifyListeners();

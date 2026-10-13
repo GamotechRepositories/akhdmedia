@@ -162,7 +162,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           onSelected: (size) =>
                               setState(() => _selectedImageSize = size),
                         ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.sm),
                       _SpecsSection(product: product),
                       if (relatedPreview.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.section),
@@ -684,24 +684,25 @@ class _QualitySelector extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                mainAxisExtent: 68,
-              ),
-              itemCount: entries.length,
-              itemBuilder: (context, index) {
-                final entry = entries[index];
-                final isSelected = selected == entry.key;
-                return _QualityTile(
-                  name: entry.key,
-                  info: entry.value,
-                  isSelected: isSelected,
-                  onTap: () => onSelected(entry.key),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = (constraints.maxWidth - 8) / 2;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final entry in entries)
+                      SizedBox(
+                        width: itemWidth,
+                        height: 68,
+                        child: _QualityTile(
+                          name: entry.key,
+                          info: entry.value,
+                          isSelected: selected == entry.key,
+                          onTap: () => onSelected(entry.key),
+                        ),
+                      ),
+                  ],
                 );
               },
             ),

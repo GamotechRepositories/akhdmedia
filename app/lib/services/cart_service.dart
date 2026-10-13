@@ -49,6 +49,16 @@ class CartService {
     return _parseCart(response);
   }
 
+  Future<CartState> applyPromoCode(String code) async {
+    final response = await _api.postJson('/cart/promo', data: {'code': code});
+    return _parseCart(response);
+  }
+
+  Future<CartState> removePromoCode() async {
+    final response = await _api.deleteJson('/cart/promo');
+    return _parseCart(response);
+  }
+
   Future<CartState> clearCart() async {
     final response = await _api.deleteJson('/cart');
     return _parseCart(response);

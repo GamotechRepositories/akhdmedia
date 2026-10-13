@@ -593,6 +593,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }),
       const Divider(),
+      if (cartProvider.cart.discountAmount > 0) ...[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              cartProvider.cart.appliedPromoCode.isNotEmpty
+                  ? 'Promo discount (${cartProvider.cart.appliedPromoCode})'
+                  : 'Promo discount',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF059669)),
+            ),
+            Text(
+              '-${Formatters.currency(cartProvider.cart.discountAmount)}',
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+      ],
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -604,7 +622,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
       const SizedBox(height: AppSpacing.md),
-      const Text('Pay with Apple', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+      const Text('Apple In-App Purchase', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
       const SizedBox(height: AppSpacing.sm),
       Container(
         width: double.infinity,
@@ -615,7 +633,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           border: Border.all(color: const Color(0xFFBFDBFE)),
         ),
         child: const Text(
-          'Purchases on iOS are completed securely through the App Store. You will confirm each item with Apple Pay / your Apple ID before your license is delivered.',
+          'Purchases on iOS are completed securely through Apple In-App Purchase. You will confirm each item with your Apple ID / App Store before your license is delivered.',
           style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A), height: 1.35),
         ),
       ),

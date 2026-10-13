@@ -108,6 +108,7 @@ class _MainShellState extends State<MainShell> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
+        extendBody: true,
         body: shell,
         bottomNavigationBar: ShellBottomBar(
           selectedIndex: shell.currentIndex,

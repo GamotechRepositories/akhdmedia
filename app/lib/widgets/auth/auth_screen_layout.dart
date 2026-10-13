@@ -444,7 +444,7 @@ class AuthFooterLink extends StatelessWidget {
     return Text.rich(
       textAlign: TextAlign.center,
       TextSpan(
-        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+        style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
         children: [
           TextSpan(text: prompt),
           WidgetSpan(
@@ -455,7 +455,7 @@ class AuthFooterLink extends StatelessWidget {
               child: Text(
                 actionLabel,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AuthScreenColors.primaryBlue,
                 ),

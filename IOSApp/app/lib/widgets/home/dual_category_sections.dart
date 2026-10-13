@@ -41,10 +41,10 @@ class DualCategorySections extends StatelessWidget {
             products: sections[i].products,
             onProductTap: onProductTap,
             onViewAll: () => onViewAll(sections[i].categorySlug),
-            tightTop: i == 0,
+            tightTop: false,
           ),
         ],
-        const SizedBox(height: AppSpacing.section),
+        const SizedBox(height: AppSpacing.md),
       ],
     );
   }

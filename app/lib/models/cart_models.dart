@@ -52,6 +52,7 @@ class CartState {
     this.subtotal = 0,
     this.gstTotal = 0,
     this.discountAmount = 0,
+    this.appliedPromoCode = '',
     this.total = 0,
     this.itemCount = 0,
   });
@@ -61,8 +62,11 @@ class CartState {
   final num subtotal;
   final num gstTotal;
   final num discountAmount;
+  final String appliedPromoCode;
   final num total;
   final int itemCount;
+
+  bool get hasPromo => appliedPromoCode.isNotEmpty;
 
   bool get isEmpty => items.isEmpty;
 
@@ -87,6 +91,7 @@ class CartState {
         .whereType<Map<String, dynamic>>()
         .map(CartItem.fromJson)
         .toList();
+    final promoJson = json['appliedPromo'];
     return CartState(
       id: json['id']?.toString() ?? '',
       items: items,
@@ -94,6 +99,9 @@ class CartState {
       gstTotal: json['gstTotal'] is num ? json['gstTotal'] as num : 0,
       discountAmount:
           json['discountAmount'] is num ? json['discountAmount'] as num : 0,
+      appliedPromoCode: promoJson is Map<String, dynamic>
+          ? promoJson['code']?.toString() ?? ''
+          : '',
       total: json['total'] is num ? json['total'] as num : 0,
       itemCount: json['itemCount'] is int
           ? json['itemCount'] as int

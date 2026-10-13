@@ -292,11 +292,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ? const Center(child: Text('No clips match your filters.'))
                     : GridView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(
+                        padding: EdgeInsets.fromLTRB(
                           AppSpacing.lg,
                           0,
                           AppSpacing.lg,
-                          AppSpacing.lg,
+                          AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
                         ),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(

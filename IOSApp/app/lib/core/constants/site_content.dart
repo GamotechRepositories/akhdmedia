@@ -154,7 +154,7 @@ class SiteContent {
       ContentSection(
         title: '3. Payment information',
         paragraphs: [
-          'Payments are processed through third-party payment providers. We do not store complete credit card or debit card details on our servers.',
+          'Purchases made within the iOS app are processed securely through Apple In-App Purchase. We do not process or store your payment card details on our servers.',
         ],
       ),
       ContentSection(
@@ -223,7 +223,7 @@ class SiteContent {
       ContentSection(
         title: '10. Third-party services',
         paragraphs: [
-          'Our website may contain links to third-party websites, cloud-storage services, payment gateways, and social media platforms. We are not responsible for their privacy practices.',
+          'Our platform may contain links to third-party services and social media platforms. We are not responsible for their privacy practices.',
         ],
       ),
       ContentSection(
@@ -257,13 +257,13 @@ class SiteContent {
         title: 'Terms & conditions',
         paragraphs: [
           'Last updated: 16/06/2026',
-          'Welcome to AKHD MEDIA & CO. By accessing or using this website, purchasing content, or downloading any media from this platform, you agree to be bound by these Terms and Conditions.',
+          'Welcome to AKHD MEDIA & CO. By accessing or using this app, purchasing content, or downloading any media from this platform, you agree to be bound by these Terms and Conditions.',
         ],
       ),
       ContentSection(
         title: '1. Acceptance of terms',
         paragraphs: [
-          'By accessing this website, you confirm that you have read, understood, and agreed to these Terms and Conditions, the Privacy Policy, Refund Policy, and License Information Policy.',
+          'By accessing this app, you confirm that you have read, understood, and agreed to these Terms and Conditions, the Privacy Policy, Refund Policy, and License Information Policy.',
         ],
       ),
       ContentSection(
@@ -281,7 +281,7 @@ class SiteContent {
       ContentSection(
         title: '3. Eligibility',
         paragraphs: [
-          'You must be at least 18 years old and legally capable of entering into binding contracts to purchase content from this website.',
+          'You must be at least 18 years old and legally capable of entering into binding contracts to purchase content from this app.',
         ],
       ),
       ContentSection(
@@ -293,7 +293,7 @@ class SiteContent {
       ContentSection(
         title: '5. Payments',
         paragraphs: [
-          'All payments must be completed through approved payment methods available on the website.',
+          'In-app purchases on iOS are processed securely through Apple In-App Purchase. Charges will be billed to your Apple ID account.',
           'AKHD MEDIA & CO reserves the right to refuse, cancel, or suspend any order suspected of fraud, abuse, or unauthorized activity.',
         ],
       ),
@@ -455,7 +455,7 @@ class SiteContent {
       ContentSection(
         title: '6. Processing of approved refunds',
         paragraphs: [
-          'If a refund is approved, it will be processed through the original payment method within 5-7 business days, subject to payment gateway and banking timelines.',
+          'If a refund is approved for an in-app purchase, it will be processed in accordance with Apple App Store refund procedures and timelines.',
         ],
       ),
       ContentSection(
@@ -1199,7 +1199,7 @@ class SiteContent {
       ContentSection(
         title: '7. Third-party services',
         paragraphs: [
-          'Our website may integrate or link to third-party services, including payment providers or other external platforms.',
+          'Our platform may integrate with third-party service providers or external platforms.',
           'AKHD MEDIA & CO is not responsible for the content, policies, security, availability, or practices of any third-party websites or services.',
         ],
       ),

@@ -181,7 +181,7 @@ export const createPaidOrderFromApplePurchase = async ({
   const normalizedAddress = validateBillingAddress({
     name: billingAddress.name,
     email: billingAddress.email,
-    phone: billingAddress.phone || 'N/A',
+    phone: billingAddress.phone || '',
     purchaseReasons: billingAddress.purchaseReasons?.length
       ? billingAddress.purchaseReasons
       : ['personal'],

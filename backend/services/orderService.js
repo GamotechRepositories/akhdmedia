@@ -14,7 +14,7 @@ import { applyPayableLineTotals } from '../utils/orderAmounts.js'
 import { assertProductPurchasable, hasDeliverableMasterFile } from '../utils/productDelivery.js'
 import { validatePromoForOrder, incrementPromoUsage } from './promoCodeService.js'
 
-const REQUIRED_BILLING_FIELDS = ['name', 'email', 'phone']
+const REQUIRED_BILLING_FIELDS = ['name', 'email']
 
 const VALID_PURCHASE_REASONS = new Set(['personal', 'digital', 'outlet', 'other'])
 const REASONS_REQUIRING_DETAIL = new Set(['digital', 'outlet', 'other'])
@@ -60,7 +60,7 @@ export const validateBillingAddress = (billingAddress = {}) => {
   return {
     name: billingAddress.name.trim(),
     email,
-    phone: billingAddress.phone.trim(),
+    phone: String(billingAddress.phone || '').trim(),
     purchaseReasons,
     purchaseReasonOther: REASONS_REQUIRING_DETAIL.has(selectedReason) ? purchaseReasonOther : '',
   }

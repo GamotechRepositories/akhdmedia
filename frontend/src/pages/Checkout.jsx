@@ -339,8 +339,9 @@ const Checkout = () => {
   const getBillingValidationError = () => {
     if (!billingDetails.name.trim()) return 'Please enter your full name';
     if (!billingDetails.email.trim()) return 'Please enter your email address';
-    if (!billingDetails.phone.trim()) return 'Please enter your phone number';
-    if (!isPhoneNumberValid(billingDetails.phone)) return 'Please enter a valid phone number';
+    if (billingDetails.phone?.trim() && !isPhoneNumberValid(billingDetails.phone)) {
+      return 'Please enter a valid phone number';
+    }
     if (!billingDetails.purchaseReasons.length) {
       return 'Please select where you will use the video';
     }
@@ -626,7 +627,7 @@ const Checkout = () => {
 
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Phone <span className="text-red-500">*</span>
+                    Phone <span className="text-xs font-normal text-gray-500">(optional)</span>
                   </label>
                   <PhoneCountryInput
                     id="checkout-phone"
@@ -881,8 +882,7 @@ const Checkout = () => {
                   <span className="font-medium text-gray-800">{billingDetails.name}</span>
                   {' · '}
                   {billingDetails.email}
-                  {' · '}
-                  {billingDetails.phone}
+                  {billingDetails.phone?.trim() ? ` · ${billingDetails.phone}` : ''}
                 </p>
               </div>
 

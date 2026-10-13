@@ -69,7 +69,9 @@ class _HomeScreenState extends State<HomeScreen> {
           return RefreshIndicator(
             onRefresh: () => catalog.loadCatalog(force: true),
             child: ListView(
-              padding: EdgeInsets.zero,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
               children: [
                 HeroCarousel(
                   slides: catalog.homepageSettings.heroSlides,

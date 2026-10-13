@@ -28,8 +28,8 @@ class HomeProductSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        top: tightTop ? 28 : AppSpacing.section,
-        bottom: AppSpacing.md,
+        top: tightTop ? 8 : 14,
+        bottom: 6,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,7 +74,7 @@ class HomeProductSection extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: AppSpacing.sm,
                   mainAxisSpacing: AppSpacing.xs,
-                  childAspectRatio: 0.54,
+                  childAspectRatio: 0.585,
                 ),
                 itemCount: products.length,
                 itemBuilder: (context, index) {
@@ -87,7 +87,7 @@ class HomeProductSection extends StatelessWidget {
               ),
             ),
           if (onViewAll != null && !isLoading) ...[
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.sm),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: _SectionViewAllButton(
@@ -120,7 +120,7 @@ class _SectionViewAllButton extends StatelessWidget {
         style: TextButton.styleFrom(
           backgroundColor: const Color(0xFF111827),
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
             side: BorderSide(color: Colors.grey.shade300),
@@ -152,7 +152,7 @@ class _ProductGridSkeleton extends StatelessWidget {
           crossAxisCount: 2,
           crossAxisSpacing: AppSpacing.sm,
           mainAxisSpacing: AppSpacing.xs,
-          childAspectRatio: 0.54,
+          childAspectRatio: 0.585,
         ),
         itemCount: 4,
         itemBuilder: (_, __) => Container(

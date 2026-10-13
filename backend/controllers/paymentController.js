@@ -186,7 +186,7 @@ export const verifyAppleIapPayment = asyncHandler(async (req, res) => {
     billingAddress: {
       name: billingAddress.name || user.name || '',
       email: billingAddress.email || user.email || '',
-      phone: billingAddress.phone || user.phone || 'Apple IAP',
+      phone: billingAddress.phone || user.phone || '',
       purchaseReasons: billingAddress.purchaseReasons?.length
         ? billingAddress.purchaseReasons
         : ['personal'],
