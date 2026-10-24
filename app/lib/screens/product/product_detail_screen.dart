@@ -832,13 +832,16 @@ class _SpecsSection extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               GridView.builder(
+                padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 2.8,
+                  // Fixed row height that fits label + value, so no empty
+                  // space is left under the last row.
+                  mainAxisExtent: 34,
                 ),
                 itemCount: specs.length,
                 itemBuilder: (context, index) {
@@ -851,7 +854,7 @@ class _SpecsSection extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
             ],
             _LicenseNote(),
           ],

@@ -521,7 +521,8 @@ class _VideoLayer extends StatelessWidget {
               child: _VideoLoadingIndicator(),
             ),
           ),
-        if (!isPlaying && !_showLoading)
+        // Always mounted (icon fades out while playing) so a tap pauses too.
+        if (!_showLoading)
           PreviewVideoPlayOverlay(
             isPlaying: isPlaying,
             onTogglePlay: onTogglePlay,
@@ -662,7 +663,10 @@ class _MediaLightboxPageState extends State<_MediaLightboxPage> {
                         url: item.src,
                         poster: item.poster,
                         isAuthenticated: context.watch<AuthProvider>().isAuthenticated,
-                        onPreviewLimit: () => showPreviewSignInPrompt(context),
+                        onPreviewLimit: () => showPreviewSignInPrompt(
+                          context,
+                          closeRouteOnSignIn: true,
+                        ),
                         immersive: true,
                         autoPlay: widget.youtubeAutoPlay && index == widget.initialIndex,
                       ),
@@ -813,6 +817,7 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
       controller,
       isGateTriggered: () => _previewGateTriggered,
       setGateTriggered: (value) => _previewGateTriggered = value,
+      closeRouteOnSignIn: true,
     );
 
     setState(() {
@@ -896,11 +901,28 @@ class _LightboxVideoSlideState extends State<_LightboxVideoSlide> {
               color: Colors.black.withValues(alpha: 0.45),
               child: const Center(child: _VideoLoadingIndicator()),
             ),
-          if (!_isPlaying && !showLoading)
+          if (!showLoading)
             PreviewVideoPlayOverlay(
               isPlaying: _isPlaying,
               onTogglePlay: _togglePlay,
               iconSize: 72,
+            ),
+          if (ready)
+            Positioned(
+              left: 8,
+              bottom: 8,
+              child: IconButton(
+                onPressed: _togglePlay,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black.withValues(alpha: 0.75),
+                  foregroundColor: Colors.white,
+                ),
+                icon: Icon(
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                  size: 20,
+                ),
+                tooltip: _isPlaying ? 'Pause' : 'Play',
+              ),
             ),
           if (ready)
             Positioned(
@@ -1024,6 +1046,7 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
       controller,
       isGateTriggered: () => _previewGateTriggered,
       setGateTriggered: (value) => _previewGateTriggered = value,
+      closeRouteOnSignIn: true,
     );
 
     setState(() {
@@ -1125,11 +1148,28 @@ class _VideoFullscreenPageState extends State<_VideoFullscreenPage> {
                   color: Colors.black.withValues(alpha: 0.45),
                   child: const Center(child: _VideoLoadingIndicator()),
                 ),
-              if (!_isPlaying && !showLoading)
+              if (!showLoading)
                 PreviewVideoPlayOverlay(
                   isPlaying: _isPlaying,
                   onTogglePlay: _togglePlay,
                   iconSize: 80,
+                ),
+              if (ready)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: IconButton(
+                    onPressed: _togglePlay,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withValues(alpha: 0.75),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: Icon(
+                      _isPlaying ? Icons.pause : Icons.play_arrow,
+                      size: 20,
+                    ),
+                    tooltip: _isPlaying ? 'Pause' : 'Play',
+                  ),
                 ),
               Positioned(
                 left: 8,

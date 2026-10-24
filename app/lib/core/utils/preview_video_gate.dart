@@ -10,11 +10,33 @@ const kPreviewAuthLimit = Duration(seconds: 10);
 const kPreviewSignInMessage =
     'Sign in to continue watching all the videos, details and full previews.';
 
-Future<void> showPreviewSignInPrompt(BuildContext context) {
+/// Shows the "Sign in to keep watching" prompt.
+///
+/// Set [closeRouteOnSignIn] when the prompt is shown from a fullscreen /
+/// lightbox route pushed with `Navigator.push` — that route is closed first so
+/// the login screen is not hidden behind it.
+Future<void> showPreviewSignInPrompt(
+  BuildContext context, {
+  bool closeRouteOnSignIn = false,
+}) {
   if (!context.mounted) return Future.value();
 
   final auth = context.read<AuthProvider>();
   if (auth.isAuthenticated) return Future.value();
+
+  void goToSignIn(BuildContext dialogContext) {
+    final router = GoRouter.of(context);
+    final redirect = router.routerDelegate.currentConfiguration.uri.toString();
+
+    Navigator.of(dialogContext).pop();
+
+    if (closeRouteOnSignIn && context.mounted) {
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) navigator.pop();
+    }
+
+    router.push('/login?redirect=${Uri.encodeComponent(redirect)}');
+  }
 
   return showDialog<void>(
     context: context,
@@ -42,11 +64,7 @@ Future<void> showPreviewSignInPrompt(BuildContext context) {
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                final redirect = GoRouterState.of(context).uri.toString();
-                context.push('/login?redirect=${Uri.encodeComponent(redirect)}');
-              },
+              onPressed: () => goToSignIn(dialogContext),
               child: const Text('Sign in'),
             ),
           ],
@@ -61,6 +79,7 @@ void enforcePreviewVideoAuthGate(
   VideoPlayerController controller, {
   required bool Function() isGateTriggered,
   required void Function(bool value) setGateTriggered,
+  bool closeRouteOnSignIn = false,
 }) {
   if (!context.mounted) return;
 
@@ -81,7 +100,10 @@ void enforcePreviewVideoAuthGate(
   if (isGateTriggered()) return;
   setGateTriggered(true);
 
-  showPreviewSignInPrompt(context).then((_) {
+  showPreviewSignInPrompt(
+    context,
+    closeRouteOnSignIn: closeRouteOnSignIn,
+  ).then((_) {
     if (context.mounted && !context.read<AuthProvider>().isAuthenticated) {
       setGateTriggered(false);
     }
