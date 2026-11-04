@@ -256,6 +256,16 @@ const Subscriptions = () => {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
+                        {Number(plan.originalPrice) > Number(plan.price) && (
+                          <div className="flex items-center justify-end gap-1.5 mb-0.5">
+                            <span className="text-xs text-gray-400 line-through font-medium">
+                              {formatCurrency(plan.originalPrice)}
+                            </span>
+                            <span className="rounded-full bg-emerald-50 px-1.5 py-0.2 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                              {Math.round(((Number(plan.originalPrice) - Number(plan.price)) / Number(plan.originalPrice)) * 100)}% OFF
+                            </span>
+                          </div>
+                        )}
                         <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">
                           {formatCurrency(plan.price)}
                         </div>

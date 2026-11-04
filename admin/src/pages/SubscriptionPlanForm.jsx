@@ -56,6 +56,7 @@ const SubscriptionPlanForm = () => {
   })
 
   const [newFeatureText, setNewFeatureText] = useState('')
+  const [discountPercentage, setDiscountPercentage] = useState(0)
 
   useEffect(() => {
     if (!isEdit) return
@@ -65,6 +66,14 @@ const SubscriptionPlanForm = () => {
         const res = await fetchAdminSubscriptionPlan(id)
         const plan = res.data?.data?.plan
         if (plan) {
+          const orig = Number(plan.originalPrice) || 0
+          const p = Number(plan.price) || 0
+          if (orig > p && orig > 0) {
+            setDiscountPercentage(Math.round(((orig - p) / orig) * 100))
+          } else {
+            setDiscountPercentage(0)
+          }
+
           setFormData({
             name: plan.name || '',
             tagline: plan.tagline || '',
@@ -99,6 +108,56 @@ const SubscriptionPlanForm = () => {
       interval,
       durationDays: interval === 'yearly' ? 365 : 30,
     }))
+  }
+
+  const handleOriginalPriceChange = (e) => {
+    const origVal = e.target.value
+    const orig = Number(origVal) || 0
+    let nextPrice = formData.price
+    const currentDisc = Number(discountPercentage) || 0
+    if (orig > 0 && currentDisc > 0) {
+      nextPrice = Math.round(orig * (1 - currentDisc / 100))
+    } else if (orig > 0 && (!formData.price || Number(formData.price) === 0)) {
+      nextPrice = orig
+    }
+    setFormData((prev) => ({
+      ...prev,
+      originalPrice: origVal,
+      price: nextPrice,
+    }))
+  }
+
+  const applyPresetDiscount = (disc) => {
+    const discNum = Math.max(0, Math.min(100, Number(disc) || 0))
+    setDiscountPercentage(discNum)
+    const orig = Number(formData.originalPrice) || 0
+    if (orig > 0) {
+      const nextPrice = Math.round(orig * (1 - discNum / 100))
+      setFormData((prev) => ({ ...prev, price: nextPrice }))
+    }
+  }
+
+  const handleDiscountPercentageChange = (e) => {
+    const val = e.target.value
+    const discNum = Math.max(0, Math.min(100, Number(val) || 0))
+    setDiscountPercentage(val)
+    const orig = Number(formData.originalPrice) || 0
+    if (orig > 0) {
+      const nextPrice = Math.round(orig * (1 - discNum / 100))
+      setFormData((prev) => ({ ...prev, price: nextPrice }))
+    }
+  }
+
+  const handlePriceChange = (e) => {
+    const val = e.target.value
+    const p = Number(val) || 0
+    const orig = Number(formData.originalPrice) || 0
+    if (orig > p && orig > 0) {
+      setDiscountPercentage(Math.round(((orig - p) / orig) * 100))
+    } else {
+      setDiscountPercentage(0)
+    }
+    setFormData((prev) => ({ ...prev, price: val }))
   }
 
   const handleAddFeature = () => {
@@ -293,20 +352,84 @@ const SubscriptionPlanForm = () => {
               <p className="mt-0.5 text-[11px] text-gray-400">Default 30 days for monthly, 365 for yearly.</p>
             </div>
 
+{/* 1. Original / Regular Price */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700">Price / Subtotal (₹ INR) *</label>
+              <label className="block text-xs font-semibold text-gray-700">
+                Original Price (₹ Strike-through / MRP)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="e.g. 30000"
+                value={formData.originalPrice}
+                onChange={handleOriginalPriceChange}
+                className="mt-1 w-full rounded-xl border border-gray-200 p-2.5 text-sm font-semibold text-gray-800 focus:border-gray-900 focus:outline-none"
+              />
+              <p className="mt-0.5 text-[11px] text-gray-400">Regular full price before any discount.</p>
+            </div>
+
+            {/* 2. Discount % */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-gray-700">Discount (%)</label>
+                {Number(formData.originalPrice) > Number(formData.price) && (
+                  <span className="text-[11px] font-bold text-emerald-700">
+                    Save ₹{(Number(formData.originalPrice) - Number(formData.price)).toLocaleString('en-IN')} ({discountPercentage}% OFF)
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  placeholder="0"
+                  value={discountPercentage}
+                  onChange={handleDiscountPercentageChange}
+                  className="w-full rounded-xl border border-gray-200 p-2.5 text-sm font-semibold text-emerald-700 focus:border-gray-900 focus:outline-none"
+                />
+                <span className="shrink-0 text-sm font-bold text-gray-500">%</span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {[0, 10, 15, 20, 25, 30, 50].map((disc) => (
+                  <button
+                    key={disc}
+                    type="button"
+                    onClick={() => applyPresetDiscount(disc)}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-semibold border transition ${
+                      Number(discountPercentage) === disc
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {disc === 0 ? '0% None' : `${disc}%`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Final Selling Price / Subtotal */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700">
+                Final Selling Price / Subtotal (₹ INR) *
+              </label>
               <input
                 type="number"
                 min="0"
                 step="1"
                 value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                onChange={handlePriceChange}
                 required
-                className="mt-1 w-full rounded-xl border border-gray-200 p-2.5 text-sm font-semibold text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="mt-1 w-full rounded-xl border border-gray-200 p-2.5 text-sm font-bold text-blue-900 focus:border-gray-900 focus:outline-none"
               />
-              <p className="mt-0.5 text-[11px] text-gray-400">Base price before GST (e.g. 499 or 25000).</p>
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                Calculated automatically from discount (or edit directly).
+              </p>
             </div>
 
+            {/* 4. GST Rate (%) */}
             <div>
               <label className="block text-xs font-semibold text-gray-700">GST Rate (%) *</label>
               <div className="mt-1 flex items-center gap-2">
@@ -339,40 +462,41 @@ const SubscriptionPlanForm = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700">Original Price (₹ Strike-through)</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={formData.originalPrice}
-                onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-gray-200 p-2.5 text-sm text-gray-500 focus:border-gray-900 focus:outline-none"
-              />
-              <p className="mt-0.5 text-[11px] text-gray-400">Leave 0 if no discount to show.</p>
-            </div>
-
-            {/* Live Pricing Breakdown Preview */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3.5">
+            {/* 5. Live Pricing Breakdown Preview */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:col-span-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
                 Customer Checkout Preview
               </span>
-              <div className="mt-2 space-y-1 text-xs">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
+              <div className="mt-2.5 space-y-1.5 text-xs">
+                {Number(formData.originalPrice) > Number(formData.price) && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Original Price (MRP)</span>
+                    <span className="line-through font-medium">
+                      ₹{Number(formData.originalPrice).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+                {Number(formData.originalPrice) > Number(formData.price) && (
+                  <div className="flex justify-between text-emerald-700 font-semibold">
+                    <span>Discount ({discountPercentage}% OFF)</span>
+                    <span>-₹{(Number(formData.originalPrice) - Number(formData.price)).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-700">
+                  <span>Taxable Subtotal (Selling Price)</span>
                   <span className="font-semibold text-gray-900">
                     ₹{Number(formData.price || 0).toLocaleString('en-IN')}
                   </span>
                 </div>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-700">
                   <span>GST ({formData.gstPercentage || 0}%)</span>
                   <span className="font-semibold text-gray-900">
                     ₹{Math.round(((Number(formData.price || 0) * Number(formData.gstPercentage || 0)) / 100)).toLocaleString('en-IN')}
                   </span>
                 </div>
-                <div className="flex justify-between border-t border-gray-200 pt-1 text-xs font-bold text-gray-900">
-                  <span>Total Payable</span>
-                  <span className="text-blue-700 font-extrabold">
+                <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-bold text-gray-900">
+                  <span>Total Payable by Customer</span>
+                  <span className="text-blue-700 font-extrabold text-base">
                     ₹{(
                       Number(formData.price || 0) +
                       Math.round(((Number(formData.price || 0) * Number(formData.gstPercentage || 0)) / 100))
