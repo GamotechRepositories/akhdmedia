@@ -5,6 +5,7 @@ import {
   adminGetPlanById,
   adminGetPlans,
   adminGetSubscribers,
+  adminGetSubscriberById,
   adminUpdatePlan,
   adminUpdateSubscriber,
   adminAssignSubscription,
@@ -58,6 +59,14 @@ export const listSubscribers = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: result,
+  })
+})
+
+export const getSubscriber = asyncHandler(async (req, res) => {
+  const subscriber = await adminGetSubscriberById(req.params.id)
+  res.json({
+    success: true,
+    data: { subscriber },
   })
 })
 

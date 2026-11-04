@@ -6,6 +6,7 @@ import {
   listPlans,
   createSubscriber,
   listSubscribers,
+  getSubscriber,
   updatePlan,
   updateSubscriber,
 } from '../controllers/adminSubscriptionController.js'
@@ -50,6 +51,12 @@ router.get(
   '/subscribers',
   requirePermission(ADMIN_PERMISSIONS.SUBSCRIPTIONS_READ),
   listSubscribers,
+)
+
+router.get(
+  '/subscribers/:id',
+  requirePermission(ADMIN_PERMISSIONS.SUBSCRIPTIONS_READ),
+  getSubscriber,
 )
 
 router.post(

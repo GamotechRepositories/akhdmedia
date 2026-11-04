@@ -31,6 +31,7 @@ import Admins from './pages/Admins'
 import AdminForm from './pages/AdminForm'
 import AccessDenied from './pages/AccessDenied'
 import Subscriptions from './pages/Subscriptions'
+import SubscriberDetail from './pages/SubscriberDetail'
 import SubscriptionPlanForm from './pages/SubscriptionPlanForm'
 import Login from './pages/Login'
 
@@ -70,6 +71,7 @@ const App = () => (
           <Route path="support" element={<Support />} />
           <Route path="support/:id" element={<SupportDetail />} />
           <Route path="subscriptions" element={<Subscriptions />} />
+          <Route path="subscriptions/subscribers/:id" element={<SubscriberDetail />} />
           <Route path="subscriptions/new" element={<SubscriptionPlanForm />} />
           <Route path="subscriptions/:id/edit" element={<SubscriptionPlanForm />} />
           <Route path="admins" element={<Admins />} />

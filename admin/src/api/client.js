@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
 const reportXHRProgress = (event, file, onProgress, tracker) => {
   if (!onProgress) return
@@ -527,6 +527,7 @@ export const fetchAdminSubscribers = ({ page = 1, limit = 20, search = '', statu
     },
   })
 
+export const fetchAdminSubscriber = (id) => api.get('/admin/subscriptions/subscribers/' + id)
 export const createAdminSubscriber = (payload) => api.post('/admin/subscriptions/subscribers', payload)
 export const updateAdminSubscriber = (id, payload) => api.patch('/admin/subscriptions/subscribers/' + id, payload)
 

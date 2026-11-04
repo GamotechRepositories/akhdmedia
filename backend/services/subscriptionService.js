@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import SubscriptionPlan from '../models/SubscriptionPlan.js'
 import UserSubscription from '../models/UserSubscription.js'
 import User from '../models/User.js'
@@ -767,15 +768,12 @@ export const adminGetPlans = async () => {
   const planIds = plans.map((p) => p._id)
 
   const counts = await UserSubscription.aggregate([
-    { $match: { planId: { $in: planIds } } },
+    { $match: { planId: { $in: planIds }, status: { $ne: 'pending' } } },
     {
       $group: {
         _id: '$planId',
         activeCount: {
           $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] },
-        },
-        pendingCount: {
-          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] },
         },
         totalCount: { $sum: 1 },
       },
@@ -784,11 +782,10 @@ export const adminGetPlans = async () => {
   const countMap = counts.reduce((acc, c) => ({ ...acc, [c._id.toString()]: c }), {})
 
   return plans.map((p) => {
-    const stats = countMap[p._id.toString()] || { activeCount: 0, pendingCount: 0, totalCount: 0 }
+    const stats = countMap[p._id.toString()] || { activeCount: 0, totalCount: 0 }
     return {
       ...p,
       activeSubscribersCount: stats.activeCount || 0,
-      pendingSubscribersCount: stats.pendingCount || 0,
       totalSubscribersCount: stats.totalCount || 0,
     }
   })
@@ -833,8 +830,11 @@ export const adminDeletePlan = async (id) => {
 export const adminGetSubscribers = async ({ page = 1, limit = 20, search = '', status = 'all', planId = 'all' } = {}) => {
   const query = {}
 
-  if (status && status !== 'all') {
+  if (status && status !== 'all' && status !== 'pending') {
     query.status = status
+  } else {
+    // Exclude pending / incomplete checkout attempts from the subscriber list
+    query.status = { $ne: 'pending' }
   }
 
   if (planId && planId !== 'all') {
@@ -860,6 +860,10 @@ export const adminGetSubscribers = async ({ page = 1, limit = 20, search = '', s
     UserSubscription.find(query)
       .populate('userId', 'name email phone')
       .populate('planId', 'name interval price videoQuota')
+      .populate({
+        path: 'downloadedVideos.productId',
+        select: 'name price clipId featuredImage previewImage thumbnail duration resolution',
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -867,14 +871,64 @@ export const adminGetSubscribers = async ({ page = 1, limit = 20, search = '', s
     UserSubscription.countDocuments(query),
   ])
 
+  const enrichedSubscribers = subscribers.map((sub) => ({
+    ...sub,
+    downloadedVideos: (sub.downloadedVideos || []).map((v) => {
+      const prod = v.productId || {}
+      return {
+        ...v,
+        originalPrice: typeof prod.price === 'number' ? prod.price : 0,
+        thumbnail: prod.featuredImage?.url || prod.previewImage?.url || prod.thumbnail || '',
+        clipId: v.clipId || prod.clipId || '',
+      }
+    }),
+  }))
+
   return {
-    subscribers,
+    subscribers: enrichedSubscribers,
     pagination: {
       page: Number(page),
       limit: Number(limit),
       total,
       pages: Math.ceil(total / limit) || 1,
     },
+  }
+}
+
+export const adminGetSubscriberById = async (id) => {
+  const sub = await UserSubscription.findById(id)
+    .populate('userId', 'name email phone avatar isPremium')
+    .populate('planId', 'name interval price videoQuota features')
+    .populate({
+      path: 'downloadedVideos.productId',
+      select: 'name price clipId featuredImage previewImage thumbnail duration resolution slug',
+    })
+    .lean()
+
+  if (!sub) throw new AppError('Subscriber not found', 404)
+
+  const videosWithPrice = (sub.downloadedVideos || []).map((v) => {
+    const prod = v.productId || {}
+    return {
+      _id: v._id,
+      productId: prod._id || v.productId,
+      name: v.name || prod.name || 'Video Clip',
+      clipId: v.clipId || prod.clipId || '',
+      imageSize: v.imageSize || '4K-UHD RAW Master',
+      licenseNumber: v.licenseNumber || '',
+      orderId: v.orderId,
+      orderNumber: v.orderNumber,
+      claimedAt: v.claimedAt,
+      originalPrice: typeof prod.price === 'number' ? prod.price : 0,
+      thumbnail: prod.featuredImage?.url || prod.previewImage?.url || prod.thumbnail || '',
+      resolution: prod.resolution || '',
+      duration: prod.duration || '',
+    }
+  })
+
+  return {
+    ...sub,
+    downloadedVideos: videosWithPrice,
   }
 }
 
@@ -969,6 +1023,7 @@ export const adminUpdateSubscriber = async (id, payload) => {
 
 export const adminAssignSubscription = async ({
   userId,
+  userEmail,
   planId,
   amountPaid = 0,
   videoQuota,
@@ -978,7 +1033,14 @@ export const adminAssignSubscription = async ({
   adminReason = '',
   whatsappNumber = '',
 }) => {
-  const user = await User.findById(userId)
+  let user = null
+  const candidateId = userId || null
+  if (candidateId && mongoose.Types.ObjectId.isValid(candidateId)) {
+    user = await User.findById(candidateId)
+  }
+  if (!user && userEmail) {
+    user = await User.findOne({ email: userEmail.trim().toLowerCase() })
+  }
   if (!user) throw new AppError('Customer user not found', 404)
 
   const plan = await SubscriptionPlan.findById(planId)

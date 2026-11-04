@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   fetchAdminSubscriptionPlans,
   deleteAdminSubscriptionPlan,
@@ -28,6 +28,7 @@ const formatDate = (dateString) => {
 }
 
 const Subscriptions = () => {
+  const navigate = useNavigate()
   const { admin, isSuperAdmin, hasPermission } = useAuth()
   const canWrite = Boolean(
     isSuperAdmin ||
@@ -107,7 +108,7 @@ const Subscriptions = () => {
           planId: subPlanFilter,
         })
         const data = res.data?.data || {}
-        setSubscribers(data.subscribers || [])
+        setSubscribers((data.subscribers || []).filter((s) => s.status !== 'pending'))
         setSubPagination(data.pagination || { page: 1, limit: 20, total: 0, pages: 1 })
       } catch (err) {
         setSubscribersError(err.response?.data?.message || err.message || 'Failed to load subscribers')
@@ -243,7 +244,8 @@ const Subscriptions = () => {
     setAssignSaving(true)
     try {
       await createAdminSubscriber({
-        userId: selectedUser._id,
+        userId: selectedUser._id || selectedUser.id,
+        userEmail: selectedUser.email,
         planId: assignPlanId,
         amountPaid: assignIsFree ? 0 : Number(assignAmountPaid) || 0,
         paymentProvider: assignIsFree ? 'free' : 'admin_manual',
@@ -626,7 +628,6 @@ const Subscriptions = () => {
                   <option value="on_hold">On Hold</option>
                   <option value="under_review">Under Review</option>
                   <option value="cancelled">Cancelled</option>
-                  <option value="pending">Pending</option>
                   <option value="expired">Expired</option>
                 </select>
               </div>
@@ -667,17 +668,17 @@ const Subscriptions = () => {
           )}
 
           {!subscribersLoading && subscribers.length > 0 && (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
                 <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
                   <tr>
-                    <th className="px-6 py-3.5">Customer</th>
-                    <th className="px-6 py-3.5">Plan & Billing</th>
-                    <th className="px-6 py-3.5">Amount Paid</th>
-                    <th className="px-6 py-3.5">Videos Remaining</th>
-                    <th className="px-6 py-3.5">Days Left & Expiry</th>
-                    <th className="px-6 py-3.5">Status</th>
-                    {canWrite && <th className="px-6 py-3.5 text-right">Actions</th>}
+                    <th className="px-6 py-3.5 whitespace-nowrap">Customer</th>
+                    <th className="px-6 py-3.5 whitespace-nowrap">Plan & Billing</th>
+                    <th className="px-6 py-3.5 whitespace-nowrap">Amount Paid</th>
+                    <th className="px-6 py-3.5 whitespace-nowrap">Videos Remaining</th>
+                    <th className="px-6 py-3.5 whitespace-nowrap">Days Left & Expiry</th>
+                    <th className="px-6 py-3.5 whitespace-nowrap">Status</th>
+                    <th className="px-6 py-3.5 text-right whitespace-nowrap"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
@@ -693,9 +694,14 @@ const Subscriptions = () => {
                     const isExpired = sub.status === 'expired' || diffTime <= 0
 
                     return (
-                      <tr key={sub._id} className="hover:bg-gray-50/60">
+                      <tr
+                        key={sub._id}
+                        onClick={() => navigate(`/subscriptions/subscribers/${sub._id}`)}
+                        className="hover:bg-blue-50/40 cursor-pointer transition-colors group"
+                        title="Click to view details, accessed videos & adjust quota"
+                      >
                         {/* Customer */}
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <p className="font-semibold text-gray-900">{sub.userId?.name || 'Customer'}</p>
                           <p className="text-xs text-gray-500">{sub.userId?.email || '—'}</p>
                           {sub.whatsappNumber ? (
@@ -708,7 +714,7 @@ const Subscriptions = () => {
                         </td>
 
                         {/* Plan */}
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <p className="font-medium text-gray-900">
                             {sub.planSnapshot?.name || sub.planId?.name || 'Subscription Plan'}
                           </p>
@@ -718,7 +724,7 @@ const Subscriptions = () => {
                         </td>
 
                         {/* Amount Paid */}
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           {(() => {
                             const isPaid = sub.paymentStatus === 'paid'
                             const isFree =
@@ -732,16 +738,16 @@ const Subscriptions = () => {
 
                             return (
                               <div className="space-y-1">
-                                <p className="font-bold text-gray-900 text-sm">
+                                <p className="font-bold text-gray-900 text-sm whitespace-nowrap">
                                   {formatCurrency(paidAmount)}
                                 </p>
                                 <div>
                                   {isFree ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200 whitespace-nowrap">
                                       ★ Free / Admin Gift
                                     </span>
                                   ) : isPaid ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-200">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-200 whitespace-nowrap">
                                       ✓ Paid {sub.paymentProvider === 'razorpay' ? '(Online)' : sub.paymentProvider ? `(${sub.paymentProvider})` : ''}
                                     </span>
                                   ) : null}
@@ -774,10 +780,10 @@ const Subscriptions = () => {
                         </td>
 
                         {/* Days Left & Expiry */}
-                        <td className="px-6 py-4 text-xs">
+                        <td className="px-6 py-4 text-xs whitespace-nowrap">
                           <div className="space-y-1">
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${
                                 isExpired
                                   ? 'bg-red-50 text-red-700 border border-red-200'
                                   : daysLeft <= 5
@@ -787,20 +793,20 @@ const Subscriptions = () => {
                             >
                               {isExpired ? 'Expired' : `${daysLeft} Days Left`}
                             </span>
-                            <p className="text-[11px] text-gray-600 font-medium">
+                            <p className="text-[11px] text-gray-600 font-medium whitespace-nowrap">
                               Expires: {formatDate(sub.endDate)}
                             </p>
-                            <p className="text-[10px] text-gray-400">
+                            <p className="text-[10px] text-gray-400 whitespace-nowrap">
                               Started: {formatDate(sub.startDate)}
                             </p>
                           </div>
                         </td>
 
                         {/* Status */}
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="space-y-1">
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
                                 sub.status === 'active'
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : sub.status === 'on_hold'
@@ -836,18 +842,12 @@ const Subscriptions = () => {
                           </div>
                         </td>
 
-                        {/* Actions */}
-                        {canWrite && (
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => openEditQuotaModal(sub)}
-                              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-50 hover:border-gray-300"
-                            >
-                              Adjust Quota & Status
-                            </button>
-                          </td>
-                        )}
+                        {/* Row link indicator */}
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 rounded-lg border border-transparent px-3 py-1.5 text-xs font-semibold text-gray-400 group-hover:text-blue-600 group-hover:border-blue-200 group-hover:bg-white group-hover:shadow-sm transition">
+                            View Plan & Videos →
+                          </span>
+                        </td>
                       </tr>
                     )
                   })}
@@ -1006,7 +1006,6 @@ const Subscriptions = () => {
                   <option value="under_review">Under Review (Lock Downloads, Days Count)</option>
                   <option value="cancelled">Cancelled (Terminate Access)</option>
                   <option value="expired">Expired</option>
-                  <option value="pending">Pending</option>
                 </select>
               </div>
 
@@ -1120,7 +1119,7 @@ const Subscriptions = () => {
                       <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white shadow-sm">
                         {assignUserResults.map((u) => (
                           <div
-                            key={u._id}
+                            key={u._id || u.id}
                             onClick={() => {
                               setSelectedUser(u)
                               setAssignUserResults([])
