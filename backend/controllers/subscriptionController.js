@@ -1,4 +1,5 @@
 import AppError from '../utils/AppError.js'
+import { fetchLiveUsdInrRate } from '../services/exchangeRateService.js'
 import { paypalSubscriptionsEnabled, verifyPayPalSubscription, processPayPalWebhook } from '../services/paypalSubscriptionService.js'
 import UserSubscription from '../models/UserSubscription.js'
 import SubscriptionPlan from '../models/SubscriptionPlan.js'
@@ -24,9 +25,11 @@ import { verifyRazorpayWebhookSignature } from '../services/paymentService.js'
 
 export const getPlans = asyncHandler(async (req, res) => {
   const plans = await getPublicSubscriptionPlans()
+  const paypal = paypalSubscriptionsEnabled()
+  const exchangeRate = paypal ? await fetchLiveUsdInrRate() : null
   res.json({
     success: true,
-    data: { plans, providers: { paypal: paypalSubscriptionsEnabled() } },
+    data: { plans, providers: { paypal }, usdInrRate: exchangeRate?.rate ?? null },
   })
 })
 

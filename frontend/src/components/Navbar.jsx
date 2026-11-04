@@ -349,56 +349,68 @@ const Navbar = () => {
       </nav>
       </header>
 
-      <div className="mobile-bottom-nav safe-bottom fixed bottom-4 left-3 right-3 z-40 md:hidden">
-        <div className="flex items-center justify-around rounded-2xl border border-white/20 bg-white/90 p-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl sm:p-2">
-          <Link to="/" className={`rounded-xl p-3 transition ${activeCategory === 'home' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`} aria-label="Home">
-            <svg className="h-5 w-5" fill={activeCategory === 'home' ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+      <nav aria-label="Mobile navigation" className="mobile-bottom-nav fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] z-40 mx-auto max-w-md md:hidden">
+        <div className="mobile-nav-glass flex items-center gap-1 rounded-full p-1.5">
+          <Link to="/" className={`mobile-nav-item flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[10px] font-semibold tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${activeCategory === 'home' ? 'bg-blue-50/90 text-blue-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`} aria-label="Home"
+            aria-current={activeCategory === 'home' ? 'page' : undefined}>
+            <svg aria-hidden="true" className="h-5 w-5" fill={activeCategory === 'home' ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
+            <span>Home</span>
           </Link>
           <Link
             to="/support"
-            className={`rounded-xl p-3 transition ${activeCategory === 'support' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+            className={`mobile-nav-item flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[10px] font-semibold tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${activeCategory === 'support' ? 'bg-blue-50/90 text-blue-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
             aria-label="Support"
+            aria-current={activeCategory === 'support' ? 'page' : undefined}
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
+            <span>Support</span>
           </Link>
-          <Link to="/videos" className={`rounded-xl p-3 transition ${activeCategory === 'videos' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`} aria-label="Videos">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <Link to="/videos" className={`mobile-nav-item flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[10px] font-semibold tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${activeCategory === 'videos' ? 'bg-blue-50/90 text-blue-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`} aria-label="Videos"
+            aria-current={activeCategory === 'videos' ? 'page' : undefined}>
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
+            <span>Videos</span>
           </Link>
           {isAuthenticated && (
             <Link
               to="/orders"
-              className={`rounded-xl p-3 transition ${activeCategory === 'orders' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+              className={`mobile-nav-item flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[10px] font-semibold tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${activeCategory === 'orders' ? 'bg-blue-50/90 text-blue-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
               aria-label="My orders"
+            aria-current={activeCategory === 'orders' ? 'page' : undefined}
             >
               <OrdersIcon className="h-5 w-5" />
+            <span>Orders</span>
             </Link>
           )}
           {isAuthenticated ? (
             <Link
               to="/profile"
-              className={`rounded-xl p-3 transition ${activeCategory === 'profile' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+              className={`mobile-nav-item flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[10px] font-semibold tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${activeCategory === 'profile' ? 'bg-blue-50/90 text-blue-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
               aria-label="Profile"
+            aria-current={activeCategory === 'profile' ? 'page' : undefined}
             >
               <ProfileIcon className="h-5 w-5" />
+            <span>Profile</span>
             </Link>
           ) : (
             <Link
               to="/login"
               state={authLinkState}
-              className={`rounded-xl p-3 transition ${location.pathname === '/login' ? 'bg-black text-white shadow-lg' : 'text-gray-500'}`}
+              className={`mobile-nav-item flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-1 py-2 text-[10px] font-semibold tracking-wide transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${location.pathname === '/login' ? 'bg-blue-50/90 text-blue-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]' : 'text-gray-600 hover:bg-white/60 hover:text-gray-900'}`}
               aria-label="Sign in"
+            aria-current={location.pathname === '/login' ? 'page' : undefined}
             >
               <ProfileIcon className="h-5 w-5" />
+            <span>Sign in</span>
             </Link>
           )}
         </div>
-      </div>
+      </nav>
 
       <div
         className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity xl:hidden ${

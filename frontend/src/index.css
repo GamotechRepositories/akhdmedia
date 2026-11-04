@@ -572,3 +572,18 @@ html.media-lightbox-open {
     animation: none;
   }
 }
+
+/* Floating mobile dock with a solid fallback for browsers without blur. */
+.mobile-nav-glass {
+  background: rgba(250, 250, 252, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.06), inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+@supports ((backdrop-filter: blur(24px)) or (-webkit-backdrop-filter: blur(24px))) {
+  .mobile-nav-glass {
+    background: rgba(250, 250, 252, 0.8);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}

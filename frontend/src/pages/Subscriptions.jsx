@@ -106,12 +106,19 @@ const Subscriptions = () => {
     fetchData()
   }, [isAuthenticated])
 
-  const filteredPlans =
-    selectedInterval === 'all'
-      ? plans
-      : selectedInterval === 'weekly'
-      ? plans.filter((p) => p.interval === 'weekly' || p.interval === 'days' || p.interval === 'custom')
-      : plans.filter((p) => (p.interval || 'monthly') === selectedInterval)
+  const getPlanInterval = (plan) =>
+    ['weekly', 'days', 'custom'].includes(plan.interval) ? 'weekly' : (plan.interval || 'monthly')
+  const availableIntervals = [
+    { value: 'weekly', label: 'Weekly & Passes' },
+    { value: 'monthly', label: 'Monthly Plans' },
+    { value: 'yearly', label: 'Yearly Plans' },
+  ].filter(({ value }) => plans.some((plan) => getPlanInterval(plan) === value))
+  const activeInterval = availableIntervals.some(({ value }) => value === selectedInterval)
+    ? selectedInterval
+    : 'all'
+  const filteredPlans = activeInterval === 'all'
+    ? plans
+    : plans.filter((plan) => getPlanInterval(plan) === activeInterval)
 
   const handleSelectPlan = (plan) => {
     if (!isAuthenticated) {
@@ -146,55 +153,28 @@ const Subscriptions = () => {
             Editorial <span className="text-blue-600">4K Video Plans</span>
           </h1>
 
-          {/* Clean Segmented Pill: All / Monthly / Yearly */}
-          <div className="mt-8 flex justify-center">
-            <div className="inline-flex items-center flex-wrap justify-center rounded-full border border-gray-200 bg-gray-100 p-1 shadow-inner gap-1">
-              <button
-                type="button"
-                onClick={() => setSelectedInterval('all')}
-                className={`rounded-full px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold transition-all ${
-                  selectedInterval === 'all'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedInterval('weekly')}
-                className={`rounded-full px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition-all ${
-                  selectedInterval === 'weekly'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Weekly & Passes
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedInterval('monthly')}
-                className={`rounded-full px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold transition-all ${
-                  selectedInterval === 'monthly'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Monthly Plans
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedInterval('yearly')}
-                className={`rounded-full px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold transition-all ${
-                  selectedInterval === 'yearly'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Yearly Plans
-              </button>
+          {/* Single-row billing interval filters */}
+          {!loading && availableIntervals.length > 1 && (
+            <div className="mt-8 overflow-x-auto pb-1">
+              <div role="group" aria-label="Filter plans by billing interval" className="mx-auto flex w-max min-w-full items-center justify-center gap-0.5 rounded-full border border-gray-200 bg-gray-100 p-1 shadow-inner sm:min-w-0 sm:gap-1">
+                {[{ value: 'all', label: 'All' }, ...availableIntervals].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelectedInterval(value)}
+                    aria-pressed={activeInterval === value}
+                    className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-2 py-2 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-6 sm:text-sm ${
+                      activeInterval === value
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

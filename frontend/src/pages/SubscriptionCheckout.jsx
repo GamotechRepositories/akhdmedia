@@ -22,7 +22,7 @@ const SubscriptionCheckout = () => {
 
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
   const [paypalEnabled, setPaypalEnabled] = useState(false);
-  const [paypalCheckout, setPaypalCheckout] = useState(null);
+  const [usdInrRate, setUsdInrRate] = useState(null);
   const [paypalVerifying, setPaypalVerifying] = useState(false);
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,9 @@ const SubscriptionCheckout = () => {
       setLoading(true);
       try {
         const res = await subscriptionAPI.getPublicPlans();
-        setPaypalEnabled(Boolean(res.data?.providers?.paypal));
+        const rate = Number(res.data?.usdInrRate);
+        setUsdInrRate(Number.isFinite(rate) && rate > 0 ? rate : null);
+        setPaypalEnabled(Boolean(res.data?.providers?.paypal) && Number.isFinite(rate) && rate > 0);
         const found = (res.data?.plans || []).find((p) => p._id === planId);
         if (!found) {
           setError('Subscription plan not found or no longer available.');
@@ -74,6 +76,10 @@ const SubscriptionCheckout = () => {
   const gstRate = Number(plan?.gstPercentage !== undefined ? plan.gstPercentage : 18);
   const gstAmount = Math.round((subtotal * gstRate) / 100);
   const totalPayable = subtotal + gstAmount;
+
+  const displayPrice = (amount) => paymentProvider === 'paypal' && usdInrRate
+    ? `${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.round(amount / usdInrRate * 100) / 100)} USD`
+    : formatCurrency(amount);
 
   const isPhoneValid = Boolean(
     whatsappNumber && (isPhoneNumberValid(whatsappNumber) || String(whatsappNumber).replace(/\D/g, '').length >= 10)
@@ -120,7 +126,7 @@ const SubscriptionCheckout = () => {
       }
 
       if (paypal?.approvalUrl) {
-        setPaypalCheckout(paypal);
+        window.location.assign(paypal.approvalUrl);
         return;
       }
 
@@ -399,13 +405,13 @@ const SubscriptionCheckout = () => {
               <div className="mt-4 border-t border-gray-100 pt-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500 font-medium">Subtotal</span>
-                  <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
+                  <span className="font-semibold text-gray-900">{displayPrice(subtotal)}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500 font-medium">
                     GST {gstRate > 0 ? `(${gstRate}%)` : ''}
                   </span>
-                  <span className="font-semibold text-gray-900">{formatCurrency(gstAmount)}</span>
+                  <span className="font-semibold text-gray-900">{displayPrice(gstAmount)}</span>
                 </div>
               </div>
 
@@ -415,7 +421,7 @@ const SubscriptionCheckout = () => {
                   <p className="text-[11px] text-gray-400">Inclusive of GST &amp; digital licensing</p>
                 </div>
                 <span className="text-2xl font-black text-gray-900">
-                  {formatCurrency(totalPayable)}
+                  {displayPrice(totalPayable)}
                 </span>
               </div>
 
@@ -423,28 +429,24 @@ const SubscriptionCheckout = () => {
                 <fieldset className="mt-5 space-y-2" disabled={isSubmitting}>
                   <legend className="text-sm font-bold text-gray-900">Payment method</legend>
                   <label className="flex min-h-11 items-center gap-2 text-sm">
-                    <input type="radio" name="provider" checked={paymentProvider === 'razorpay'} onChange={() => { setPaymentProvider('razorpay'); setPaypalCheckout(null); }} />
+                    <input type="radio" name="provider" checked={paymentProvider === 'razorpay'} onChange={() => { setPaymentProvider('razorpay'); }} />
                     Razorpay · India
                   </label>
                   {paypalEnabled && <label className="flex min-h-11 items-center gap-2 text-sm">
-                    <input type="radio" name="provider" checked={paymentProvider === 'paypal'} onChange={() => { setPaymentProvider('paypal'); setPaypalCheckout(null); }} />
+                    <input type="radio" name="provider" checked={paymentProvider === 'paypal'} onChange={() => { setPaymentProvider('paypal'); }} />
                     PayPal · International (USD)
                   </label>}
                   <p className="text-xs text-gray-600">Your subscription renews automatically each billing cycle until you cancel in your account.</p>
                 </fieldset>
               )}
               {searchParams.get('paypalCancelled') && <p role="status" className="mt-3 text-sm text-gray-600">PayPal setup was cancelled. You can try again.</p>}
-              {paypalCheckout && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4" role="status">
-                <p className="text-sm font-bold">PayPal autopay: ${paypalCheckout.amount.toFixed(2)} USD every {paypalCheckout.frequency.count} {paypalCheckout.frequency.unit.toLowerCase()}{paypalCheckout.frequency.count > 1 ? 's' : ''}</p>
-                <p className="mt-2 text-xs">This USD price includes the taxes shown above and stays fixed for this subscription. Approve automatic renewal on PayPal to continue.</p>
-                <a href={paypalCheckout.approvalUrl} className="mt-3 inline-flex rounded-lg bg-blue-800 px-4 py-3 text-sm font-bold text-white">Approve autopay with PayPal</a>
-              </div>}
+              {paymentProvider === 'paypal' && <p role="status" className="mt-3 text-xs text-gray-600">Prices are converted to USD. Approve automatic renewal on PayPal to complete your subscription.</p>}
               {/* Action Button */}
               <div className="mt-5">
                 <button
                   type="button"
                   onClick={handleProceedToPayment}
-                  disabled={!isFormReady || isSubmitting || Boolean(paypalCheckout)}
+                  disabled={!isFormReady || isSubmitting}
                   className={`w-full rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition ${
                     isFormReady && !isSubmitting
                       ? 'bg-gray-900 hover:bg-gray-800 active:scale-[0.99] cursor-pointer'
@@ -453,7 +455,7 @@ const SubscriptionCheckout = () => {
                 >
                   {isSubmitting
                     ? 'Processing Payment Gateway...'
-                    : paymentProvider === 'paypal' ? 'Review PayPal autopay price' : `Proceed to Payment · ${formatCurrency(totalPayable)}`}
+                    : `Proceed to Payment · ${displayPrice(totalPayable)}`}
                 </button>
               </div>
             </div>
