@@ -1,3 +1,4 @@
+import { createPayPalSubscription, cancelPayPalSubscription } from './paypalSubscriptionService.js'
 const resolvePlanDurationDays = (plan, fallbackInterval = 'monthly') => {
   if (plan?.durationDays && Number(plan.durationDays) > 0) {
     return Number(plan.durationDays)
@@ -204,6 +205,25 @@ export const createSubscriptionCheckout = async ({ user, planId, paymentProvider
     }
   }
 
+  if (paymentProvider === 'paypal') {
+    const pendingSub = await UserSubscription.create({
+      userId: user._id, planId: plan._id,
+      planSnapshot: {
+        name: plan.name, tagline: plan.tagline, interval: plan.interval,
+        price: plan.price, subtotal, gstPercentage, gstAmount,
+        totalPayable: totalAmount, videoQuota: plan.videoQuota,
+      },
+      price: plan.price, subtotal, gstPercentage, gstAmount, totalAmount,
+      currency: plan.currency || 'INR', videoQuota: plan.videoQuota,
+      videoQuotaRemaining: plan.videoQuota, startDate: now, endDate,
+      status: 'pending', paymentProvider: 'paypal', paymentStatus: 'pending',
+      whatsappNumber: whatsappNumber?.trim() || user.phone || '',
+      policyAgreed: Boolean(policyAgreed), policyAgreedAt: policyAgreed ? now : null,
+    })
+    const paypal = await createPayPalSubscription({ subscription: pendingSub, plan })
+    return { success: true, directActive: false, subscriptionId: pendingSub._id, paypal }
+  }
+
   if (paymentProvider === 'razorpay') {
     if (!isRazorpayConfigured()) {
       throw new AppError('Razorpay is not configured right now. Please contact support.', 503)
@@ -371,6 +391,13 @@ export const verifySubscriptionPayment = async ({
     throw new AppError('Subscription not found', 404)
   }
 
+  if (subscription.paymentProvider !== 'razorpay' ||
+      (subscription.razorpaySubscriptionId
+        ? razorpaySubscriptionId !== subscription.razorpaySubscriptionId
+        : razorpayOrderId !== subscription.razorpayOrderId)) {
+    throw new AppError('Payment does not match this subscription', 400)
+  }
+
   if (subscription.status === 'active' && subscription.paymentStatus === 'paid') {
     return subscription
   }
@@ -432,6 +459,10 @@ export const cancelUserSubscription = async (userId, targetPlanId = null) => {
       message: `Your subscription is already scheduled to end on ${new Date(subscription.endDate).toLocaleDateString('en-IN')}`,
       endDate: subscription.endDate,
     }
+  }
+
+  if (subscription.paymentProvider === 'paypal' && subscription.paypalSubscriptionId) {
+    await cancelPayPalSubscription(subscription.paypalSubscriptionId)
   }
 
   if (subscription.razorpaySubscriptionId) {

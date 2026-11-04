@@ -10,7 +10,7 @@ import {
 
 export { isPayPalConfigured, getPayPalClientId } from '../config/paypal.js'
 
-const getAccessToken = async () => {
+export const getAccessToken = async () => {
   if (!isPayPalConfigured()) {
     throw new AppError('PayPal is not configured. Please contact support.', 503)
   }

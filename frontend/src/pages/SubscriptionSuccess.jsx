@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { subscriptionAPI } from '../services/subscriptionApi';
 import { useAuth } from '../context/AuthContext';
 import PageLoader from '../components/ui/PageLoader';
@@ -14,7 +14,6 @@ const formatCurrency = (val) =>
 
 const SubscriptionSuccess = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const subscriptionId = searchParams.get('subscriptionId') || '';
@@ -56,6 +55,13 @@ const SubscriptionSuccess = () => {
 
   if (loading) {
     return <PageLoader fullScreen label="Loading your subscription confirmation &amp; receipt..." />;
+  }
+
+  if (error) {
+    return <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <p role="alert" className="text-sm text-red-700">{error}</p>
+      <Link to="/subscriptions" className="mt-4 inline-block underline">Back to subscriptions</Link>
+    </div>;
   }
 
   const planName =
@@ -134,6 +140,8 @@ const SubscriptionSuccess = () => {
     : 'SUB-CONFIRMED';
 
   const txnId =
+    subscription?.paypalLastPaymentId ||
+    subscription?.paypalSubscriptionId ||
     subscription?.razorpayPaymentId ||
     subscription?.razorpaySubscriptionId ||
     refNumber;
@@ -166,6 +174,7 @@ const SubscriptionSuccess = () => {
             </h1>
             <p className="mt-1 text-sm font-semibold text-emerald-800">
               Thank you for subscribing to {BRAND.name}
+              {subscription?.paymentProvider === 'paypal' && <span className="mt-1 block">Charged ${Number(subscription.paypalAmount).toFixed(2)} USD via PayPal</span>}
             </p>
             <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-gray-100 px-3.5 py-1 text-xs font-mono font-bold text-gray-600">
               <span>Receipt Ref:</span>

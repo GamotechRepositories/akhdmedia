@@ -20,23 +20,21 @@ const SubscriptionCheckout = () => {
   const planId = searchParams.get('planId');
   const { user, isAuthenticated } = useAuth();
 
+  const [paymentProvider, setPaymentProvider] = useState('razorpay');
+  const [paypalEnabled, setPaypalEnabled] = useState(false);
+  const [paypalCheckout, setPaypalCheckout] = useState(null);
+  const [paypalVerifying, setPaypalVerifying] = useState(false);
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Form states
-  const [whatsappNumber, setWhatsappNumber] = useState(user?.phone || '');
+  const [enteredWhatsappNumber, setWhatsappNumber] = useState(null);
+  const whatsappNumber = enteredWhatsappNumber ?? normalizePhoneValue(user?.phone || '');
   const [agreePolicy, setAgreePolicy] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
-
-  // Auto-fill phone when user loads
-  useEffect(() => {
-    if (user?.phone && !whatsappNumber) {
-      setWhatsappNumber(normalizePhoneValue(user.phone));
-    }
-  }, [user, whatsappNumber]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,6 +53,7 @@ const SubscriptionCheckout = () => {
       setLoading(true);
       try {
         const res = await subscriptionAPI.getPublicPlans();
+        setPaypalEnabled(Boolean(res.data?.providers?.paypal));
         const found = (res.data?.plans || []).find((p) => p._id === planId);
         if (!found) {
           setError('Subscription plan not found or no longer available.');
@@ -106,17 +105,22 @@ const SubscriptionCheckout = () => {
     try {
       const formattedWhatsapp = normalizePhoneValue(whatsappNumber) || whatsappNumber;
 
-      const res = await subscriptionAPI.createCheckout(plan._id, 'razorpay', {
+      const res = await subscriptionAPI.createCheckout(plan._id, paymentProvider, {
         whatsappNumber: formattedWhatsapp,
         policyAgreed: true,
       });
 
-      const { directActive, razorpay, subscriptionId } = res.data;
+      const { directActive, razorpay, paypal, subscriptionId } = res.data;
 
       if (directActive) {
         navigate(`/subscriptions/success?subscriptionId=${res.data.subscription?._id || ''}`, {
           state: { subscription: res.data.subscription },
         });
+        return;
+      }
+
+      if (paypal?.approvalUrl) {
+        setPaypalCheckout(paypal);
         return;
       }
 
@@ -170,6 +174,37 @@ const SubscriptionCheckout = () => {
       setIsSubmitting(false);
     }
   };
+
+  const paypalReturnId = searchParams.get('paypalSubscription');
+  const verifyPaypal = async () => {
+    setPaypalVerifying(true);
+    setValidationError('');
+    try {
+      const res = await subscriptionAPI.verifyPayPalPayment(paypalReturnId);
+      navigate(`/subscriptions/success?subscriptionId=${paypalReturnId}`, {
+        replace: true,
+        state: { subscriptionId: paypalReturnId, verifiedSubscription: res.data.subscription },
+      });
+    } catch (err) {
+      setValidationError(err.response?.data?.message || err.message || 'Payment verification failed. Please retry.');
+    } finally {
+      setPaypalVerifying(false);
+    }
+  };
+
+  if (paypalReturnId && isAuthenticated) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <h1 className="text-xl font-bold">Confirm your PayPal subscription</h1>
+        <p className="mt-3 text-sm text-gray-600">Confirm your payment to activate access. If PayPal is still processing it, wait a moment and retry.</p>
+        {validationError && <p role="alert" className="mt-4 text-sm text-red-700">{validationError}</p>}
+        <button onClick={verifyPaypal} disabled={paypalVerifying} className="mt-6 rounded-xl bg-gray-900 px-6 py-3 text-white disabled:opacity-50">
+          {paypalVerifying ? 'Checking payment…' : 'Confirm payment'}
+        </button>
+        <Link to="/subscriptions" className="mt-4 block text-sm underline">Back to subscriptions</Link>
+      </div>
+    );
+  }
 
   if (loading) {
     return <PageLoader />;
@@ -384,12 +419,32 @@ const SubscriptionCheckout = () => {
                 </span>
               </div>
 
+              {subtotal > 0 && (
+                <fieldset className="mt-5 space-y-2" disabled={isSubmitting}>
+                  <legend className="text-sm font-bold text-gray-900">Payment method</legend>
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
+                    <input type="radio" name="provider" checked={paymentProvider === 'razorpay'} onChange={() => { setPaymentProvider('razorpay'); setPaypalCheckout(null); }} />
+                    Razorpay · India
+                  </label>
+                  {paypalEnabled && <label className="flex min-h-11 items-center gap-2 text-sm">
+                    <input type="radio" name="provider" checked={paymentProvider === 'paypal'} onChange={() => { setPaymentProvider('paypal'); setPaypalCheckout(null); }} />
+                    PayPal · International (USD)
+                  </label>}
+                  <p className="text-xs text-gray-600">Your subscription renews automatically each billing cycle until you cancel in your account.</p>
+                </fieldset>
+              )}
+              {searchParams.get('paypalCancelled') && <p role="status" className="mt-3 text-sm text-gray-600">PayPal setup was cancelled. You can try again.</p>}
+              {paypalCheckout && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4" role="status">
+                <p className="text-sm font-bold">PayPal autopay: ${paypalCheckout.amount.toFixed(2)} USD every {paypalCheckout.frequency.count} {paypalCheckout.frequency.unit.toLowerCase()}{paypalCheckout.frequency.count > 1 ? 's' : ''}</p>
+                <p className="mt-2 text-xs">This USD price includes the taxes shown above and stays fixed for this subscription. Approve automatic renewal on PayPal to continue.</p>
+                <a href={paypalCheckout.approvalUrl} className="mt-3 inline-flex rounded-lg bg-blue-800 px-4 py-3 text-sm font-bold text-white">Approve autopay with PayPal</a>
+              </div>}
               {/* Action Button */}
               <div className="mt-5">
                 <button
                   type="button"
                   onClick={handleProceedToPayment}
-                  disabled={!isFormReady || isSubmitting}
+                  disabled={!isFormReady || isSubmitting || Boolean(paypalCheckout)}
                   className={`w-full rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition ${
                     isFormReady && !isSubmitting
                       ? 'bg-gray-900 hover:bg-gray-800 active:scale-[0.99] cursor-pointer'
@@ -398,7 +453,7 @@ const SubscriptionCheckout = () => {
                 >
                   {isSubmitting
                     ? 'Processing Payment Gateway...'
-                    : `Proceed to Payment · ${formatCurrency(totalPayable)}`}
+                    : paymentProvider === 'paypal' ? 'Review PayPal autopay price' : `Proceed to Payment · ${formatCurrency(totalPayable)}`}
                 </button>
               </div>
             </div>

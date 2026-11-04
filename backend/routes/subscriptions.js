@@ -10,6 +10,8 @@ import {
   getSubscriptionReceipt,
   downloadSubscriptionInvoice,
   razorpayWebhook,
+  verifyPayPalPayment,
+  paypalWebhook,
 } from '../controllers/subscriptionController.js'
 import { requireUser } from '../middleware/requireUser.js'
 import { optionalUser } from '../middleware/optionalUser.js'
@@ -23,6 +25,8 @@ router.get('/plans', getPlans)
 router.get('/my-subscription', requireUser, getMySubscription)
 router.post('/checkout', requireUser, createCheckout)
 router.post('/verify', requireUser, verifyPayment)
+router.post('/paypal/verify', requireUser, verifyPayPalPayment)
+router.post('/paypal/webhook', paypalWebhook)
 router.post('/cancel', requireUser, cancelSubscription)
 router.get('/receipt/:id', optionalUser, getSubscriptionReceipt)
 router.get('/invoice-pdf/:id', optionalUser, downloadSubscriptionInvoice)

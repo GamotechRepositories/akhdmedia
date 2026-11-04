@@ -25,6 +25,11 @@ export const subscriptionAPI = {
     return data
   },
 
+  verifyPayPalPayment: async (subscriptionId) => {
+    const { data } = await api.post('/subscriptions/paypal/verify', { subscriptionId })
+    return data
+  },
+
   verifyPayment: async (payload) => {
     const { data } = await api.post('/subscriptions/verify', payload)
     return data

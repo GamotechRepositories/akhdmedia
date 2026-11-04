@@ -1,3 +1,5 @@
+import AppError from '../utils/AppError.js'
+import { paypalSubscriptionsEnabled, verifyPayPalSubscription, processPayPalWebhook } from '../services/paypalSubscriptionService.js'
 import UserSubscription from '../models/UserSubscription.js'
 import SubscriptionPlan from '../models/SubscriptionPlan.js'
 import {
@@ -11,6 +13,7 @@ import {
   createSubscriptionCheckout,
   getActiveUserSubscription,
   getActiveUserSubscriptions,
+  getUserSubscriptionOverview,
   getPublicSubscriptionPlans,
   verifySubscriptionPayment,
   cancelUserSubscription,
@@ -23,7 +26,7 @@ export const getPlans = asyncHandler(async (req, res) => {
   const plans = await getPublicSubscriptionPlans()
   res.json({
     success: true,
-    data: { plans },
+    data: { plans, providers: { paypal: paypalSubscriptionsEnabled() } },
   })
 })
 
@@ -275,4 +278,14 @@ export const downloadSubscriptionInvoice = asyncHandler(async (req, res) => {
   const disposition = inline === '1' || inline === 'true' ? 'inline' : 'attachment'
   res.setHeader('Content-Disposition', `${disposition}; filename="${filename}"`)
   res.send(buffer)
+})
+
+export const verifyPayPalPayment = asyncHandler(async (req, res) => {
+  const subscription = await verifyPayPalSubscription({ userId: req.user.id, subscriptionId: req.body.subscriptionId })
+  res.json({ success: true, data: { subscription } })
+})
+
+export const paypalWebhook = asyncHandler(async (req, res) => {
+  await processPayPalWebhook(req.headers, req.body)
+  res.json({ success: true })
 })
