@@ -54,7 +54,11 @@ export const getMySubscription = asyncHandler(async (req, res) => {
               : primaryPlan.planSnapshot?.tagline || '',
           interval: activeSubs.some((s) => s.planSnapshot?.interval === 'yearly')
             ? 'yearly'
-            : 'monthly',
+            : activeSubs.some((s) => s.planSnapshot?.interval === 'monthly')
+            ? 'monthly'
+            : activeSubs.some((s) => s.planSnapshot?.interval === 'weekly')
+            ? 'weekly'
+            : activeSubs[0].planSnapshot?.interval || 'monthly',
           price: activeSubs.reduce((acc, s) => acc + (s.price || 0), 0),
           videoQuota: totalQuota,
           videoQuotaRemaining: totalRemaining,

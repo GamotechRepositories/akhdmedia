@@ -19,7 +19,7 @@ const subscriptionPlanSchema = new mongoose.Schema(
     },
     interval: {
       type: String,
-      enum: ['monthly', 'yearly'],
+      enum: ['weekly', 'monthly', 'yearly', 'days', 'custom'],
       default: 'monthly',
       index: true,
     },

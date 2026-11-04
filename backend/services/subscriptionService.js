@@ -1,3 +1,13 @@
+const resolvePlanDurationDays = (plan, fallbackInterval = 'monthly') => {
+  if (plan?.durationDays && Number(plan.durationDays) > 0) {
+    return Number(plan.durationDays)
+  }
+  const interval = plan?.interval || fallbackInterval
+  if (interval === 'yearly') return 365
+  if (interval === 'weekly') return 7
+  return 30
+}
+
 import mongoose from 'mongoose'
 import SubscriptionPlan from '../models/SubscriptionPlan.js'
 import UserSubscription from '../models/UserSubscription.js'
@@ -88,7 +98,22 @@ export const getOrCreateRazorpayPlan = async (plan, forceRecreate = false) => {
     return plan.razorpayPlanId
   }
 
-  const period = plan.interval === 'yearly' ? 'yearly' : 'monthly'
+  let period = 'monthly'
+  let rzpInterval = 1
+  if (plan.interval === 'weekly') {
+    period = 'weekly'
+    rzpInterval = 1
+  } else if (plan.interval === 'yearly') {
+    period = 'yearly'
+    rzpInterval = 1
+  } else if (plan.interval === 'days' || plan.interval === 'custom') {
+    period = 'daily'
+    rzpInterval = Math.max(1, Number(plan.durationDays) || 1)
+  } else {
+    period = 'monthly'
+    rzpInterval = 1
+  }
+
   const subtotal = Number(plan.price) || 0
   const gstPercentage = Number(plan.gstPercentage ?? 0)
   const gstAmount = Math.round((subtotal * gstPercentage) / 100)
@@ -96,7 +121,7 @@ export const getOrCreateRazorpayPlan = async (plan, forceRecreate = false) => {
 
   const rzpPlan = await createRazorpayPlan({
     period,
-    interval: 1,
+    interval: rzpInterval,
     name: plan.name,
     amount: totalAmount,
     currency: plan.currency || 'INR',
@@ -117,7 +142,7 @@ export const createSubscriptionCheckout = async ({ user, planId, paymentProvider
   }
 
   const now = new Date()
-  const durationDays = plan.durationDays || (plan.interval === 'yearly' ? 365 : 30)
+  const durationDays = resolvePlanDurationDays(plan)
   const endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000)
 
   const subtotal = Number(plan.price) || 0
@@ -186,7 +211,13 @@ export const createSubscriptionCheckout = async ({ user, planId, paymentProvider
 
     // AutoPay Recurring Subscription via Razorpay Subscriptions API
     let rzpPlanId = await getOrCreateRazorpayPlan(plan)
-    const totalCount = plan.interval === 'yearly' ? 10 : 60 // 10 years or 5 years cycles
+    let totalCount = 60
+    if (plan.interval === 'yearly') totalCount = 10
+    else if (plan.interval === 'weekly') totalCount = 120
+    else if (plan.interval === 'days' || plan.interval === 'custom') {
+      const days = Math.max(1, Number(plan.durationDays) || 30)
+      totalCount = Math.max(12, Math.floor(1825 / days))
+    }
     const subscriptionNotes = {
       userId: user._id.toString(),
       planId: plan._id.toString(),
@@ -345,7 +376,7 @@ export const verifySubscriptionPayment = async ({
   }
 
   const plan = await SubscriptionPlan.findById(subscription.planId)
-  const durationDays = plan?.durationDays || (subscription.planSnapshot?.interval === 'yearly' ? 365 : 30)
+  const durationDays = resolvePlanDurationDays(plan, subscription.planSnapshot?.interval)
   const now = new Date()
   const endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000)
 
@@ -434,7 +465,7 @@ export const handleRazorpayWebhook = async ({ event, payload }) => {
 
       if (subscription) {
         const interval = subscription.planSnapshot?.interval || 'monthly'
-        const durationDays = interval === 'yearly' ? 365 : 30
+        const durationDays = resolvePlanDurationDays(subscription.planSnapshot, interval)
         const now = new Date()
         const currentEndDate = new Date(subscription.endDate)
         const baseDate = currentEndDate > now ? currentEndDate : now
@@ -1047,7 +1078,7 @@ export const adminAssignSubscription = async ({
   if (!plan) throw new AppError('Subscription plan not found', 404)
 
   const now = new Date()
-  const days = Number(durationDays) || plan.durationDays || (plan.interval === 'yearly' ? 365 : 30)
+  const days = Number(durationDays) || resolvePlanDurationDays(plan)
   const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000)
   const quota = videoQuota !== undefined && videoQuota !== null && videoQuota !== ''
     ? Number(videoQuota)

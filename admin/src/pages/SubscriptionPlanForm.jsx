@@ -103,10 +103,14 @@ const SubscriptionPlanForm = () => {
   }, [id, isEdit])
 
   const handleIntervalChange = (interval) => {
+    let days = 30
+    if (interval === 'yearly') days = 365
+    else if (interval === 'weekly') days = 7
+    else if (interval === 'days' || interval === 'custom') days = 15
     setFormData((prev) => ({
       ...prev,
       interval,
-      durationDays: interval === 'yearly' ? 365 : 30,
+      durationDays: days,
     }))
   }
 
@@ -311,45 +315,88 @@ const SubscriptionPlanForm = () => {
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-gray-700">Billing Interval *</label>
-              <div className="mt-2 flex gap-4">
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="interval"
-                    value="monthly"
-                    checked={formData.interval === 'monthly'}
-                    onChange={() => handleIntervalChange('monthly')}
-                    className="h-4 w-4 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-gray-900">Monthly</span>
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="interval"
-                    value="yearly"
-                    checked={formData.interval === 'yearly'}
-                    onChange={() => handleIntervalChange('yearly')}
-                    className="h-4 w-4 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-gray-900">Yearly</span>
-                </label>
+              <div className="mt-2 flex flex-wrap gap-2.5">
+                {[
+                  { id: 'weekly', label: 'Weekly (7 Days)' },
+                  { id: 'monthly', label: 'Monthly (30 Days)' },
+                  { id: 'yearly', label: 'Yearly (365 Days)' },
+                  { id: 'days', label: 'Days-wise / Custom Pass' },
+                ].map((item) => {
+                  const isChecked =
+                    item.id === 'days'
+                      ? formData.interval === 'days' || formData.interval === 'custom'
+                      : formData.interval === item.id
+                  return (
+                    <label
+                      key={item.id}
+                      className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-2 transition ${
+                        isChecked
+                          ? 'border-blue-600 bg-blue-50/50 text-blue-900 font-bold shadow-xs'
+                          : 'border-gray-200 hover:bg-gray-50 text-gray-700 font-medium'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="interval"
+                        value={item.id}
+                        checked={isChecked}
+                        onChange={() => handleIntervalChange(item.id)}
+                        className="h-4 w-4 text-blue-600"
+                      />
+                      <span className="text-sm">{item.label}</span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700">Duration in Days</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.durationDays}
-                onChange={(e) => setFormData({ ...formData, durationDays: e.target.value })}
-                required
-                className="mt-1 w-full rounded-xl border border-gray-200 p-2.5 text-sm focus:border-gray-900 focus:outline-none"
-              />
-              <p className="mt-0.5 text-[11px] text-gray-400">Default 30 days for monthly, 365 for yearly.</p>
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-gray-700">Duration in Days *</label>
+                {(formData.interval === 'days' || formData.interval === 'custom') && (
+                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    Custom Validity Active
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.durationDays}
+                  onChange={(e) => setFormData({ ...formData, durationDays: e.target.value })}
+                  required
+                  className="w-full sm:w-48 rounded-xl border border-gray-200 p-2.5 text-sm font-semibold text-gray-900 focus:border-gray-900 focus:outline-none"
+                />
+                <span className="text-sm font-semibold text-gray-500">Days</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[3, 7, 14, 15, 30, 45, 60, 90, 180, 365].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => {
+                      let intVal = 'days'
+                      if (d === 7) intVal = 'weekly'
+                      else if (d === 30) intVal = 'monthly'
+                      else if (d === 365) intVal = 'yearly'
+                      setFormData((prev) => ({ ...prev, durationDays: d, interval: intVal }))
+                    }}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-semibold border transition ${
+                      Number(formData.durationDays) === d
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {d} Days
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">
+                Customer receives full access for exactly this many days per cycle.
+              </p>
             </div>
 
 {/* 1. Original / Regular Price */}
@@ -501,6 +548,9 @@ const SubscriptionPlanForm = () => {
                       Number(formData.price || 0) +
                       Math.round(((Number(formData.price || 0) * Number(formData.gstPercentage || 0)) / 100))
                     ).toLocaleString('en-IN')}
+                    <span className="text-xs font-normal text-gray-500 ml-1">
+                      / {formData.interval === 'yearly' ? 'Year' : formData.interval === 'weekly' ? 'Week' : formData.interval === 'monthly' ? 'Month' : `${formData.durationDays || 30} Days`}
+                    </span>
                   </span>
                 </div>
               </div>

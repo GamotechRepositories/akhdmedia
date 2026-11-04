@@ -213,7 +213,7 @@ const ActiveSubscriptions = () => {
                         </span>
                         {subPrice > 0 && (
                           <span className="text-xs text-neutral-500 font-medium">
-                            / {plan.interval === 'yearly' ? 'year' : 'month'}
+                            / {plan.interval === 'yearly' ? 'year' : plan.interval === 'weekly' ? 'week' : plan.interval === 'monthly' ? 'month' : `${plan.durationDays || 30} days`}
                           </span>
                         )}
                       </div>
