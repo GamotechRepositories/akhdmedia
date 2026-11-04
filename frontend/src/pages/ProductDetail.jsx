@@ -8,7 +8,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ToastContainer';
 import { useCatalog } from '../context/CatalogContext';
-import { BRAND } from '../config/brand';
+import { subscriptionAPI } from '../services/subscriptionApi';
 import {
   getDefaultImageSize,
   sortImageSizeEntries,
@@ -49,7 +49,7 @@ const ProductDetail = () => {
   const location = useLocation();
   const { getProductById, getRelatedProducts } = useCatalog();
   const { addToCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { success, error: showError } = useToast();
   const processedAuthIntentRef = useRef(false);
 
@@ -60,6 +60,39 @@ const ProductDetail = () => {
   const [selectedImageSize, setSelectedImageSize] = useState('');
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [claimNotice, setClaimNotice] = useState(null);
+  const [resendTimerSec, setResendTimerSec] = useState(0);
+
+  useEffect(() => {
+    if (subscriptionStatus?.resendWindowRemainingMs > 0) {
+      setResendTimerSec(Math.ceil(subscriptionStatus.resendWindowRemainingMs / 1000));
+    } else {
+      setResendTimerSec(0);
+    }
+  }, [subscriptionStatus?.resendWindowRemainingMs]);
+
+  useEffect(() => {
+    if (resendTimerSec <= 0) return;
+    const timer = setInterval(() => {
+      setResendTimerSec((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendTimerSec]);
+
+  const formatClaimDate = (dateVal) => {
+    if (!dateVal) return '';
+    try {
+      return new Date(dateVal).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return '';
+    }
+  };
 
   useLayoutEffect(() => {
     scrollPageToTop();
@@ -154,6 +187,30 @@ const ProductDetail = () => {
     success,
   ]);
 
+  useEffect(() => {
+    let active = true;
+    if (!product?.id || !isAuthenticated) {
+      return;
+    }
+
+    subscriptionAPI
+      .checkClaimStatus(product.id)
+      .then((res) => {
+        if (active) {
+          setSubscriptionStatus(res.data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setSubscriptionStatus(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [product?.id, isAuthenticated]);
+
   if (productLoading) {
     return <ProductDetailSkeleton />;
   }
@@ -239,6 +296,41 @@ const ProductDetail = () => {
     }
   };
 
+  const handleClaimWithSubscription = async (action = 'claim') => {
+    if (!isAuthenticated) {
+      redirectToLogin('claimSubscription');
+      return;
+    }
+
+    setIsClaiming(true);
+    if (action === 'claim') {
+      setClaimNotice(null);
+    }
+    try {
+      const res = await subscriptionAPI.claimVideo(product.id, selectedImageSize, action);
+      success(res.message || 'Master video download link sent to your email!');
+      setSubscriptionStatus((prev) => ({
+        ...prev,
+        isClaimed: true,
+        lastClaimedAt: res.lastClaimedAt || prev?.lastClaimedAt || new Date().toISOString(),
+        quotaRemaining: res.videoQuotaRemaining ?? prev?.quotaRemaining,
+        resendWindowRemainingMs: res.resendWindowRemainingMs ?? (action === 'claim' ? 120000 : prev?.resendWindowRemainingMs),
+      }));
+      if (res.resendWindowRemainingMs > 0) {
+        setResendTimerSec(Math.ceil(res.resendWindowRemainingMs / 1000));
+      }
+      setClaimNotice({
+        email: res.customerEmail || user?.email || 'your registered email',
+        linkExpiry: res.linkExpiry || '3 days',
+        message: res.message,
+      });
+    } catch (err) {
+      showError(err.message || 'Failed to claim video with subscription');
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   const handleShareProduct = async () => {
     if (isSharing) return;
 
@@ -286,7 +378,7 @@ const ProductDetail = () => {
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-1.5 text-sm text-gray-600 transition hover:text-gray-900"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back
@@ -366,6 +458,144 @@ const ProductDetail = () => {
             </div>
 
             <div className="space-y-4 px-5 py-4 sm:px-6">
+              {subscriptionStatus?.hasSubscription ? (
+                <div className="rounded-2xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-50 to-indigo-50/50 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-blue-200/60 pb-2.5">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-xs">
+                      ★
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold leading-tight text-blue-950 break-words" title={subscriptionStatus.planName}>
+                        {subscriptionStatus.planName}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-medium text-blue-700">Subscribed Membership</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    {/* CASE 1: Active Emergency Resend Window (Within 2 minutes of recent claim) */}
+                    {resendTimerSec > 0 ? (
+                      <div className="space-y-2.5">
+                        <div className="space-y-1 text-xs text-emerald-950">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-emerald-900">✓ Master Link Sent to Email</span>
+                            <span className="font-mono text-xs font-bold text-emerald-700">
+                              {Math.floor(resendTimerSec / 60)}:{String(resendTimerSec % 60).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-emerald-800">
+                            Valid for 3 days. Didn't receive the email yet? You can resend before the 2-minute timer expires.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleClaimWithSubscription('resend')}
+                          disabled={isClaiming}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 py-3 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-emerald-800 active:scale-[0.99] disabled:opacity-50 text-center leading-snug"
+                        >
+                          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          {isClaiming ? 'Resending Link...' : 'Resend Email Link (Free)'}
+                        </button>
+                      </div>
+                    ) : subscriptionStatus.isClaimed ? (
+                      /* CASE 2: Previously Downloaded (2-minute window has passed) */
+                      <div className="space-y-2.5">
+                        <div className="space-y-1 text-xs text-blue-950">
+                          <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                            <svg className="h-4 w-4 text-blue-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <span>Previously Downloaded {subscriptionStatus.lastClaimedAt ? `on ${formatClaimDate(subscriptionStatus.lastClaimedAt)}` : ''}</span>
+                          </div>
+                          
+                        </div>
+
+                        {subscriptionStatus.quotaRemaining > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleClaimWithSubscription('claim')}
+                            disabled={isClaiming}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-3 sm:px-4 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-blue-700 active:scale-[0.99] disabled:opacity-50 text-center leading-snug"
+                          >
+                            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {isClaiming ? 'Sending Master Link to Email...' : 'Download Again with Subscription Quota'}
+                          </button>
+                        ) : (
+                          <div className="space-y-1 text-xs text-amber-900">
+                            <p className="font-bold">Subscription Quota Finished ({subscriptionStatus.videoQuota}/{subscriptionStatus.videoQuota} Used)</p>
+                            <p className="text-[11px] text-amber-800">
+                              You have used all video credits in this cycle. Renew your plan or buy individually below.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : subscriptionStatus.quotaRemaining > 0 ? (
+                      /* CASE 3: First Time Claim (Never claimed before) */
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => handleClaimWithSubscription('claim')}
+                          disabled={isClaiming}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-3 sm:px-4 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-blue-700 active:scale-[0.99] disabled:opacity-50 text-center leading-snug"
+                        >
+                          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          {isClaiming ? 'Sending Master Link to Email...' : 'Download with Subscription Quota'}
+                        </button>
+                        <p className="mt-2 text-center text-[11px] font-medium text-blue-900/80">
+                          ⚡ Master 4K RAW video link will be sent directly to your registered email (valid for 3 days).
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 text-xs text-amber-900">
+                        <p className="font-bold">Subscription Quota Finished ({subscriptionStatus.videoQuota}/{subscriptionStatus.videoQuota} Used)</p>
+                        <p className="text-[11px] text-amber-800">
+                          You have downloaded all videos included in your plan this cycle. You can renew your subscription or buy this video individually below.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {claimNotice && (
+                    <div className="mt-3 space-y-1 text-xs text-emerald-950 animate-fade-in">
+                      <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                        <span className="text-emerald-600 font-bold">✓</span>
+                        <span>Master Video Download Link Sent!</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-emerald-900">
+                        We have emailed the 4K master video download link to <strong className="text-emerald-950">{claimNotice.email}</strong>.
+                      </p>
+                      <p className="text-[11px] font-semibold text-emerald-700">
+                        ⏰ Link valid until {claimNotice.linkExpiry} (IST) (3 days). Please check your inbox and spam folder.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-3 text-center text-[10px] text-gray-500">
+                    — Or purchase standard individual license below —
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50/70 p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-blue-950">Download with Subscription Plan</p>
+                    <p className="text-[11px] text-blue-700">Get video download quotas included with our Monthly & Yearly plans.</p>
+                  </div>
+                  <Link
+                    to="/subscriptions"
+                    className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition"
+                  >
+                    View Plans
+                  </Link>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <button
                   type="button"

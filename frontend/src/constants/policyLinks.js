@@ -3,6 +3,7 @@ export const POLICY_LINKS = [
   { to: '/privacy-policy', label: 'Privacy Policy' },
   { to: '/refund-policy', label: 'Refund Policy' },
   { to: '/editorial-policy', label: 'Editorial Policy' },
+  { to: '/subscription-policy', label: 'Subscription Terms & Editorial Policy' },
   { to: '/license-information-policy', label: 'License Information Policy' },
   { to: '/legal-policy', label: 'Legal Policy' },
   {

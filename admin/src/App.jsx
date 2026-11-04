@@ -30,6 +30,8 @@ import PromoCodeForm from './pages/PromoCodeForm'
 import Admins from './pages/Admins'
 import AdminForm from './pages/AdminForm'
 import AccessDenied from './pages/AccessDenied'
+import Subscriptions from './pages/Subscriptions'
+import SubscriptionPlanForm from './pages/SubscriptionPlanForm'
 import Login from './pages/Login'
 
 const App = () => (
@@ -67,6 +69,9 @@ const App = () => (
           <Route path="users/:id" element={<UserDetail />} />
           <Route path="support" element={<Support />} />
           <Route path="support/:id" element={<SupportDetail />} />
+          <Route path="subscriptions" element={<Subscriptions />} />
+          <Route path="subscriptions/new" element={<SubscriptionPlanForm />} />
+          <Route path="subscriptions/:id/edit" element={<SubscriptionPlanForm />} />
           <Route path="admins" element={<Admins />} />
           <Route path="admins/new" element={<AdminForm />} />
           <Route path="admins/:id/edit" element={<AdminForm />} />

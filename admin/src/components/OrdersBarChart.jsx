@@ -265,6 +265,7 @@ export const buildMonthlyOrderStats = (orders = [], year = new Date().getFullYea
   const bucketMap = Object.fromEntries(buckets.map((bucket) => [bucket.key, bucket]))
 
   orders.forEach((order) => {
+    if (order.paymentMethod === 'subscription' || !Number(order.totalAmount || order.amount)) return
     const created = new Date(order.createdAt)
     if (Number.isNaN(created.getTime())) return
 
@@ -274,7 +275,7 @@ export const buildMonthlyOrderStats = (orders = [], year = new Date().getFullYea
 
     bucket.orders += 1
     if (order.paymentStatus === 'paid') {
-      bucket.revenue += Number(order.totalAmount) || 0
+      bucket.revenue += Number(order.totalAmount || order.amount) || 0
     }
   })
 

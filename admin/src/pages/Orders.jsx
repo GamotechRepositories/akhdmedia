@@ -482,13 +482,17 @@ const Orders = () => {
                   <OrderAmountSummary order={order} compact />
                 </td>
                 <td className={tdHideMd}>
-                  <p className="text-slate-600">Online</p>
+                  <p className="text-slate-600 font-medium">
+                    {order.paymentProvider === 'subscription' ? 'Subscription' : 'Online'}
+                  </p>
                   <span
                     className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${
-                      paymentStatusStyles[order.paymentStatus] || 'bg-slate-100 text-slate-700'
+                      order.paymentProvider === 'subscription'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : paymentStatusStyles[order.paymentStatus] || 'bg-slate-100 text-slate-700'
                     }`}
                   >
-                    {order.paymentStatus || '—'}
+                    {order.paymentProvider === 'subscription' ? 'Quota (1 Credit)' : (order.paymentStatus || '—')}
                   </span>
                 </td>
                 <td className={tdHideLg}>

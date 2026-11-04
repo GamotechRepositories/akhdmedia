@@ -39,12 +39,12 @@ const orderSchema = new mongoose.Schema(
     billingAddress: { type: billingAddressSchema, required: true },
     paymentMethod: {
       type: String,
-      enum: ['online', 'COD'],
+      enum: ['online', 'COD', 'subscription'],
       default: 'online',
     },
     paymentProvider: {
       type: String,
-      enum: ['razorpay', 'paypal', 'apple'],
+      enum: ['razorpay', 'paypal', 'apple', 'subscription'],
       default: 'razorpay',
     },
     subtotalAmount: { type: Number, required: true, min: 0, default: 0 },
@@ -71,6 +71,8 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'confirmed', 'completed'],
       default: 'confirmed',
     },
+        subscriptionId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserSubscription', default: null },
+    subscriptionPlanName: { type: String, default: '' },
     licenseEmailResendCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true },

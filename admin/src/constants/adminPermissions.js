@@ -16,6 +16,8 @@ export const ADMIN_PERMISSIONS = {
   USERS_MANAGE: 'users:manage',
   SUPPORT_MANAGE: 'support:manage',
   ADMINS_MANAGE: 'admins:manage',
+  SUBSCRIPTIONS_READ: 'subscriptions:read',
+  SUBSCRIPTIONS_WRITE: 'subscriptions:write',
 }
 
 export const hasAdminPermission = (admin, permission) => {
@@ -123,6 +125,12 @@ export const NAV_ITEMS = [
     label: 'Support',
     permission: ADMIN_PERMISSIONS.SUPPORT_MANAGE,
     description: 'Customer help requests',
+  },
+  {
+    to: '/subscriptions',
+    label: 'Subscriptions',
+    permission: ADMIN_PERMISSIONS.SUBSCRIPTIONS_READ,
+    description: 'Plans & video quotas',
   },
   {
     to: '/admins',

@@ -16,6 +16,8 @@ export const ADMIN_PERMISSIONS = {
   USERS_MANAGE: 'users:manage',
   SUPPORT_MANAGE: 'support:manage',
   ADMINS_MANAGE: 'admins:manage',
+  SUBSCRIPTIONS_READ: 'subscriptions:read',
+  SUBSCRIPTIONS_WRITE: 'subscriptions:write',
 }
 
 export const ALL_ADMIN_PERMISSIONS = Object.values(ADMIN_PERMISSIONS)
@@ -98,6 +100,14 @@ export const ADMIN_PERMISSION_GROUPS = [
     id: 'admins',
     label: 'Admin team',
     permissions: [{ key: ADMIN_PERMISSIONS.ADMINS_MANAGE, label: 'Create & manage admin accounts' }],
+  },
+  {
+    id: 'subscriptions',
+    label: 'Subscriptions',
+    permissions: [
+      { key: ADMIN_PERMISSIONS.SUBSCRIPTIONS_READ, label: 'View subscription plans & subscribers' },
+      { key: ADMIN_PERMISSIONS.SUBSCRIPTIONS_WRITE, label: 'Create & edit subscription plans, adjust subscriber quota' },
+    ],
   },
 ]
 

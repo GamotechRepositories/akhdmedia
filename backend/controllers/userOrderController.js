@@ -1,9 +1,11 @@
+import { syncPastSubscriptionClaimsToOrders } from '../services/subscriptionService.js'
 import asyncHandler from '../utils/asyncHandler.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
 import { getOrdersForUser, getUserOrderById } from '../services/orderService.js'
 import { getUserById } from '../services/userAuthService.js'
 
 export const listUserOrders = asyncHandler(async (req, res) => {
+  await syncPastSubscriptionClaimsToOrders()
   const user = await getUserById(req.user.id)
   const orders = await getOrdersForUser(user._id, user.email)
 

@@ -18,14 +18,16 @@ const formatDate = (value) => {
 
 const shortOrderNumber = (orderNumber = '') => orderNumber.slice(-8).toUpperCase();
 
-const paymentStatusClass = (status) => {
+const paymentStatusClass = (status, provider) => {
+  if (provider === 'subscription') return 'bg-blue-50 text-blue-700 border-blue-200';
   if (status === 'paid') return 'bg-green-50 text-green-700 border-green-200';
   if (status === 'pending') return 'bg-amber-50 text-amber-700 border-amber-200';
   if (status === 'failed') return 'bg-red-50 text-red-700 border-red-200';
   return 'bg-gray-50 text-gray-700 border-gray-200';
 };
 
-const paymentStatusLabel = (status) => {
+const paymentStatusLabel = (status, provider) => {
+  if (provider === 'subscription') return 'Paid · Subscription Quota';
   if (status === 'paid') return 'Paid';
   if (status === 'pending') return 'Payment pending';
   if (status === 'failed') return 'Failed';
@@ -130,9 +132,9 @@ const Orders = () => {
                           Order #{shortOrderNumber(order.orderNumber)}
                         </h2>
                         <span
-                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${paymentStatusClass(order.paymentStatus)}`}
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${paymentStatusClass(order.paymentStatus, order.paymentProvider)}`}
                         >
-                          {paymentStatusLabel(order.paymentStatus)}
+                          {paymentStatusLabel(order.paymentStatus, order.paymentProvider)}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-gray-500">{formatDate(order.createdAt)}</p>

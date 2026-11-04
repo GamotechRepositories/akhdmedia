@@ -89,6 +89,7 @@ export const emptyBucket = (key, year, month, label) => ({
 })
 
 export const applyTxnToBucket = (bucket, txn) => {
+  if (txn.paymentMethod === 'subscription' || !Number(txn.amount)) return
   bucket.totalTransactions += 1
   if (txn.transactionStatus === 'successful') {
     bucket.paidTransactions += 1
@@ -135,6 +136,7 @@ export const filterTransactionsByMonth = (transactions, monthKey) =>
   transactions
     .filter((txn) => {
       if (!txn.createdAt) return false
+      if (txn.paymentMethod === 'subscription' || !Number(txn.amount)) return false
       const date = new Date(txn.createdAt)
       if (Number.isNaN(date.getTime())) return false
       return getMonthKeyFromDate(date) === monthKey
@@ -145,6 +147,7 @@ export const filterTransactionsByDay = (transactions, dayKey) =>
   transactions
     .filter((txn) => {
       if (!txn.createdAt) return false
+      if (txn.paymentMethod === 'subscription' || !Number(txn.amount)) return false
       const date = new Date(txn.createdAt)
       if (Number.isNaN(date.getTime())) return false
       return getDayKeyFromDate(date) === dayKey
@@ -155,6 +158,7 @@ export const buildDailyRows = (monthTransactions) => {
   const buckets = new Map()
 
   for (const txn of monthTransactions) {
+    if (txn.paymentMethod === 'subscription' || !Number(txn.amount)) continue
     const date = new Date(txn.createdAt)
     const dayKey = getDayKeyFromDate(date)
 

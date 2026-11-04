@@ -5,6 +5,7 @@ import OtpDigitInputs from '../components/auth/OtpDigitInputs';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { confirmDeleteAccount, requestDeleteAccount } from '../services/authApi';
+import { subscriptionAPI } from '../services/subscriptionApi';
 
 const inputClass =
   'w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10';
@@ -93,6 +94,17 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const SubscriptionIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+    />
+  </svg>
+);
+
 const ChevronIcon = () => (
   <svg className="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -115,6 +127,14 @@ const Profile = () => {
   const [deleteCode, setDeleteCode] = useState('');
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [sub, setSub] = useState(null);
+
+
+  useEffect(() => {
+    subscriptionAPI.getMySubscription()
+      .then((res) => setSub(res.data?.subscription || null))
+      .catch(() => setSub(null));
+  }, []);
 
   useEffect(() => {
     setName(user?.name || '');
@@ -230,17 +250,17 @@ const Profile = () => {
             <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/5 blur-2xl" aria-hidden />
             <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-white/5 blur-2xl" aria-hidden />
 
-            <div className="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:text-left">
+            <div className="relative flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left">
               <div className="relative shrink-0">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white text-3xl font-bold tracking-wide text-gray-900 shadow-lg ring-4 ring-white/20 sm:h-28 sm:w-28 sm:text-4xl">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl font-bold tracking-wide text-gray-900 shadow-lg ring-4 ring-white/20 sm:h-28 sm:w-28 sm:text-4xl">
                   {getInitials(displayName)}
                 </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-xl font-bold text-white sm:text-2xl">
-                  {user?.name || 'Your account'}
+              <div className="w-full min-w-0 flex-1 px-2 sm:px-0">
+                <h2 className="text-lg font-bold leading-snug text-white break-words sm:text-2xl">
+                  {displayName || 'Your account'}
                 </h2>
-                <p className="mt-1 truncate text-sm text-gray-300">{user?.email}</p>
+                <p className="mt-1 text-xs text-gray-300 break-all sm:text-sm sm:truncate">{user?.email}</p>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                   <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-gray-200 ring-1 ring-white/15">
                     Member account
@@ -315,7 +335,7 @@ const Profile = () => {
                             </div>
                           </div>
                         ) : (
-                          <dd className="mt-1 truncate text-sm font-medium text-gray-900">{user?.name || '—'}</dd>
+                          <dd className="mt-1 break-words text-sm font-medium text-gray-900">{user?.name || '—'}</dd>
                         )}
                       </div>
                     </div>
@@ -412,7 +432,86 @@ const Profile = () => {
                 <p className="mt-0.5 text-sm text-gray-500">Jump to orders or get help</p>
 
                 <div className="mt-4 space-y-2.5">
+                                    {/* 2. All Subscription Plans (links to /subscriptions) */}
                   <Link
+                    to="/subscriptions"
+                    className="group flex items-center gap-3 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-white px-4 py-3.5 transition hover:border-blue-400 hover:shadow-sm"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                      <SubscriptionIcon />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-gray-900">
+                        Subscription Plans
+                      </span>
+                    </span>
+                    <ChevronIcon />
+                  </Link>
+
+                  {/* On Hold Notice */}
+                  {sub && sub.status === 'on_hold' && (
+                    <div className="rounded-xl border border-purple-200 bg-purple-50/90 p-4 text-xs text-purple-950">
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-lg">⏸️</span>
+                        <div className="space-y-1">
+                          <p className="font-bold text-purple-900">Subscription Paused / On Hold </p>
+                          <p className="text-purple-800 leading-relaxed">
+                            Your subscription has been placed on hold by the administrator. Video downloads are temporarily paused. 
+                            <strong> Your remaining days are protected and will be automatically extended once active.</strong>
+                          </p>
+                          {sub.adminReason && (
+                            <p className="text-[11px] font-semibold text-purple-900 bg-purple-100/80 px-2 py-1 rounded inline-block">
+                              Admin Note: {sub.adminReason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Under Review Notice */}
+                  {sub && sub.status === 'under_review' && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-xs text-amber-950">
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-lg">🔍</span>
+                        <div className="space-y-1">
+                          <p className="font-bold text-amber-900">Account Under Review </p>
+                          <p className="text-amber-800 leading-relaxed">
+                            Your subscription is currently under admin review. Downloads are locked during investigation. Plan days continue to elapse during this period.
+                          </p>
+                          {sub.adminReason && (
+                            <p className="text-[11px] font-semibold text-amber-900 bg-amber-100/80 px-2 py-1 rounded inline-block">
+                              Reason: {sub.adminReason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cancelled Notice */}
+                  {sub && sub.status === 'cancelled' && (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50/90 p-4 text-xs text-rose-950">
+                      <div className="flex items-start gap-2.5">
+                        <span className="text-lg">🚫</span>
+                        <div className="space-y-1">
+                          <p className="font-bold text-rose-900">Subscription Cancelled </p>
+                          <p className="text-rose-800 leading-relaxed">
+                            Your subscription has been cancelled and downloading access has been revoked.
+                          </p>
+                          {sub.adminReason && (
+                            <p className="text-[11px] font-semibold text-rose-900 bg-rose-100/80 px-2 py-1 rounded inline-block">
+                              Reason: {sub.adminReason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+
+
+<Link
                     to="/orders"
                     className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5 transition hover:border-gray-300 hover:bg-gray-50"
                   >
@@ -421,7 +520,6 @@ const Profile = () => {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-gray-900">My Orders</span>
-                      <span className="block text-xs text-gray-500">View purchases & downloads</span>
                     </span>
                     <ChevronIcon />
                   </Link>
@@ -435,10 +533,29 @@ const Profile = () => {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-gray-900">Support</span>
-                      <span className="block text-xs text-gray-500">Contact help & tickets</span>
                     </span>
                     <ChevronIcon />
                   </Link>
+
+                  {/* 1. Active Purchased Subscription (links to dedicated /active-subscriptions page) */}
+                  {sub && (
+                    <Link
+                      to="/active-subscriptions"
+                      className="group flex items-center gap-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-white px-4 py-3.5 transition hover:border-emerald-400 hover:shadow-sm"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-gray-900">
+                          Active Subscriptions
+                        </span>
+                      </span>
+                      <ChevronIcon />
+                    </Link>
+                  )}
 
                   {!editingField && (
                     <button
@@ -451,7 +568,6 @@ const Profile = () => {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold text-gray-900">Log out</span>
-                        <span className="block text-xs text-gray-500">Sign out of this device</span>
                       </span>
                       <ChevronIcon />
                     </button>
@@ -582,6 +698,8 @@ const Profile = () => {
           </div>
         </div>
       )}
+
+
 
       <AlertModal
         open={Boolean(error)}

@@ -44,11 +44,54 @@ const getAnyVideoDelivery = (product) => {
 }
 
 /** Video products always deliver the master file — quality tier is licensing only */
-const getProductDelivery = (product, imageSize) => {
+export const getProductDelivery = (product, imageSize) => {
   if (product.mediaType === 'video') {
     return getAnyVideoDelivery(product) || getTierDelivery(product, imageSize)
   }
   return getTierDelivery(product, imageSize)
+}
+
+export const getProductDirectDownloads = async (product, imageSize = '') => {
+  const tier = getProductDelivery(product, imageSize)
+  if (!tier) {
+    return { files: [], message: 'Delivery file not yet available for this product' }
+  }
+
+  const files = []
+
+  if (tier.videoKey) {
+    const downloadName = resolveDownloadFilename(
+      tier.videoFilename,
+      tier.videoKey,
+      `${product.name}-${imageSize || 'original'}.mp4`,
+    )
+    const url = await getPrivateDownloadUrl(tier.videoKey, downloadName)
+    files.push({
+      type: 'video',
+      label: downloadName,
+      url,
+    })
+  }
+
+  if (tier.imageKeys?.length) {
+    for (let i = 0; i < tier.imageKeys.length; i += 1) {
+      const imageKey = tier.imageKeys[i]
+      if (!imageKey) continue
+      const downloadName = resolveDownloadFilename(
+        tier.imageFilenames?.[i],
+        imageKey,
+        `${product.name}-${imageSize || 'image'}-${i + 1}.jpg`,
+      )
+      const url = await getPrivateDownloadUrl(imageKey, downloadName)
+      files.push({
+        type: 'image',
+        label: downloadName,
+        url,
+      })
+    }
+  }
+
+  return { files }
 }
 
 export const getOrderItemDownloads = async (order) => {

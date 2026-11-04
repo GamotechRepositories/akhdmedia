@@ -82,6 +82,8 @@ export const formatOrderResponse = (order) => {
     appleProductId: order.appleProductId || '',
     appleTransactionId: order.appleTransactionId || '',
     appleOriginalTransactionId: order.appleOriginalTransactionId || '',
+    subscriptionId: order.subscriptionId ? order.subscriptionId.toString() : null,
+    subscriptionPlanName: order.subscriptionPlanName || '',
     licenseEmailResendCount,
     maxLicenseEmailResends: MAX_LICENSE_EMAIL_RESENDS,
     licenseEmailResendsRemaining: resendsRemaining,

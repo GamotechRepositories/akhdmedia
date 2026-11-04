@@ -80,3 +80,52 @@ export const canAccessOrderDownloads = (order) => {
   if (!order.paymentStatus && order.status === 'confirmed') return true
   return false
 }
+
+
+export const createRazorpayPlan = async ({ period = 'monthly', interval = 1, name, amount, currency = 'INR', description = '' }) => {
+  const razorpay = getRazorpayClient()
+  return razorpay.plans.create({
+    period,
+    interval: Number(interval) || 1,
+    item: {
+      name: String(name).slice(0, 40),
+      amount: Math.round(Number(amount) * 100),
+      currency: currency || 'INR',
+      description: String(description || name).slice(0, 100),
+    },
+  })
+}
+
+export const createRazorpaySubscription = async ({ planId, totalCount = 60, customerNotify = 1, notes = {} }) => {
+  const razorpay = getRazorpayClient()
+  return razorpay.subscriptions.create({
+    plan_id: planId,
+    total_count: Number(totalCount) || 60,
+    quantity: 1,
+    customer_notify: customerNotify ? 1 : 0,
+    notes,
+  })
+}
+
+export const cancelRazorpaySubscription = async (subscriptionId, cancelAtCycleEnd = true) => {
+  const razorpay = getRazorpayClient()
+  return razorpay.subscriptions.cancel(subscriptionId, Boolean(cancelAtCycleEnd))
+}
+
+export const verifyRazorpaySubscriptionSignature = ({ razorpayPaymentId, razorpaySubscriptionId, razorpaySignature }) => {
+  const keySecret = process.env.RAZORPAY_KEY_SECRET
+  if (!keySecret) {
+    throw new AppError('Online payment is not configured. Please contact support.', 503)
+  }
+
+  const body = `${razorpayPaymentId}|${razorpaySubscriptionId}`
+  const expectedSignature = crypto.createHmac('sha256', keySecret).update(body).digest('hex')
+  return expectedSignature === razorpaySignature
+}
+
+export const verifyRazorpayWebhookSignature = (bodyText, signature, webhookSecret) => {
+  const secret = webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET
+  if (!secret || !signature) return false
+  const expectedSignature = crypto.createHmac('sha256', secret).update(bodyText).digest('hex')
+  return expectedSignature === signature
+}

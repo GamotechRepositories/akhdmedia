@@ -62,6 +62,7 @@ export const openRazorpayCheckout = async ({
   amount,
   currency,
   orderId,
+  subscriptionId,
   name,
   description,
   prefill,
@@ -77,14 +78,11 @@ export const openRazorpayCheckout = async ({
   return new Promise((resolve, reject) => {
     const options = {
       key,
-      amount,
-      currency,
       name,
       description,
-      order_id: orderId,
       prefill,
       theme: { color: '#111827' },
-      method: METHOD_PRESETS[preferredMethod] || METHOD_PRESETS.upi,
+      ...((preferredMethod && METHOD_PRESETS[preferredMethod]) ? { method: METHOD_PRESETS[preferredMethod] } : {}),
       ...(isMobileDevice() && preferredMethod === 'upi' ? { webview_intent: true } : {}),
       handler: async (response) => {
         try {
@@ -100,6 +98,19 @@ export const openRazorpayCheckout = async ({
           reject(new Error('Payment cancelled'))
         },
       },
+    }
+
+    if (subscriptionId) {
+      options.subscription_id = subscriptionId
+    }
+    if (orderId) {
+      options.order_id = orderId
+    }
+    if (amount) {
+      options.amount = amount
+    }
+    if (currency) {
+      options.currency = currency
     }
 
     const razorpay = new window.Razorpay(options)

@@ -4,7 +4,7 @@ import { migrateLegacyAdminsToCollection } from './migrateAdmins.js'
 
 const SALT_ROUNDS = 10
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@akhdmedia.com'
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin@2026'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin@123'
 
 const seedAdmin = async () => {
   const migrated = await migrateLegacyAdminsToCollection()
@@ -12,22 +12,24 @@ const seedAdmin = async () => {
     console.log(`Migrated ${migrated} admin account(s) from users → admins collection`)
   }
 
+  const existing = await Admin.findOne({ email: ADMIN_EMAIL })
+  if (existing) {
+    // Admin already exists, NEVER overwrite their password!
+    return
+  }
+
   const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, SALT_ROUNDS)
 
-  await Admin.findOneAndUpdate(
-    { email: ADMIN_EMAIL },
-    {
-      email: ADMIN_EMAIL,
-      password: hashedPassword,
-      name: 'AKHD MEDIA & CO',
-      phone: '0000000000',
-      isSuperAdmin: true,
-      permissions: [],
-    },
-    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-  )
+  await Admin.create({
+    email: ADMIN_EMAIL,
+    password: hashedPassword,
+    name: 'AKHD MEDIA & CO',
+    phone: '0000000000',
+    isSuperAdmin: true,
+    permissions: [],
+  })
 
-  console.log(`Admin seeded in admins collection: ${ADMIN_EMAIL}`)
+  console.log(`Initial admin created: ${ADMIN_EMAIL}`)
 }
 
 export default seedAdmin

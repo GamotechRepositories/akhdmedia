@@ -12,6 +12,10 @@ import {
   buildLicenseCertificateBuffer,
   getLicenseCertificateFilename,
 } from './licenseCertificateService.js'
+import {
+  buildSubscriptionCertificateBuffer,
+  getSubscriptionCertificateFilename,
+} from './subscriptionCertificateService.js'
 
 let resendClient = null
 
@@ -77,7 +81,7 @@ const brandParagraph = (html) =>
 const brandSectionLabel = (label) =>
   `<p style="margin:24px 0 8px;font-size:13px;font-weight:600;color:#111827;letter-spacing:0.04em;text-transform:uppercase;">${label}</p>`
 
-const formatLinkExpiry = (fromDate = new Date()) => {
+export const formatLinkExpiry = (fromDate = new Date()) => {
   const expiresAt = new Date(fromDate.getTime() + SIGNED_URL_EXPIRY_SECONDS * 1000)
   return expiresAt.toLocaleString('en-IN', {
     day: 'numeric',
@@ -859,5 +863,400 @@ export const sendAdminBroadcastEmail = async ({
     sentCount,
     failedCount: failed.length,
     failed,
+  }
+}
+
+
+export const sendSubscriptionConfirmationEmail = async ({ user, subscription, plan }) => {
+  const customerEmail = user?.email?.trim()
+  if (!customerEmail) {
+    console.warn('[email] Skipped subscription email — no customer email')
+    return { sent: false, reason: 'missing_email' }
+  }
+
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — subscription email not sent')
+    return { sent: false, reason: 'resend_not_configured' }
+  }
+
+  const customerName = user?.name || 'Valued Subscriber'
+  const planName = plan?.name || subscription?.planSnapshot?.name || 'Editorial Video Plan'
+  const interval = (plan?.interval || subscription?.planSnapshot?.interval || 'monthly').toUpperCase()
+  const currentYear = new Date().getFullYear()
+
+  const subtotal = Number(subscription?.subtotal || subscription?.planSnapshot?.subtotal || subscription?.price || 0)
+  const gstPercentage = Number(subscription?.gstPercentage || subscription?.planSnapshot?.gstPercentage || 0)
+  const gstAmount = Number(subscription?.gstAmount || subscription?.planSnapshot?.gstAmount || 0)
+  const totalAmount = Number(subscription?.totalAmount || subscription?.amountPaid || (subtotal + gstAmount))
+
+  const purchaseDate = new Date(subscription?.startDate || Date.now()).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+  const expiryDate = new Date(subscription?.endDate || Date.now()).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+  const whatsappNumber = subscription?.whatsappNumber || user?.phone || 'Provided Number'
+  const txnId = subscription?.razorpayPaymentId || subscription?.razorpaySubscriptionId || subscription?._id?.toString() || '—'
+  const videoQuota = subscription?.videoQuota || plan?.videoQuota || 20
+
+  let invoiceBuffer = null
+  let invoiceFilename = 'subscription-tax-invoice.pdf'
+  try {
+    const plainSub = subscription?.toObject ? subscription.toObject() : (subscription || {})
+    const subForPdf = {
+      ...plainSub,
+      _id: subscription?._id || plainSub._id,
+      planSnapshot: plainSub.planSnapshot || {
+        name: planName,
+        interval: interval.toLowerCase(),
+        videoQuota,
+        subtotal,
+        gstPercentage,
+        gstAmount,
+        totalPayable: totalAmount,
+        customerName,
+      },
+      videoQuota: plainSub.videoQuota ?? videoQuota,
+      subtotal: plainSub.subtotal ?? subtotal,
+      gstAmount: plainSub.gstAmount ?? gstAmount,
+      totalAmount: plainSub.totalAmount ?? totalAmount,
+      gstPercentage: plainSub.gstPercentage ?? gstPercentage,
+      startDate: plainSub.startDate || subscription?.startDate || new Date(),
+      endDate: plainSub.endDate || subscription?.endDate,
+      whatsappNumber: plainSub.whatsappNumber || whatsappNumber,
+      razorpayPaymentId: plainSub.razorpayPaymentId || subscription?.razorpayPaymentId,
+      razorpaySubscriptionId: plainSub.razorpaySubscriptionId || subscription?.razorpaySubscriptionId,
+      paymentProvider: plainSub.paymentProvider || subscription?.paymentProvider,
+    }
+    invoiceFilename = getSubscriptionCertificateFilename(subForPdf)
+    invoiceBuffer = buildSubscriptionCertificateBuffer(subForPdf, user)
+  } catch (pdfErr) {
+    console.error('[email] Failed generating subscription invoice PDF for attachment:', pdfErr.message)
+  }
+
+  const bodyHtml = `
+    <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#111827;">
+      Subscription Confirmed &amp; Payment Received!
+    </h1>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#374151;">
+      Hi ${escapeHtml(customerName)},
+    </p>
+
+    <!-- WhatsApp Group Alert Banner -->
+    <div style="margin:0 0 24px;padding:18px 20px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;">
+      <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#065f46;">
+        💬 WhatsApp Group Activation in Progress
+      </p>
+      <p style="margin:0;font-size:14px;line-height:1.7;color:#047857;">
+        <strong>We have successfully received your payment.</strong> In the next few hours a separate WhatsApp group will be created for you where you will keep getting all the 4K UHD videos on a daily basis.
+      </p>
+      <p style="margin:12px 0 0;font-size:13px;color:#065f46;">
+        Registered WhatsApp Mobile Number: <strong style="font-family:monospace;font-size:14px;">${escapeHtml(whatsappNumber)}</strong>
+      </p>
+    </div>
+
+    <!-- Bill / Tax Receipt Breakdown -->
+    <p style="margin:24px 0 10px;font-size:13px;font-weight:700;color:#111827;letter-spacing:0.04em;text-transform:uppercase;">
+      Subscription Tax Invoice / Bill Receipt
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#f9fafb;">
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Plan</td>
+        <td align="right" style="padding:12px 16px;font-size:14px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;">${escapeHtml(planName)} (${escapeHtml(interval)})</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Billing Cycle &amp; Validity</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;color:#111827;border-bottom:1px solid #e5e7eb;">${purchaseDate} to ${expiryDate}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Website Video Downloads</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;font-weight:600;color:#2563eb;border-bottom:1px solid #e5e7eb;">${videoQuota} Full-Resolution Videos</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Subtotal (Base Price)</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;color:#111827;border-bottom:1px solid #e5e7eb;">₹${subtotal.toLocaleString('en-IN')}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">GST (${gstPercentage}%)</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;color:#111827;border-bottom:1px solid #e5e7eb;">₹${gstAmount.toLocaleString('en-IN')}</td>
+      </tr>
+      <tr style="background:#f3f4f6;">
+        <td style="padding:14px 16px;font-size:14px;font-weight:700;color:#111827;">Total Paid</td>
+        <td align="right" style="padding:14px 16px;font-size:18px;font-weight:800;color:#111827;">₹${totalAmount.toLocaleString('en-IN')}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 16px;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;">Payment ID / Txn Ref</td>
+        <td align="right" style="padding:10px 16px;font-size:12px;font-family:monospace;color:#6b7280;border-top:1px solid #e5e7eb;">${escapeHtml(txnId)}</td>
+      </tr>
+    </table>
+
+    <div style="margin:0 0 20px;padding:14px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;line-height:1.6;color:#334155;">
+      📄 <strong>Official Tax Invoice Attached:</strong> Your formal GST tax invoice and membership certificate (<code>${escapeHtml(invoiceFilename)}</code>) has been attached to this email as a PDF for your accounting and tax records.
+    </div>
+
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#4b5563;">
+      You can now log in to your account at any time to download editorial clips, review your quota, or manage your membership.
+    </p>
+
+    <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">
+      Need assistance or need to change your WhatsApp group number? Simply reply to this email or reach us at <a href="mailto:support@akhdmedia.com" style="color:#2563eb;">support@akhdmedia.com</a>.
+    </p>
+  `
+
+  const html = wrapBrandEmail({
+    title: `Subscription Receipt - ${planName}`,
+    bodyHtml,
+    currentYear,
+  })
+
+  const text = [
+    `Hi ${customerName},`,
+    '',
+    `We have successfully received your payment for ${planName} (${interval}).`,
+    '',
+    'WHATSAPP GROUP ACTIVATION:',
+    'In the next few hours a separate WhatsApp group will be created for you where you will keep getting all the 4K UHD videos on a daily basis.',
+    `WhatsApp Number: ${whatsappNumber}`,
+    '',
+    'BILL & RECEIPT BREAKDOWN:',
+    `Plan: ${planName} (${interval})`,
+    `Validity: ${purchaseDate} to ${expiryDate}`,
+    `Downloads: ${videoQuota} Videos Included`,
+    `Subtotal: ₹${subtotal.toLocaleString('en-IN')}`,
+    `GST (${gstPercentage}%): ₹${gstAmount.toLocaleString('en-IN')}`,
+    `Total Paid: ₹${totalAmount.toLocaleString('en-IN')}`,
+    `Txn ID: ${txnId}`,
+    '',
+    'ATTACHED DOCUMENT:',
+    invoiceFilename,
+    '',
+    `${BRAND_NAME} Team`,
+  ].join('\n')
+
+  const attachments = invoiceBuffer
+    ? [
+        {
+          filename: invoiceFilename,
+          content: invoiceBuffer.toString('base64'),
+        },
+      ]
+    : []
+
+  try {
+    const result = await resend.emails.send({
+      from: getResendFrom(),
+      to: [customerEmail],
+      subject: `🎉 Payment Received & Subscription Activated - ${planName} | ${BRAND_NAME}`,
+      html,
+      text,
+      ...(attachments.length ? { attachments } : {}),
+    })
+    console.log('[email] Subscription confirmation email sent (with invoice attachment):', result?.data?.id || result?.id)
+    return { sent: true, id: result?.data?.id || result?.id }
+  } catch (err) {
+    console.error('[email] Failed to send subscription confirmation email:', err.message)
+    return { sent: false, error: err.message }
+  }
+}
+
+
+export const sendSubscriptionVideoDownloadEmail = async ({
+  user,
+  product,
+  files = [],
+  imageSize = '',
+  licenseNumber = '',
+  orderNumber = '',
+  linkExpiry,
+  quotaRemaining,
+  totalQuota,
+  planName = 'Active Plan',
+  isRedownload = false,
+}) => {
+  const customerEmail = user?.email?.trim()
+  if (!customerEmail) {
+    console.warn('[email] Skipped subscription video claim email — no customer email')
+    return { sent: false, reason: 'missing_email' }
+  }
+
+  const resend = getResendClient()
+  if (!resend || !isEmailConfigured()) {
+    console.warn('[email] Resend not configured — subscription video claim email not sent')
+    return { sent: false, reason: 'resend_not_configured' }
+  }
+
+  const customerName = user.name || customerEmail.split('@')[0] || 'Subscriber'
+  const currentYear = new Date().getFullYear()
+  const claimDate = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+  const videoFiles = files.filter((f) => f.type === 'video')
+  const primaryVideo = videoFiles[0] || files[0]
+
+  if (!primaryVideo?.url) {
+    console.warn(`[email] Skipped subscription video claim email for "${product.name}" — no download URL available`)
+    return { sent: false, reason: 'no_download_url' }
+  }
+
+  const subject = isRedownload
+    ? `🎬 Fresh Master Video Download Link (${product.name}) | ${BRAND_NAME}`
+    : `🎬 Your Master Video Download Link (${product.name}) - Subscription Quota | ${BRAND_NAME}`
+
+  const bodyHtml = `
+    <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;line-height:1.3;color:#111827;">
+      ${isRedownload ? 'Fresh Master Video Download Link' : 'Your Master Video is Ready for Download!'}
+    </h1>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#374151;">
+      Hi ${escapeHtml(customerName)},
+    </p>
+
+    <!-- Subscription Quota Notice Card -->
+    <div style="margin:0 0 24px;padding:18px 20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e40af;">
+        ⚡ Claimed via Active Subscription Quota
+      </p>
+      <p style="margin:0;font-size:14px;line-height:1.6;color:#1e3a8a;">
+        ${
+          isRedownload
+            ? `You previously unlocked this video under your <strong>${escapeHtml(planName)}</strong> membership. No extra credits were deducted.`
+            : `You have successfully claimed this master video using <strong>1 download credit</strong> from your <strong>${escapeHtml(planName)}</strong> membership.`
+        }
+      </p>
+      <div style="margin:12px 0 0;padding-top:10px;border-top:1px dashed #93c5fd;font-size:13px;color:#1e40af;">
+        <strong>Subscription Quota Remaining:</strong>
+        <span style="display:inline-block;margin-left:6px;padding:2px 10px;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:700;font-size:12px;">
+          ${quotaRemaining} of ${totalQuota} Videos Left
+        </span>
+      </div>
+    </div>
+
+    <!-- Video Details Table -->
+    <p style="margin:24px 0 10px;font-size:13px;font-weight:700;color:#111827;letter-spacing:0.04em;text-transform:uppercase;">
+      Video Specifications
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#f9fafb;">
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;width:40%;">Video Title</td>
+        <td align="right" style="padding:12px 16px;font-size:14px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;">${escapeHtml(product.name)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Clip ID</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;font-family:monospace;color:#111827;border-bottom:1px solid #e5e7eb;">${escapeHtml(product.clipId || '—')}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">License Number</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;font-family:monospace;color:#111827;border-bottom:1px solid #e5e7eb;">${escapeHtml(licenseNumber || '—')}</td>
+      </tr>
+      ${orderNumber ? `<tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Order Reference</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;font-family:monospace;color:#111827;border-bottom:1px solid #e5e7eb;">#${escapeHtml(orderNumber.slice(-8).toUpperCase())}</td>
+      </tr>` : ''}
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Resolution / Quality</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;font-weight:600;color:#2563eb;border-bottom:1px solid #e5e7eb;">4K-UHD RAW Master ${imageSize ? `(${escapeHtml(imageSize)})` : ''}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#6b7280;">Date Claimed</td>
+        <td align="right" style="padding:12px 16px;font-size:13px;color:#111827;">${claimDate}</td>
+      </tr>
+    </table>
+
+    <!-- Download Section -->
+    <p style="margin:24px 0 10px;font-size:13px;font-weight:700;color:#111827;letter-spacing:0.04em;text-transform:uppercase;">
+      Download Master File
+    </p>
+    ${files.map((file) => `
+      <div style="margin:0 0 16px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+          <tr>
+            <td align="center" style="border-radius:8px;background:#2563eb;">
+              <a
+                href="${escapeHtml(file.url)}"
+                style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:8px;background:#2563eb;"
+              >
+                ${file.type === 'video' ? '⬇ Download 4K Master Video' : `⬇ Download ${escapeHtml(file.label || 'File')}`}
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0;font-size:12px;color:#6b7280;word-break:break-all;">
+          File: ${escapeHtml(file.label || product.name)}
+        </p>
+      </div>
+    `).join('')}
+
+    <!-- Link Expiry Notice -->
+    <div style="margin:20px 0 24px;padding:14px 18px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#92400e;">
+        ⏰ <strong>Security Notice / Link Validity:</strong> This master video download link is time-limited and valid until <strong>${escapeHtml(linkExpiry)} (IST)</strong> (3 days / 72 hours). Please download and save your master video locally before this time.
+      </p>
+    </div>
+
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4b5563;">
+      Need to re-download after expiration? Simply return to this video's page on <strong>${BRAND_NAME}</strong> while your subscription remains active to download again using 1 credit from your quota.
+    </p>
+
+    <p style="margin:20px 0 0;font-size:14px;line-height:1.7;color:#111827;">
+      Warm regards,<br>
+      <strong>${BRAND_NAME} Team</strong>
+    </p>
+  `
+
+  const html = wrapBrandEmail({
+    title: `Master Video Download - ${product.name}`,
+    bodyHtml,
+    currentYear,
+  })
+
+  const textLines = [
+    `Hi ${customerName},`,
+    '',
+    isRedownload
+      ? `Here is your fresh master video download link for "${product.name}".`
+      : `Your master video "${product.name}" is ready for download!`,
+    '',
+    'SUBSCRIPTION QUOTA:',
+    isRedownload
+      ? `Unlocked under your active plan: ${planName} (Zero credit re-download)`
+      : `Claimed with 1 credit from your plan: ${planName}`,
+    `Remaining Quota: ${quotaRemaining} of ${totalQuota} videos left`,
+    '',
+    'VIDEO DETAILS:',
+    `Title: ${product.name}`,
+    `Clip ID: ${product.clipId || '—'}`,
+    `Format: 4K-UHD RAW Master ${imageSize ? `(${imageSize})` : ''}`,
+    `Date Claimed: ${claimDate}`,
+    '',
+    'DOWNLOAD LINKS:',
+    ...files.map((f) => `${f.type === 'video' ? 'Master Video' : f.label}: ${f.url}`),
+    '',
+    `IMPORTANT: This download link expires on ${linkExpiry} (IST) (3 days / 72 hours).`,
+    '',
+    `Warm regards,`,
+    `${BRAND_NAME} Team`,
+  ]
+
+  try {
+    const result = await resend.emails.send({
+      from: getResendFrom(),
+      to: [customerEmail],
+      subject,
+      html,
+      text: textLines.join('\n'),
+    })
+    console.log('[email] Subscription video download email sent successfully:', result?.data?.id || result?.id)
+    return { sent: true, id: result?.data?.id || result?.id }
+  } catch (err) {
+    console.error('[email] Failed to send subscription video download email:', err.message)
+    return { sent: false, error: err.message }
   }
 }

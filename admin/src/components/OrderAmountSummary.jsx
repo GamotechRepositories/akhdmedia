@@ -13,6 +13,38 @@ const OrderAmountSummary = ({
   className = '',
   compact = false,
 }) => {
+  if (order?.paymentProvider === 'subscription') {
+    if (compact) {
+      return (
+        <div className={`text-right text-sm ${className}`.trim()}>
+          <p className="text-sm font-bold text-slate-900">₹0</p>
+          <span className="mt-0.5 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
+            Subscription Quota
+          </span>
+        </div>
+      )
+    }
+
+    return (
+      <div className={`space-y-2 text-sm ${className}`.trim()}>
+        <div className="flex justify-between gap-4">
+          <span className="text-slate-600">Payment type</span>
+          <span className="font-semibold text-blue-700">Subscription Quota (1 Credit)</span>
+        </div>
+        {order.subscriptionPlanName && (
+          <div className="flex justify-between gap-4">
+            <span className="text-slate-600">Plan</span>
+            <span className="font-medium text-slate-900">{order.subscriptionPlanName}</span>
+          </div>
+        )}
+        <div className="flex justify-between gap-4 border-t border-slate-100 pt-2">
+          <span className="font-semibold text-slate-900">{totalLabel}</span>
+          <span className="font-bold text-slate-900">₹0</span>
+        </div>
+      </div>
+    )
+  }
+
   const { subtotal, taxableSubtotal, gst, promoCode, discountAmount, total } = getOrderAmountBreakdown(
     order || {},
   )

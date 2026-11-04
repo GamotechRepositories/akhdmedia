@@ -77,6 +77,7 @@ const RevenueDayDetail = () => {
     }
 
     for (const txn of dayTransactions) {
+      if (txn.paymentMethod === 'subscription' || !Number(txn.amount)) continue
       summary.totalTransactions += 1
       if (txn.transactionStatus === 'successful') {
         summary.paidTransactions += 1

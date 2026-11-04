@@ -20,6 +20,8 @@ import adminSiteContentRoutes from './adminSiteContent.js'
 import adminActorRoutes from './adminActors.js'
 import adminPromoCodeRoutes from './adminPromoCodes.js'
 import adminTeamRoutes from './adminTeam.js'
+import subscriptionRoutes from './subscriptions.js'
+import adminSubscriptionRoutes from './adminSubscriptions.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
 import { requirePermission } from '../middleware/requirePermission.js'
 import { ADMIN_PERMISSIONS } from '../constants/adminPermissions.js'
@@ -101,6 +103,8 @@ router.use(
   ),
   uploadRoutes,
 )
+router.use('/subscriptions', subscriptionRoutes)
+router.use('/admin/subscriptions', requireAdmin, adminSubscriptionRoutes)
 router.use('/files', fileRoutes)
 
 export default router

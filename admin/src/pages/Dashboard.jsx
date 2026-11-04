@@ -182,6 +182,7 @@ const Dashboard = () => {
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
+  const [transactions, setTransactions] = useState([])
   const [transactionSummary, setTransactionSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -200,6 +201,7 @@ const Dashboard = () => {
       setCategories(categoriesRes.data || [])
       setProducts(productsRes.data || [])
       setOrders(ordersRes.data.data?.orders || [])
+      setTransactions(transactionsRes.data.data?.transactions || [])
       setTransactionSummary(transactionsRes.data.data?.summary || null)
     } catch (error) {
       setMessage(error.message)
@@ -214,34 +216,40 @@ const Dashboard = () => {
 
   const chartYearOptions = useMemo(() => getChartYearOptions(), [])
 
+  // Combined sales transactions (video purchases + subscriptions) for accurate revenue & analytics
+  const allSales = useMemo(() => {
+    if (transactions && transactions.length > 0) return transactions
+    return orders
+  }, [transactions, orders])
+
   const monthlyStats = useMemo(
-    () => buildMonthlyOrderStats(orders, chartYear),
-    [orders, chartYear],
+    () => buildMonthlyOrderStats(allSales, chartYear),
+    [allSales, chartYear],
   )
 
   const paidOrders = useMemo(
-    () => orders.filter((order) => order.paymentStatus === 'paid').length,
-    [orders],
+    () => allSales.filter((o) => o.paymentStatus === 'paid' || o.isSuccessful).length,
+    [allSales],
   )
 
   const pendingOrders = useMemo(
-    () => orders.filter((order) => order.paymentStatus === 'pending').length,
-    [orders],
+    () => allSales.filter((o) => o.paymentStatus === 'pending' || (!o.isSuccessful && o.paymentStatus !== 'failed')).length,
+    [allSales],
   )
 
   const todayStats = useMemo(() => {
-    const todayOrders = orders.filter((order) => isToday(order.createdAt))
-    const todayPaidOrders = todayOrders.filter((order) => order.paymentStatus === 'paid')
+    const todaySales = allSales.filter((o) => isToday(o.createdAt))
+    const todayPaidSales = todaySales.filter((o) => o.paymentStatus === 'paid' || o.isSuccessful)
 
     return {
-      orderCount: todayOrders.length,
-      paidCount: todayPaidOrders.length,
-      revenue: todayPaidOrders.reduce(
-        (sum, order) => sum + (Number(order.totalAmount) || 0),
+      orderCount: todaySales.length,
+      paidCount: todayPaidSales.length,
+      revenue: todayPaidSales.reduce(
+        (sum, item) => sum + (Number(item.totalAmount || item.amount) || 0),
         0,
       ),
     }
-  }, [orders])
+  }, [allSales])
 
   const activeProducts = useMemo(
     () => products.filter((product) => product.isActive).length,
@@ -316,7 +324,7 @@ const Dashboard = () => {
           <StatCard
             label="Today's revenue"
             value={loading ? '—' : formatCurrency(todayStats.revenue)}
-            hint={`${todayStats.paidCount} paid order${todayStats.paidCount === 1 ? '' : 's'} today`}
+            hint={`${todayStats.paidCount} paid transaction${todayStats.paidCount === 1 ? '' : 's'} today`}
             accent="bg-teal-500"
             to="/transactions"
             linkLabel="View transactions"

@@ -1,3 +1,4 @@
+import { syncPastSubscriptionClaimsToOrders } from '../services/subscriptionService.js'
 import asyncHandler from '../utils/asyncHandler.js'
 import Order from '../models/Order.js'
 import { formatOrderResponse } from '../utils/formatCart.js'
@@ -308,6 +309,7 @@ export const resendOrderLicenseEmail = asyncHandler(async (req, res) => {
 })
 
 export const listAdminOrders = asyncHandler(async (req, res) => {
+  await syncPastSubscriptionClaimsToOrders()
   const pagination = parsePageLimit(req.query)
 
   if (pagination) {

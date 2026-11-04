@@ -16,7 +16,6 @@ import { getBunnyCdnUrl, getBunnyStorageZoneName, isBunnyEnabled } from './confi
 import apiRoutes from './routes/index.js'
 import shareRoutes from './routes/share.js'
 import errorHandler from './middleware/errorHandler.js'
-import seedAdmin from './seed/seedAdmin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -61,7 +60,6 @@ app.use(errorHandler)
 
 const startServer = async () => {
   await connectDB()
-  await seedAdmin()
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)

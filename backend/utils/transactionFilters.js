@@ -19,6 +19,8 @@ const TRANSACTION_SEARCH_FIELDS = [
 export const buildTransactionListFilter = (query = {}) => {
   const filter = {
     paymentStatus: { $in: ['paid', 'invoice', 'failed'] },
+    paymentMethod: { $ne: 'subscription' },
+    totalAmount: { $gt: 0 },
   }
   const status = String(query.status || 'all')
 

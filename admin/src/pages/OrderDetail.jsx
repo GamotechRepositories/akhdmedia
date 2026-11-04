@@ -201,15 +201,17 @@ const OrderDetail = () => {
             <div>
               <dt className="text-slate-500">Payment provider</dt>
               <dd className="font-medium capitalize text-slate-900">
-                {order.paymentProvider || 'razorpay'}
+                {order.paymentProvider === 'subscription' ? 'Subscription Quota' : (order.paymentProvider || 'razorpay')}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Transaction ID</dt>
+              <dt className="text-slate-500">Transaction ID / Reference</dt>
               <dd className="break-all font-mono text-xs text-slate-900">
-                {(order.paymentProvider === 'paypal'
-                  ? order.paypalCaptureId || order.paypalOrderId
-                  : order.razorpayPaymentId) || '—'}
+                {order.paymentProvider === 'subscription'
+                  ? (order.subscriptionPlanName ? `${order.subscriptionPlanName} (1 Credit)` : 'Subscription Quota')
+                  : ((order.paymentProvider === 'paypal'
+                    ? order.paypalCaptureId || order.paypalOrderId
+                    : order.razorpayPaymentId) || '—')}
               </dd>
             </div>
             {order.paymentProvider === 'paypal' ? (

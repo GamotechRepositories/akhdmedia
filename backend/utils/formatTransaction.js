@@ -69,3 +69,69 @@ export const formatTransactionResponse = (order) => {
     updatedAt: order.updatedAt,
   }
 }
+
+
+export const formatSubscriptionTransactionResponse = (sub) => {
+  const isPaid = sub.paymentStatus === 'paid' || sub.status === 'active'
+  const isFailed = sub.status === 'cancelled' || sub.paymentStatus === 'failed'
+
+  const amount = Number(sub.amountPaid ?? sub.totalAmount ?? sub.price ?? 0)
+  const subtotal = Number(sub.subtotal ?? sub.planSnapshot?.subtotal ?? sub.price ?? 0)
+  const gstAmount = Number(sub.gstAmount ?? sub.planSnapshot?.gstAmount ?? 0)
+  const planName = sub.planSnapshot?.name || sub.planId?.name || 'Subscription Plan'
+  const interval = sub.planSnapshot?.interval || sub.planId?.interval || 'monthly'
+  const idStr = sub._id.toString()
+
+  let txnStatus = 'pending'
+  let txnLabel = 'Pending'
+  if (isPaid) {
+    txnStatus = 'successful'
+    txnLabel = 'Successful'
+  } else if (isFailed) {
+    txnStatus = 'failed'
+    txnLabel = 'Failed'
+  }
+
+  return {
+    id: idStr,
+    transactionId: sub.razorpayPaymentId || sub.razorpaySubscriptionId || idStr,
+    orderId: idStr,
+    orderNumber: `SUB-${idStr.slice(-8).toUpperCase()}`,
+    type: 'subscription',
+    paymentProvider: sub.paymentProvider || 'razorpay',
+    razorpayOrderId: sub.razorpayOrderId || '',
+    razorpayPaymentId: sub.razorpayPaymentId || '',
+    razorpaySubscriptionId: sub.razorpaySubscriptionId || '',
+    paypalOrderId: '',
+    paypalCaptureId: '',
+    customerName: sub.userId?.name || 'Subscriber',
+    customerEmail: sub.userId?.email || '',
+    customerPhone: sub.whatsappNumber || sub.userId?.phone || '',
+    purchaseReasons: ['subscription'],
+    purchaseReasonOther: '',
+    amount,
+    subtotalAmount: subtotal,
+    gstAmount,
+    promoCode: '',
+    discountAmount: 0,
+    totalAmount: amount,
+    currency: sub.currency || 'INR',
+    paymentMethod: sub.paymentProvider || 'razorpay',
+    paymentStatus: sub.paymentStatus || (isPaid ? 'paid' : 'pending'),
+    transactionStatus: txnStatus,
+    transactionStatusLabel: txnLabel,
+    isSuccessful: isPaid,
+    orderStatus: sub.status || 'active',
+    itemCount: 1,
+    items: [
+      {
+        name: `${planName} (${interval})`,
+        clipId: 'SUBSCRIPTION',
+        price: amount,
+        licenseNumber: `SUB-LIC-${idStr.slice(-6).toUpperCase()}`,
+      },
+    ],
+    createdAt: sub.createdAt || sub.startDate || new Date(),
+    updatedAt: sub.updatedAt || sub.startDate || new Date(),
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   IconActors,
@@ -15,6 +15,7 @@ import {
   IconMail,
   IconTrash,
   IconUsers,
+  IconSubscription,
 } from '../components/icons/AdminIcons'
 import { NAV_ITEMS } from '../constants/adminPermissions'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +37,7 @@ const NAV_ICONS = {
   '/user-mail': IconMail,
   '/support': IconSupport,
   '/admins': IconAdmins,
+  '/subscriptions': IconSubscription,
 }
 
 const pageTitles = {
@@ -59,6 +61,8 @@ const pageTitles = {
   '/support': 'Support',
   '/admins': 'Admin Team',
   '/admins/new': 'Add Admin',
+  '/subscriptions': 'Subscriptions',
+  '/subscriptions/new': 'Add Subscription Plan',
   '/access-denied': 'Access Denied',
 }
 

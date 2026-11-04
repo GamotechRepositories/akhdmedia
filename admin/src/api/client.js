@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 
 const reportXHRProgress = (event, file, onProgress, tracker) => {
   if (!onProgress) return
@@ -67,7 +67,7 @@ api.interceptors.response.use(
       error.response?.status === 403 &&
       !window.location.pathname.startsWith('/access-denied')
     ) {
-      // Let the current page handle permission errors — avoid trapping users on /access-denied
+      // Let the current page handle permission errors â€” avoid trapping users on /access-denied
       console.warn('API permission denied:', requestUrl, message)
     }
 
@@ -508,5 +508,26 @@ export const createAdminAccount = (payload) => api.post('/admin/team', payload)
 export const updateAdminAccount = (id, payload) => api.put(`/admin/team/${id}`, payload)
 
 export const deleteAdminAccount = (id) => api.delete(`/admin/team/${id}`)
+
+
+export const fetchAdminSubscriptionPlans = () => api.get('/admin/subscriptions/plans')
+export const fetchAdminSubscriptionPlan = (id) => api.get('/admin/subscriptions/plans/' + id)
+export const createAdminSubscriptionPlan = (payload) => api.post('/admin/subscriptions/plans', payload)
+export const updateAdminSubscriptionPlan = (id, payload) => api.put('/admin/subscriptions/plans/' + id, payload)
+export const deleteAdminSubscriptionPlan = (id) => api.delete('/admin/subscriptions/plans/' + id)
+
+export const fetchAdminSubscribers = ({ page = 1, limit = 20, search = '', status = 'all', planId = 'all' } = {}) =>
+  api.get('/admin/subscriptions/subscribers', {
+    params: {
+      page,
+      limit,
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(status !== 'all' ? { status } : {}),
+      ...(planId && planId !== 'all' ? { planId } : {}),
+    },
+  })
+
+export const createAdminSubscriber = (payload) => api.post('/admin/subscriptions/subscribers', payload)
+export const updateAdminSubscriber = (id, payload) => api.patch('/admin/subscriptions/subscribers/' + id, payload)
 
 export default api

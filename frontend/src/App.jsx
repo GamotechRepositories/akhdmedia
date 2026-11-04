@@ -35,7 +35,12 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Orders = lazy(() => import('./pages/Orders'));
+const ActiveSubscriptions = lazy(() => import('./pages/ActiveSubscriptions'));
 const FromIosApp = lazy(() => import('./pages/FromIosApp'));
+const Subscriptions = lazy(() => import('./pages/Subscriptions'));
+const SubscriptionCheckout = lazy(() => import('./pages/SubscriptionCheckout'));
+const SubscriptionPolicy = lazy(() => import('./pages/SubscriptionPolicy'));
+const SubscriptionSuccess = lazy(() => import('./pages/SubscriptionSuccess'));
 
 const RouteFallback = () => (
   <div className="flex min-h-[40vh] items-center justify-center bg-gray-50" aria-busy="true">
@@ -53,6 +58,13 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/actors" element={<ActorsPage />} />
+            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/subscriptions/checkout" element={<SubscriptionCheckout />} />
+            <Route path="/subscriptions/success" element={<SubscriptionSuccess />} />
+            <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+            <Route path="/pricing" element={<Subscriptions />} />
+            <Route path="/subscription-policy" element={<SubscriptionPolicy />} />
+            <Route path="/subscription-terms" element={<SubscriptionPolicy />} />
             <Route path="/videos" element={<CategoryPage />} />
             <Route path="/videos/:category/:subCategory" element={<CategoryPage />} />
             <Route path="/videos/:category" element={<CategoryPage />} />
@@ -83,6 +95,8 @@ function AppContent() {
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<Profile />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/active-subscriptions" element={<ActiveSubscriptions />} />
+              <Route path="/my-subscriptions" element={<ActiveSubscriptions />} />
             </Route>
           </Routes>
         </Suspense>
