@@ -520,37 +520,6 @@ const Subscriptions = () => {
       {/* TAB 2: Subscribers & Video Quotas */}
       {activeTab === 'subscribers' && (
         <div className="space-y-6">
-          {/* Active Plan Filter Callout Banner */}
-          {selectedPlanDetails && (
-            <div className="flex flex-col gap-2 rounded-2xl border border-blue-200 bg-blue-50/90 p-4 sm:flex-row sm:items-center sm:justify-between shadow-xs">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-blue-950">
-                    Subscribers for: {selectedPlanDetails.name}
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    Showing only customers currently enrolled in this specific plan.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSubPlanFilter('all')
-                  setSelectedPlanDetails(null)
-                }}
-                className="inline-flex items-center gap-1.5 self-start rounded-xl border border-blue-300 bg-white px-3.5 py-1.5 text-xs font-bold text-blue-700 shadow-xs hover:bg-blue-50"
-              >
-                ✕ Clear Filter (Show All Plans)
-              </button>
-            </div>
-          )}
-
           {/* Search & Filter Controls */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex w-full max-w-md items-center gap-2">
@@ -631,6 +600,23 @@ const Subscriptions = () => {
                   <option value="expired">Expired</option>
                 </select>
               </div>
+
+              {/* Clear Filter Button */}
+              {(subPlanFilter !== 'all' || selectedPlanDetails || subStatus !== 'all' || (subSearch && subSearch.trim() !== '')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubPlanFilter('all')
+                    setSelectedPlanDetails(null)
+                    setSubStatus('all')
+                    setSubSearch('')
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 transition cursor-pointer"
+                  title="Clear Filter"
+                >
+                  <span>✕</span> Clear Filter
+                </button>
+              )}
             </div>
           </div>
 
