@@ -1066,13 +1066,21 @@ const ProductMediaGallery = ({ product }) => {
 
   const renderMediaChrome = (compact = false) => (
     <div className="pointer-events-none absolute inset-0 z-30">
-      <div
-        className={`pointer-events-auto absolute rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ${
-          compact ? 'left-3 top-3' : 'left-4 top-4'
-        } ${isPreviewDemoSelected ? '' : 'uppercase'}`}
-      >
-        {isPreviewDemoSelected ? '40 Sec Preview Demo Only!' : 'Preview'}
-      </div>
+      {Boolean(
+        isPreviewDemoSelected
+          ? (product.previewBadge !== undefined ? product.previewBadge : '40 Sec Preview Demo Only!')?.trim()
+          : 'Preview'
+      ) && (
+        <div
+          className={`pointer-events-auto absolute rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white ${
+            compact ? 'left-3 top-3' : 'left-4 top-4'
+          } ${isPreviewDemoSelected ? '' : 'uppercase'}`}
+        >
+          {isPreviewDemoSelected
+            ? (product.previewBadge !== undefined ? product.previewBadge.trim() : '40 Sec Preview Demo Only!')
+            : 'Preview'}
+        </div>
+      )}
 
       <button
         type="button"

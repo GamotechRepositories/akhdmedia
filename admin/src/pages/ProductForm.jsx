@@ -164,7 +164,8 @@ const mapProductToForm = (product) => {
     subCategorySlug: product.subCategory || '',
     brand: product.brand || '',
     badge: product.badge || '',
-    badgeColor: product.badgeColor || 'red',
+    previewBadge: product.previewBadge || '40 Sec Preview Demo Only!',
+    badgeColor: product.badgeColor || 'black',
     actorIds: resolveActorIds(product),
     price: product.price,
     gstPercentage: product.gstPercentage ?? 18,
@@ -205,7 +206,8 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   subCategorySlug: '',
   brand: '',
   badge: '',
-  badgeColor: 'red',
+  previewBadge: '40 Sec Preview Demo Only!',
+  badgeColor: 'black',
   actorIds: [],
   price: 499,
   gstPercentage: 18,
@@ -458,6 +460,9 @@ const ProductForm = () => {
       categorySlug: current.categorySlug,
       subCategorySlug: current.subCategorySlug,
       brand: current.brand,
+      badge: current.badge,
+      previewBadge: current.previewBadge,
+      badgeColor: current.badgeColor,
       actorIds: current.actorIds,
       price: current.price,
       gstPercentage: current.gstPercentage,
@@ -938,6 +943,80 @@ const ProductForm = () => {
                 </div>
               </div>
             </div>
+            {/* Video Player Preview Tag */}
+            {isVideo && (
+              <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50/90 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                  <div>
+                    <span className="text-sm font-semibold text-slate-800">
+                      Video Player Preview Tag
+                    </span>
+                    <p className="text-xs text-slate-500">
+                      Shown on the top-left inside the video player preview on the website.
+                    </p>
+                  </div>
+                  {form.previewBadge?.trim() && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-slate-400 font-medium">Player Preview:</span>
+                      <span className="inline-flex items-center rounded-full bg-black/80 px-2.5 py-1 text-[10px] font-semibold text-white tracking-wide shadow-sm">
+                        {form.previewBadge.trim()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    value={form.previewBadge}
+                    onChange={(e) => updateField('previewBadge', e.target.value)}
+                    placeholder="e.g. 40 Sec Preview Demo Only!"
+                    className={inputClass}
+                  />
+                  {/* Quick suggestion buttons */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400">Quick options:</span>
+                    {[
+                      '40 Sec Preview Demo Only!',
+                      '30 Sec Preview Demo Only!',
+                      '15 Sec Preview Demo Only!',
+                      'Preview Demo Only!',
+                      'Sample Preview',
+                      'Watermarked Demo',
+                    ].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => updateField('previewBadge', tag)}
+                        className={`rounded-md border px-2 py-0.5 text-[11px] font-medium transition cursor-pointer ${
+                          form.previewBadge === tag
+                            ? 'border-slate-800 bg-slate-900 text-white'
+                            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => updateField('previewBadge', '40 Sec Preview Demo Only!')}
+                      className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                    >
+                      Reset Default
+                    </button>
+                    {form.previewBadge && (
+                      <button
+                        type="button"
+                        onClick={() => updateField('previewBadge', '')}
+                        className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 hover:bg-red-100 cursor-pointer"
+                      >
+                        Hide / Blank
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
               <input type="checkbox" checked={form.isActive} onChange={(e) => updateField('isActive', e.target.checked)} />
