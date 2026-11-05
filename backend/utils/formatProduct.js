@@ -67,6 +67,8 @@ const formatProduct = (product, categoryMap = {}, options = {}) => {
     categorySlug: product.categorySlug,
     subCategory: product.subCategorySlug,
     brand: product.brand,
+    badge: product.badge || '',
+    badgeColor: product.badgeColor || 'red',
     price: getListingPrice(product),
     gstPercentage: Number(product.gstPercentage) || 0,
     availableTiers: enabledTiers,

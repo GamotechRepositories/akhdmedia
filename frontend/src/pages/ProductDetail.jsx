@@ -427,9 +427,32 @@ const ProductDetail = () => {
                 </button>
               </div>
 
-              <h1 className="break-words text-xl font-bold leading-snug sm:text-2xl lg:text-[1.65rem]">
-                {product.name}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="break-words text-xl font-bold leading-snug sm:text-2xl lg:text-[1.65rem]">
+                  {product.name}
+                </h1>
+                {product.badge?.trim() && (
+                  <span
+                    className={`inline-flex items-center rounded px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider shadow-sm ${
+                      product.badgeColor === 'amber'
+                        ? 'bg-amber-500 text-black'
+                        : product.badgeColor === 'green'
+                        ? 'bg-emerald-600 text-white'
+                        : product.badgeColor === 'blue'
+                        ? 'bg-blue-600 text-white'
+                        : product.badgeColor === 'purple'
+                        ? 'bg-purple-600 text-white'
+                        : product.badgeColor === 'black'
+                        ? 'bg-black text-white border border-white/20'
+                        : product.badgeColor === 'orange'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-red-600 text-white'
+                    }`}
+                  >
+                    {product.badge.trim()}
+                  </span>
+                )}
+              </div>
               {product.clipId && (
                 <p className="mt-1 font-mono text-xs text-white/55">Clip ID · {product.clipId}</p>
               )}

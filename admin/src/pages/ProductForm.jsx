@@ -163,6 +163,8 @@ const mapProductToForm = (product) => {
     categorySlug: product.categorySlug,
     subCategorySlug: product.subCategory || '',
     brand: product.brand || '',
+    badge: product.badge || '',
+    badgeColor: product.badgeColor || 'red',
     actorIds: resolveActorIds(product),
     price: product.price,
     gstPercentage: product.gstPercentage ?? 18,
@@ -202,6 +204,8 @@ const emptyForm = (mediaType = MEDIA_TYPES.VIDEO) => ({
   categorySlug: '',
   subCategorySlug: '',
   brand: '',
+  badge: '',
+  badgeColor: 'red',
   actorIds: [],
   price: 499,
   gstPercentage: 18,
@@ -875,6 +879,100 @@ const ProductForm = () => {
                 Position within this product&apos;s category page. Lower numbers appear first (0, 1, 2…).
               </p>
             </label>
+
+            {/* Product Corner Badge (Customizable) */}
+            <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50/90 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <div>
+                  <span className="text-sm font-semibold text-slate-800">
+                    Product Corner Badge (Optional)
+                  </span>
+                  <p className="text-xs text-slate-500">
+                    Shown on the top-left corner of the video card on the website. Leave blank if no badge needed.
+                  </p>
+                </div>
+                {form.badge?.trim() && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400 font-medium">Card Preview:</span>
+                    <span
+                      className={`inline-flex items-center rounded px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm ${
+                        form.badgeColor === 'amber'
+                          ? 'bg-amber-500 text-black'
+                          : form.badgeColor === 'green'
+                          ? 'bg-emerald-600 text-white'
+                          : form.badgeColor === 'blue'
+                          ? 'bg-blue-600 text-white'
+                          : form.badgeColor === 'purple'
+                          ? 'bg-purple-600 text-white'
+                          : form.badgeColor === 'black'
+                          ? 'bg-black text-white'
+                          : form.badgeColor === 'orange'
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-red-600 text-white'
+                      }`}
+                    >
+                      {form.badge.trim()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <input
+                    type="text"
+                    value={form.badge}
+                    onChange={(e) => updateField('badge', e.target.value)}
+                    placeholder="e.g. Exclusive, Trending, Hot, New, 4K UHD, Staff Pick..."
+                    className={inputClass}
+                  />
+                  {/* Quick suggestion buttons */}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400">Quick options:</span>
+                    {['Exclusive', 'Trending', 'Hot', 'New', 'Staff Pick', '4K UHD'].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => updateField('badge', tag)}
+                        className={`rounded-md border px-2 py-0.5 text-[11px] font-medium transition cursor-pointer ${
+                          form.badge === tag
+                            ? 'border-slate-800 bg-slate-900 text-white'
+                            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                    {form.badge && (
+                      <button
+                        type="button"
+                        onClick={() => updateField('badge', '')}
+                        className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600 hover:bg-red-100 cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="block text-xs font-medium text-slate-600 mb-1">Badge Color</span>
+                  <select
+                    value={form.badgeColor || 'red'}
+                    onChange={(e) => updateField('badgeColor', e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="red">Red (Recommended)</option>
+                    <option value="orange">Orange</option>
+                    <option value="amber">Amber / Gold</option>
+                    <option value="green">Emerald Green</option>
+                    <option value="blue">Blue</option>
+                    <option value="purple">Purple</option>
+                    <option value="black">Dark / Black</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">
               <input type="checkbox" checked={form.isActive} onChange={(e) => updateField('isActive', e.target.checked)} />

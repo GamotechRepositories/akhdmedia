@@ -506,7 +506,14 @@ const Products = () => {
                   )}
                 </td>
                 <td className={tdPrimaryClass}>
-                  <p>{product.name}</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="font-semibold text-slate-900">{product.name}</p>
+                    {product.badge && (
+                      <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-700">
+                        {product.badge}
+                      </span>
+                    )}
+                  </div>
                   {product.clipId && (
                     <p className="mt-0.5 font-mono text-[11px] text-slate-500">{product.clipId}</p>
                   )}

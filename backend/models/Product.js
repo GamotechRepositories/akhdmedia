@@ -52,6 +52,8 @@ const productSchema = new mongoose.Schema(
     categorySlug: { type: String, required: true, lowercase: true, trim: true },
     subCategorySlug: { type: String, default: '', trim: true },
     brand: { type: String, default: '', trim: true },
+    badge: { type: String, default: '', trim: true },
+    badgeColor: { type: String, default: 'red', trim: true },
     pricingMode: {
       type: String,
       enum: PRICING_MODE_LIST,

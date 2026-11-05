@@ -114,6 +114,8 @@ export const normalizeProductPayload = (body = {}) => {
     categorySlug: body.categorySlug?.trim().toLowerCase(),
     subCategorySlug: body.subCategorySlug?.trim() || '',
     brand: body.brand?.trim() || '',
+    badge: body.badge?.trim() || '',
+    badgeColor: body.badgeColor?.trim() || 'red',
     price: 0,
     gstPercentage: Number(body.gstPercentage) || 0,
     resolutionPricing: new Map(),

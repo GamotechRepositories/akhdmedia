@@ -37,6 +37,21 @@ const cardPillIconClass = 'h-2 w-2 shrink-0 sm:h-2.5 sm:w-2.5';
 
 const previewActionIconClass = 'h-3 w-3 shrink-0 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px]';
 
+const BADGE_COLOR_MAP = {
+  red: 'bg-red-600 text-white',
+  orange: 'bg-orange-600 text-white',
+  amber: 'bg-amber-500 text-black',
+  green: 'bg-emerald-600 text-white',
+  blue: 'bg-blue-600 text-white',
+  purple: 'bg-purple-600 text-white',
+  black: 'bg-black/90 text-white border border-white/20',
+};
+
+const cornerBadgeClass = (colorKey = 'red') => {
+  const colorClass = BADGE_COLOR_MAP[colorKey] || BADGE_COLOR_MAP.red;
+  return `inline-flex items-center rounded font-extrabold uppercase shadow-md ${previewButtonClass} ${badgeTextClass} ${colorClass}`;
+};
+
 const ProductCard = ({ product, compact = false }) => {
   const isVideo = isVideoProduct(product);
   const qualityLabel = formatQualityBadgeLabel(
@@ -52,13 +67,19 @@ const ProductCard = ({ product, compact = false }) => {
           className="protected-media-shell relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-gray-900 shadow-sm @[220px]:rounded-xl"
           onContextMenu={preventMediaContextMenu}
         >
-          {!isVideo && (
+          {product.badge?.trim() ? (
+            <span
+              className={`absolute left-1.5 top-1.5 z-20 max-w-[46%] truncate sm:left-[4%] sm:top-[4%] sm:max-w-[50%] ${cornerBadgeClass(product.badgeColor)}`}
+            >
+              {product.badge.trim()}
+            </span>
+          ) : !isVideo ? (
             <span
               className={`absolute left-1.5 top-1.5 z-20 max-w-[46%] truncate sm:left-[4%] sm:top-[4%] sm:max-w-[50%] ${badgeShellClass} ${badgePadClass} ${badgeTextClass}`}
             >
               {getProductBadgeLabel(product)}
             </span>
-          )}
+          ) : null}
 
           <span
             className={`absolute right-1.5 top-1.5 z-20 max-w-[40%] truncate sm:right-[4%] sm:top-[4%] ${cardPillClass} bg-black/90`}
@@ -124,5 +145,8 @@ const ProductCard = ({ product, compact = false }) => {
 };
 
 export default memo(ProductCard, (prev, next) =>
-  prev.product.id === next.product.id && prev.compact === next.compact,
+  prev.product.id === next.product.id &&
+  prev.compact === next.compact &&
+  prev.product.badge === next.product.badge &&
+  prev.product.badgeColor === next.product.badgeColor,
 );
