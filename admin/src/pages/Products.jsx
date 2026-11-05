@@ -509,7 +509,7 @@ const Products = () => {
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="font-semibold text-slate-900">{product.name}</p>
                     {product.badge && (
-                      <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-700">
+                      <span className="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                         {product.badge}
                       </span>
                     )}

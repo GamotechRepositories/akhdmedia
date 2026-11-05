@@ -432,23 +432,7 @@ const ProductDetail = () => {
                   {product.name}
                 </h1>
                 {product.badge?.trim() && (
-                  <span
-                    className={`inline-flex items-center rounded px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider shadow-sm ${
-                      product.badgeColor === 'amber'
-                        ? 'bg-amber-500 text-black'
-                        : product.badgeColor === 'green'
-                        ? 'bg-emerald-600 text-white'
-                        : product.badgeColor === 'blue'
-                        ? 'bg-blue-600 text-white'
-                        : product.badgeColor === 'purple'
-                        ? 'bg-purple-600 text-white'
-                        : product.badgeColor === 'black'
-                        ? 'bg-black text-white border border-white/20'
-                        : product.badgeColor === 'orange'
-                        ? 'bg-orange-600 text-white'
-                        : 'bg-red-600 text-white'
-                    }`}
-                  >
+                  <span className="inline-flex items-center rounded-md bg-black/90 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-sm border border-white/20">
                     {product.badge.trim()}
                   </span>
                 )}
