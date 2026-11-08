@@ -122,6 +122,22 @@ class ProfileHubScreen extends StatelessWidget {
               _ProfileMenuCard(
                 children: [
                   _ProfileMenuItem(
+                    icon: Icons.subscriptions_outlined,
+                    iconColor: const Color(0xFF2563EB),
+                    iconBg: const Color(0xFFEFF6FF),
+                    title: 'Subscriptions',
+                    subtitle: 'Browse editorial video plans',
+                    onTap: () => context.push('/subscriptions'),
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.autorenew,
+                    iconColor: const Color(0xFF16A34A),
+                    iconBg: const Color(0xFFECFDF5),
+                    title: 'My Subscription',
+                    subtitle: 'Downloads, invoices and AutoPay',
+                    onTap: () => context.push('/my-subscription'),
+                  ),
+                  _ProfileMenuItem(
                     icon: Icons.receipt_long_outlined,
                     iconColor: const Color(0xFF2563EB),
                     iconBg: const Color(0xFFEFF6FF),

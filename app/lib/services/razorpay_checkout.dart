@@ -7,11 +7,13 @@ class RazorpayPaymentResult {
     required this.razorpayOrderId,
     required this.razorpayPaymentId,
     required this.razorpaySignature,
+    this.razorpaySubscriptionId,
   });
 
   final String razorpayOrderId;
   final String razorpayPaymentId;
   final String razorpaySignature;
+  final String? razorpaySubscriptionId;
 }
 
 class RazorpayCheckout {
@@ -19,19 +21,24 @@ class RazorpayCheckout {
 
   final Razorpay _razorpay;
   Completer<RazorpayPaymentResult>? _completer;
+  String? _subscriptionId;
 
   Future<RazorpayPaymentResult> open({
     required String keyId,
     required int amount,
     required String currency,
-    required String razorpayOrderId,
+    String razorpayOrderId = '',
+    String? razorpaySubscriptionId,
     required String name,
     required String description,
     required String customerName,
     required String customerEmail,
     required String customerPhone,
   }) {
-    _completer?.completeError(Exception('Payment replaced'));
+    if (_completer != null && !_completer!.isCompleted) {
+      _completer!.completeError(Exception('Payment replaced'));
+    }
+    _subscriptionId = razorpaySubscriptionId;
     _completer = Completer<RazorpayPaymentResult>();
 
     _razorpay
@@ -42,9 +49,12 @@ class RazorpayCheckout {
 
     _razorpay.open({
       'key': keyId,
-      'amount': amount,
+      if (razorpaySubscriptionId == null) 'amount': amount,
       'currency': currency,
-      'order_id': razorpayOrderId,
+      if (razorpaySubscriptionId != null)
+        'subscription_id': razorpaySubscriptionId
+      else
+        'order_id': razorpayOrderId,
       'name': name,
       'description': description,
       'prefill': {
@@ -64,11 +74,14 @@ class RazorpayCheckout {
   }
 
   void _onSuccess(PaymentSuccessResponse response) {
+    if (_completer == null || _completer!.isCompleted) return;
     final orderId = response.orderId ?? '';
     final paymentId = response.paymentId ?? '';
     final signature = response.signature ?? '';
 
-    if (orderId.isEmpty || paymentId.isEmpty || signature.isEmpty) {
+    if ((_subscriptionId == null && orderId.isEmpty) ||
+        paymentId.isEmpty ||
+        signature.isEmpty) {
       _completer?.completeError(Exception('Incomplete payment response'));
       return;
     }
@@ -78,16 +91,21 @@ class RazorpayCheckout {
         razorpayOrderId: orderId,
         razorpayPaymentId: paymentId,
         razorpaySignature: signature,
+        razorpaySubscriptionId:
+            response.data?['razorpay_subscription_id']?.toString() ??
+            _subscriptionId,
       ),
     );
   }
 
   void _onError(PaymentFailureResponse response) {
+    if (_completer == null || _completer!.isCompleted) return;
     final message = response.message ?? 'Payment failed';
     _completer?.completeError(Exception(message));
   }
 
   void _onExternalWallet(ExternalWalletResponse response) {
+    if (_completer == null || _completer!.isCompleted) return;
     _completer?.completeError(
       Exception('External wallet selected: ${response.walletName}'),
     );

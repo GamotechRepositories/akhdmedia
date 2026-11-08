@@ -5,13 +5,17 @@ class PayPalCheckout {
   Future<String> open({
     required BuildContext context,
     required String approvalUrl,
+    String? subscriptionId,
   }) async {
     final paypalOrderId = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.white,
-      builder: (context) => _PayPalCheckoutSheet(approvalUrl: approvalUrl),
+      builder: (context) => _PayPalCheckoutSheet(
+        approvalUrl: approvalUrl,
+        subscriptionId: subscriptionId,
+      ),
     );
 
     if (paypalOrderId == null || paypalOrderId.isEmpty) {
@@ -23,9 +27,10 @@ class PayPalCheckout {
 }
 
 class _PayPalCheckoutSheet extends StatefulWidget {
-  const _PayPalCheckoutSheet({required this.approvalUrl});
+  const _PayPalCheckoutSheet({required this.approvalUrl, this.subscriptionId});
 
   final String approvalUrl;
+  final String? subscriptionId;
 
   @override
   State<_PayPalCheckoutSheet> createState() => _PayPalCheckoutSheetState();
@@ -42,14 +47,37 @@ class _PayPalCheckoutSheetState extends State<_PayPalCheckoutSheet> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (_) => setState(() => _loading = true),
-          onPageFinished: (_) => setState(() => _loading = false),
+          onPageStarted: (_) {
+            if (mounted) setState(() => _loading = true);
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _loading = false);
+          },
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
             if (uri == null) return NavigationDecision.navigate;
 
             final path = uri.path.toLowerCase();
-            if (path.contains('/paypal/complete') || uri.queryParameters.containsKey('token')) {
+            if (widget.subscriptionId != null) {
+              final isReturn =
+                  uri.scheme == 'https' &&
+                  (uri.host == 'akhdmedia.com' ||
+                      uri.host == 'www.akhdmedia.com') &&
+                  path == '/subscriptions/checkout';
+              if (isReturn && uri.queryParameters['paypalCancelled'] == '1') {
+                Navigator.of(context).pop();
+                return NavigationDecision.prevent;
+              }
+              if (isReturn &&
+                  uri.queryParameters['paypalSubscription'] ==
+                      widget.subscriptionId) {
+                Navigator.of(context).pop(widget.subscriptionId);
+                return NavigationDecision.prevent;
+              }
+              return NavigationDecision.navigate;
+            }
+            if (path.contains('/paypal/complete') ||
+                uri.queryParameters.containsKey('token')) {
               final token = uri.queryParameters['token'];
               if (token != null && token.isNotEmpty) {
                 Navigator.of(context).pop(token);
@@ -57,7 +85,8 @@ class _PayPalCheckoutSheetState extends State<_PayPalCheckoutSheet> {
               }
             }
 
-            if (path.contains('/checkout') && uri.queryParameters['cancel'] == '1') {
+            if (path.contains('/checkout') &&
+                uri.queryParameters['cancel'] == '1') {
               Navigator.of(context).pop();
               return NavigationDecision.prevent;
             }

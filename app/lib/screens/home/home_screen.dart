@@ -81,6 +81,34 @@ class _HomeScreenState extends State<HomeScreen> {
                       context.go(HomeSections.latestUploadsViewAllPath),
                 ),
                 NewsTicker(items: catalog.homepageSettings.tickerItems),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      color: const Color(0xFF111827),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF111827).withValues(alpha: 0.15),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(22),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        leading: const Icon(Icons.subscriptions_outlined, color: Colors.white),
+                        title: const Text('Editorial video subscriptions', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Daily WhatsApp delivery & website downloads', style: TextStyle(color: Color(0xFFDBEAFE))),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.white),
+                        onTap: () => context.push('/subscriptions'),
+                      ),
+                    ),
+                  ),
+                ),
                 if (showActorsSection)
                   ActorRail(
                     actors: catalog.actors,

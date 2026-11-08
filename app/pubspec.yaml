@@ -1,7 +1,7 @@
 name: akhdmedia_app
 description: AKHD Media — premium video marketplace mobile app.
 publish_to: 'none'
-version: 1.0.0+10
+version: 1.0.0+11
 
 environment:
   sdk: ^3.11.5
@@ -57,6 +57,7 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
+    - assets/payment/
     - assets/google_sign_in.html
     - assets/IMG_1577.jpg
     - assets/Google_Favicon_2025.svg

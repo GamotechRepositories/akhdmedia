@@ -22,6 +22,12 @@ class PoliciesLegalScreen extends StatelessWidget {
         ),
         children: const [
           _PolicyTile(
+            title: 'Subscription Policy',
+            subtitle: 'Subscription terms and editorial content usage',
+            route: '/subscription-policy',
+            icon: Icons.subscriptions_outlined,
+          ),
+          _PolicyTile(
             title: 'Terms & Conditions',
             subtitle: 'Website usage and purchase terms',
             route: '/terms-and-conditions',

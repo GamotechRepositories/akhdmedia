@@ -11,11 +11,15 @@ class PhoneCountryField extends StatefulWidget {
     required this.controller,
     this.enabled = true,
     this.initialCountryCode = 'IN',
+    this.label = 'Phone Number',
+    this.validator,
   });
 
   final TextEditingController controller;
   final bool enabled;
   final String initialCountryCode;
+  final String label;
+  final String? Function(String?)? validator;
 
   @override
   State<PhoneCountryField> createState() => PhoneCountryFieldState();
@@ -68,9 +72,9 @@ class PhoneCountryFieldState extends State<PhoneCountryField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Phone Number',
-          style: TextStyle(
+        Text(
+          widget.label,
+          style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AuthScreenColors.textDark,
@@ -118,7 +122,8 @@ class PhoneCountryFieldState extends State<PhoneCountryField> {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: TextField(
+              child: TextFormField(
+                validator: (_) => widget.validator?.call(internationalPhone),
                 controller: widget.controller,
                 enabled: widget.enabled,
                 keyboardType: TextInputType.phone,

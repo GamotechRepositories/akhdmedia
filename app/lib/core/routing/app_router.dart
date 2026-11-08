@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../../screens/subscriptions/subscription_screens.dart';
 
 import '../../screens/account/forgot_password_screen.dart';
 import '../../screens/account/login_screen.dart';
@@ -66,6 +67,35 @@ final appRouter = GoRouter(
           ],
         ),
       ],
+    ),
+    GoRoute(
+      path: '/subscriptions',
+      builder: (context, state) => const SubscriptionsScreen(),
+    ),
+    GoRoute(
+      path: '/subscriptions/checkout',
+      builder: (context, state) => SubscriptionCheckoutScreen(
+        planId: state.uri.queryParameters['planId'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: '/my-subscription',
+      builder: (context, state) => const MySubscriptionScreen(),
+    ),
+    GoRoute(
+      path: '/active-subscriptions',
+      redirect: (context, state) => '/my-subscription',
+    ),
+    GoRoute(
+      path: '/subscriptions/success',
+      builder: (context, state) => const SubscriptionSuccessScreen(),
+    ),
+    GoRoute(
+      path: '/subscription-policy',
+      builder: (context, state) => const PolicyScreen(
+        title: 'Subscription Policy',
+        policySlug: 'subscription-policy',
+      ),
     ),
     GoRoute(
       path: '/actors',

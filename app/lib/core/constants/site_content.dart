@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'subscription_policy.dart';
 
 class ContentSection {
   const ContentSection({required this.title, required this.paragraphs, this.bullets = const []});
@@ -82,6 +83,7 @@ class SiteContent {
   }
 
   static List<ContentSection> policySections(String slug) {
+    if (slug == 'subscription-policy') return subscriptionPolicySections;
     final sections = _policies[slug] ?? [
       const ContentSection(
         title: 'Content',

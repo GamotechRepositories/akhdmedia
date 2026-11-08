@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 import 'app_spacing.dart';
 
 class AppTheme {
+  static const brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF2563EB)],
+    stops: [0.0, 0.45, 1.0],
+  );
+
   static ThemeData get light {
     const seed = Color(0xFF0F172A);
     final colorScheme = ColorScheme.fromSeed(
