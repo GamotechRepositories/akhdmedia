@@ -31,6 +31,16 @@ export const REGISTRATION_OTP_RESEND_COOLDOWN_MS = 5 * 60 * 1000
 
 export const PASSWORD_RESET_OTP_RESEND_COOLDOWN_MS = 5 * 60 * 1000
 
+export const ADMIN_LOGIN_OTP_EXPIRY_MINUTES = Number(
+  process.env.ADMIN_LOGIN_OTP_EXPIRY_MINUTES || 5,
+)
+
+export const ADMIN_LOGIN_OTP_EXPIRY_MS = ADMIN_LOGIN_OTP_EXPIRY_MINUTES * 60 * 1000
+
+export const ADMIN_LOGIN_OTP_RESEND_COOLDOWN_MS = 60 * 1000
+
+export const ADMIN_LOGIN_OTP_MAX_ATTEMPTS = 5
+
 export const formatPasswordResetExpiryLabel = (
   minutes = PASSWORD_RESET_EXPIRY_MINUTES,
 ) => {

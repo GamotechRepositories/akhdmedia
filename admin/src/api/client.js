@@ -75,8 +75,13 @@ api.interceptors.response.use(
   },
 )
 
-export const login = async (email, password) => {
-  const { data } = await api.post('/auth/login', { email, password })
+export const requestAdminLoginOtp = async (email) => {
+  const { data } = await api.post('/auth/login/send-otp', { email })
+  return data
+}
+
+export const verifyAdminLoginOtp = async (email, code) => {
+  const { data } = await api.post('/auth/login/verify-otp', { email, code })
   return data
 }
 

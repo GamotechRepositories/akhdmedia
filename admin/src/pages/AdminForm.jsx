@@ -224,7 +224,7 @@ const AdminForm = () => {
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
             {isSuperAdmin
               ? 'Super admin always has full access to every section of the panel.'
-              : 'Create a separate login and choose exactly which admin pages appear in the sidebar.'}
+              : 'Choose which admin pages this person can open. They sign in with this email, and the code is sent to the admin inbox.'}
           </p>
         </div>
 
@@ -254,7 +254,7 @@ const AdminForm = () => {
             <FormStep
               step="1"
               title="Account details"
-              hint="Login credentials for this admin user."
+              hint="This email decides who is signed in. The one-time code is sent to the admin inbox."
               tone="sky"
             >
               <div className="grid gap-4 sm:grid-cols-2">
@@ -275,7 +275,7 @@ const AdminForm = () => {
 
                 <label className="block sm:col-span-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Email (login ID)
+                    Email
                   </span>
                   <input
                     className={`${inputClass} disabled:bg-slate-50 disabled:text-slate-500`}

@@ -1,16 +1,26 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import {
-  authenticateAdmin,
   formatAdminResponse,
   getAdminById,
   getAdminCookieName,
   getAdminCookieOptions,
+  requestAdminLoginOtp,
   signAdminToken,
+  verifyAdminLoginOtp,
 } from '../services/authService.js'
 
-export const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body
-  const admin = await authenticateAdmin(email, password)
+export const sendLoginOtp = asyncHandler(async (req, res) => {
+  const result = await requestAdminLoginOtp(req.body?.email)
+
+  res.json({
+    success: true,
+    message: 'A login code was sent to the admin email.',
+    data: result,
+  })
+})
+
+export const verifyLoginOtp = asyncHandler(async (req, res) => {
+  const admin = await verifyAdminLoginOtp(req.body?.email, req.body?.code)
   const token = signAdminToken(admin)
 
   res.cookie(getAdminCookieName(), token, getAdminCookieOptions())
@@ -21,6 +31,12 @@ export const login = asyncHandler(async (req, res) => {
     data: {
       admin: formatAdminResponse(admin),
     },
+  })
+})
+
+export const rejectPasswordLogin = asyncHandler(async (req, res) => {
+  res.status(400).json({
+    message: 'Password sign-in is turned off. Request a one-time code for the admin email.',
   })
 })
 

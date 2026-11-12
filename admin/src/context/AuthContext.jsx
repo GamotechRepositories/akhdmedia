@@ -1,5 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { getMe, login as loginRequest, logout as logoutRequest } from '../api/client'
+import {
+  getMe,
+  logout as logoutRequest,
+  requestAdminLoginOtp,
+  verifyAdminLoginOtp,
+} from '../api/client'
 import {
   hasAdminPermission as checkPermission,
   hasAnyAdminPermission as checkAnyPermission,
@@ -34,8 +39,10 @@ export const AuthProvider = ({ children }) => {
     refreshAuth()
   }, [refreshAuth])
 
-  const login = useCallback(async (email, password) => {
-    const response = await loginRequest(email, password)
+  const sendLoginCode = useCallback(async (email) => requestAdminLoginOtp(email), [])
+
+  const verifyLoginCode = useCallback(async (email, code) => {
+    const response = await verifyAdminLoginOtp(email, code)
     setAdmin(response.data?.admin || null)
     return response
   }, [])
@@ -66,11 +73,12 @@ export const AuthProvider = ({ children }) => {
       isSuperAdmin: Boolean(admin?.isSuperAdmin),
       hasPermission,
       hasAnyPermission,
-      login,
+      sendLoginCode,
+      verifyLoginCode,
       logout,
       refreshAuth,
     }),
-    [admin, loading, hasPermission, hasAnyPermission, login, logout, refreshAuth],
+    [admin, loading, hasPermission, hasAnyPermission, sendLoginCode, verifyLoginCode, logout, refreshAuth],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

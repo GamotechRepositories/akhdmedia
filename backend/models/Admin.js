@@ -30,6 +30,10 @@ const adminSchema = new mongoose.Schema(
         default: null,
       },
     },
+    loginOtpHash: { type: String, default: '', select: false },
+    loginOtpExpiresAt: { type: Date, default: null, select: false },
+    loginOtpSentAt: { type: Date, default: null, select: false },
+    loginOtpAttempts: { type: Number, default: 0, select: false },
   },
   {
     timestamps: true,

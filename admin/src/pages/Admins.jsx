@@ -84,7 +84,7 @@ const Admins = () => {
       <AdminPageHeader
         eyebrow="Team"
         title="Admin Team"
-        description="Create admin logins and choose which pages each person can access."
+        description="Each person signs in with their own email. The code goes to the admin inbox, and the panel opens with that person's permissions."
         action={
           <Link to="/admins/new" className={primaryBtnClass}>
             Add Admin
